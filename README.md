@@ -1,3 +1,64 @@
+# PRONTOEQUIPAS — Administração da plataforma
+
+Este frontend é a consola global da plataforma. A primeira integração implementada
+inclui autenticação com palavra-passe e OTP, renovação de tokens, encerramento de
+sessão e gestão global de empresas. Os componentes de demonstração continuam no
+código-fonte, mas deixaram de estar na navegação e nas rotas públicas.
+
+## Ligação à API local
+
+1. Iniciar o backend com as suas dependências e configuração habituais.
+2. Confirmar a porta HTTP do backend. O proxy deste projecto aponta para
+   `http://localhost:3333`; ajustar `proxy.conf.json` se a porta efectiva for outra.
+3. Com as dependências existentes do frontend instaladas, executar `npm start`
+   e abrir `http://localhost:4200`.
+4. Entrar com uma conta que tenha a role global `SUPER_ADMIN` e verificar o OTP.
+
+`public/config.json` define a base da API em tempo de execução. Por omissão usa
+`/api/v1`. O proxy de desenvolvimento encaminha `/api` para o backend, evitando
+dependência de CORS no desenvolvimento. Em produção, configurar um reverse proxy
+para `/api` ou definir a URL HTTPS absoluta da API e autorizar a origem do dashboard
+no CORS do backend. O servidor do frontend deve devolver `index.html` nas rotas Angular.
+
+| Funcionalidade | Endpoint da API |
+| --- | --- |
+| Iniciar login | `POST /api/v1/auth/login` |
+| Validar OTP | `POST /api/v1/auth/login/verify-otp` |
+| Reenviar OTP | `POST /api/v1/auth/login/resend-otp` |
+| Renovar sessão | `POST /api/v1/auth/refresh` |
+| Terminar sessão | `POST /api/v1/auth/logout` |
+| Pesquisar e listar empresas | `GET /api/v1/platform/companies?page=1&limit=20&search=` |
+| Suspender empresa | `PATCH /api/v1/platform/companies/:id/suspend` |
+| Activar empresa | `PATCH /api/v1/platform/companies/:id/activate` |
+
+Os tokens ficam apenas em memória: recarregar a página exige novo login. Pedidos
+concorrentes que recebem 401 partilham a renovação do refresh token. Um 403 não
+provoca renovação. As guards do frontend controlam a navegação; a autorização
+efectiva permanece no backend. Pedidos globais não enviam `X-Company-Id`.
+
+A página de empresas apresenta dados reais, pesquisa, paginação, estados de erro,
+lista vazia e confirmação antes de alterar o estado de acesso. Não cria empresas
+pelo endpoint de adesão: esse endpoint associa o utilizador como administrador da
+nova empresa e tem uma finalidade diferente da gestão global de clientes.
+
+## Próximas áreas de desenvolvimento
+
+Faltam as interfaces de indicadores globais, planos e subscrições, cobrança da
+plataforma, equipa e permissões, auditoria, suporte e configurações. Antes de cada
+integração devem ser validados o contrato de resposta e as permissões específicas
+do respectivo endpoint. A edição do perfil de uma empresa usa contexto de tenant
+e não deve ser confundida com a administração global.
+
+## Verificação
+
+Executar `npm run build` e `npm test -- --watch=false --browsers=ChromeHeadless`
+num ambiente com as dependências instaladas. Foram adicionados testes HTTP para
+isolamento de credenciais, recusa de permissão e renovação concorrente de sessão.
+A integração ponta a ponta exige a API activa e uma conta de plataforma válida.
+
+---
+
+
 # Free Angular Tailwind Admin Dashboard Template - TailAdmin Angular
 
 TailAdmin Angular is a **free and open-source admin dashboard template** built with **Angular** and **Tailwind CSS**. It provides developers with everything they need to create a feature-rich, data-driven **back-end, dashboard, or admin panel** for any type of web project.
@@ -159,3 +220,4 @@ TailAdmin Angular ships with a rich set of **ready-to-use dashboard features**:
 - Core dashboard layout and components
 - Essential UI elements and pages
 - Built with modern Angular best practices
+
