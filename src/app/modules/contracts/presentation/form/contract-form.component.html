@@ -1,0 +1,126 @@
+<app-component-card [title]="id ? 'Edit contract draft' : 'New contract'">
+  @if (loading()) {
+    <p role="status" class="text-sm text-gray-600 dark:text-gray-400">Loading form…</p>
+  } @else if (loadError()) {
+    <p role="alert" class="feedback">{{ loadError() }}</p>
+    <button type="button" class="action mt-3" (click)="load()">Try again</button>
+  } @else {
+    <ol class="mb-6 flex flex-wrap gap-2" aria-label="Contract form steps">
+      @for (label of steps; track label; let index = $index) {
+        <li class="section-link" [attr.aria-current]="index === step() ? 'step' : null"
+            [class.bg-brand-50]="index === step()" [class.dark:bg-brand-500/15]="index === step()">{{ index + 1 }}. {{ label }}</li>
+      }
+    </ol>
+    <h3 class="mb-4 text-lg font-semibold text-gray-900 dark:text-gray-100">{{ steps[step()] }}</h3>
+    @if (error()) { <p role="alert" class="feedback mb-4">{{ error() }}</p> }
+    @if (saved(); as draft) {
+      <a class="action action-primary" [routerLink]="['/contracts', context.company.id, 'details', draft.id]">Open saved contract</a>
+    } @else {
+      <form [formGroup]="form" (ngSubmit)="step() < steps.length - 1 ? next() : save(false)">
+        <fieldset class="space-y-4" [disabled]="saving()">
+          @switch (step()) {
+            @case (0) {
+              @if (id) {
+                <p class="text-sm text-gray-700 dark:text-gray-300">{{ form.controls.contractNumber.value }} · {{ employeeName(employee()) }}</p>
+              } @else {
+                <div class="grid gap-4 md:grid-cols-2">
+                  <label class="field">Contract number <input class="control" type="text" formControlName="contractNumber" maxlength="50" required /></label>
+                  <label class="field">Find employee
+                    <span class="flex gap-2">
+                      <input class="control" type="search" [(ngModel)]="employeeSearch" [ngModelOptions]="{standalone: true}" maxlength="100" placeholder="Name or employee number" (keydown.enter)="$event.preventDefault(); searchEmployees(1)" />
+                      <button class="action" type="button" [disabled]="searching()" (click)="searchEmployees(1)">Search</button>
+                    </span>
+                  </label>
+                  <label class="field">Employee
+                    <select class="control" [ngModel]="employee()?.id ?? ''" [ngModelOptions]="{standalone: true}" (ngModelChange)="pickEmployee($event)" [disabled]="searching()">
+                      <option value="">Select an employee</option>
+                      @if (employee(); as selected) {
+                        @if (!employeeIsListed(selected.id)) { <option [value]="selected.id">{{ employeeName(selected) }} · {{ selected.employeeNumber }}</option> }
+                      }
+                      @for (entry of employees(); track entry.id) { <option [value]="entry.id">{{ employeeName(entry) }} · {{ entry.employeeNumber }}</option> }
+                    </select>
+                  </label>
+                  @if (employeePages() > 1) {
+                    <div class="flex items-end gap-2">
+                      <button class="action" type="button" [disabled]="searching() || employeePage() === 1" (click)="searchEmployees(employeePage() - 1)">Previous</button>
+                      <button class="action" type="button" [disabled]="searching() || employeePage() >= employeePages()" (click)="searchEmployees(employeePage() + 1)">Next</button>
+                    </div>
+                  }
+                </div>
+                @if (employee(); as selected) {
+                  <p class="text-sm text-gray-700 dark:text-gray-300">{{ selected.employeeNumber }} · {{ departmentName() || '—' }} · {{ selected.jobTitle || '—' }}</p>
+                }
+              }
+            }
+            @case (1) {
+              <div class="grid gap-4 md:grid-cols-2">
+                <label class="field">Contract type<select class="control" formControlName="typeCode" required>
+                  <option value="">Select contract type</option>
+                  @for (type of types(); track type.id) { <option [value]="type.code">{{ type.name }}</option> }
+                </select></label>
+                <label class="field">Hiring arrangement<input class="control" formControlName="hiringRegime" maxlength="120" /></label>
+                <label class="field">Start date<input class="control" type="date" formControlName="startDate" required /></label>
+                <label class="field">{{ requiresEndDate() ? 'End date (required)' : 'End date' }}<input class="control" type="date" formControlName="endDate" [required]="requiresEndDate()" [attr.min]="form.controls.startDate.value || null" /></label>
+                <label class="field">Probation days<input class="control" inputmode="numeric" formControlName="probationDays" maxlength="4" /></label>
+              </div>
+              @if (!types().length) {
+                <p class="text-sm text-gray-600 dark:text-gray-400">No contract types are available. <a class="text-brand-600 dark:text-brand-400" [routerLink]="['/contracts', context.company.id, 'types']">Open contract types</a></p>
+              }
+            }
+            @case (2) {
+              <div class="grid gap-4 md:grid-cols-2">
+                <label class="field">Base salary<input class="control" inputmode="decimal" formControlName="salaryAmount" maxlength="20" /></label>
+                <label class="field">Currency<input class="control uppercase" formControlName="currency" maxlength="3" required /></label>
+                <label class="field">Pay frequency<input class="control" formControlName="payFrequency" maxlength="80" /></label>
+                <label class="field">Allowances and components<input class="control" formControlName="allowances" maxlength="240" /></label>
+                <label class="field md:col-span-2">Payment terms<textarea class="control" formControlName="paymentTerms" maxlength="1000" rows="3"></textarea></label>
+              </div>
+            }
+            @case (3) {
+              <div class="grid gap-4 md:grid-cols-2">
+                <label class="field">Working hours<input class="control" formControlName="workingHours" maxlength="120" /></label>
+                <label class="field">Schedule<input class="control" formControlName="schedule" maxlength="120" /></label>
+                <label class="field">Department<input class="control" formControlName="department" maxlength="120" /></label>
+                <label class="field">Job title<input class="control" formControlName="jobTitle" maxlength="120" /></label>
+                <label class="field">Workplace<input class="control" formControlName="workplace" maxlength="120" /></label>
+              </div>
+            }
+            @case (4) {
+              @if (canAttach) {
+                <app-contract-document-picker [companyId]="context.company.id" [(selected)]="document" [previewAllowed]="canPreview" />
+                @if (document) {
+                  <label class="field">Document type<select class="control" [(ngModel)]="documentType" [ngModelOptions]="{standalone: true}">
+                    <option value="CONTRACT">Contract</option><option value="ATTACHMENT">Attachment</option><option value="SUPPORTING">Supporting document</option>
+                  </select></label>
+                }
+              }
+              <label class="field">Notes<textarea class="control" formControlName="notes" maxlength="2000" rows="4"></textarea></label>
+            }
+            @case (5) {
+              @let values = form.getRawValue();
+              <dl class="grid gap-4 rounded-lg bg-gray-50 p-4 text-sm text-gray-700 dark:bg-gray-800 dark:text-gray-300 sm:grid-cols-2">
+                <div><dt>Employee</dt><dd class="font-semibold">{{ employeeName(employee()) }} · {{ values.contractNumber }}</dd></div>
+                <div><dt>Contract type</dt><dd class="font-semibold">{{ typeName(values.typeCode) }}</dd></div>
+                <div><dt>Term</dt><dd class="font-semibold">{{ date(values.startDate) }} – {{ date(values.endDate) }}</dd></div>
+                <div><dt>Compensation</dt><dd class="font-semibold">{{ amount(values.salaryAmount || null, values.currency.toUpperCase()) }} {{ values.payFrequency }}</dd></div>
+                <div><dt>Working conditions</dt><dd class="font-semibold">{{ values.jobTitle || '—' }} · {{ values.workplace || '—' }}</dd></div>
+                <div><dt>Document</dt><dd class="font-semibold">{{ document?.name || '—' }}</dd></div>
+              </dl>
+            }
+          }
+          <div class="flex flex-wrap gap-2 border-t border-gray-200 pt-4 dark:border-gray-800">
+            @if (step() > 0) { <button class="action" type="button" (click)="previous()">Back</button> }
+            @if (step() < steps.length - 1) {
+              <button class="action action-primary" type="submit">Continue</button>
+            } @else {
+              <button class="action" type="submit">{{ saving() ? 'Saving…' : 'Save draft' }}</button>
+              @if (context.permissions.includes('contracts.submit')) {
+                <button class="action action-primary" type="button" (click)="save(true)">Save and submit</button>
+              }
+            }
+          </div>
+        </fieldset>
+      </form>
+    }
+  }
+</app-component-card>

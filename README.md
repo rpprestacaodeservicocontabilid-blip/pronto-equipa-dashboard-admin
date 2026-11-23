@@ -1,9 +1,20 @@
 # PRONTOEQUIPAS — Administração da plataforma
 
-Este frontend é a consola global da plataforma. A primeira integração implementada
-inclui autenticação com palavra-passe e OTP, renovação de tokens, encerramento de
-sessão e gestão global de empresas. Os componentes de demonstração continuam no
+Este frontend é a consola global da plataforma. A integração implementada inclui
+cadastro, verificação de email, login com OTP, recuperação e alteração de palavra-passe,
+gestão de sessões, Google OAuth e gestão global de empresas. Os componentes de demonstração continuam no
 código-fonte, mas deixaram de estar na navegação e nas rotas públicas.
+
+Os fluxos, contratos, estrutura modular, configuração do Google e limitações do
+backend estão descritos em [Integração de autenticação](docs/authentication-integration.md).
+As páginas `/signin` e `/signup` mantêm o layout original do template.
+O módulo empresarial está disponível em `/contracts`. O
+[guia de contratos](docs/contracts-integration.md) descreve as rotas, permissões
+e integrações existentes.
+O módulo de configuração empresarial está disponível em `/organization`.
+Consulte o [guia de Organização](docs/organization-integration.md).
+O módulo de férias e licenças está disponível em `/leave`.
+Consulte o [guia de Férias e Licenças](docs/leave-integration.md).
 
 ## Ligação à API local
 
@@ -12,29 +23,36 @@ código-fonte, mas deixaram de estar na navegação e nas rotas públicas.
    `http://localhost:3333`; ajustar `proxy.conf.json` se a porta efectiva for outra.
 3. Com as dependências existentes do frontend instaladas, executar `npm start`
    e abrir `http://localhost:4200`.
-4. Entrar com uma conta que tenha a role global `SUPER_ADMIN` e verificar o OTP.
+4. Entrar e verificar o OTP. A gestão global de empresas exige `SUPER_ADMIN`.
+   Para contratos, escolher uma empresa activa em que a conta seja membro e
+   tenha permissão `contracts.read`.
 
 `public/config.json` define a base da API em tempo de execução. Por omissão usa
 `/api/v1`. O proxy de desenvolvimento encaminha `/api` para o backend, evitando
 dependência de CORS no desenvolvimento. Em produção, configurar um reverse proxy
-para `/api` ou definir a URL HTTPS absoluta da API e autorizar a origem do dashboard
-no CORS do backend. O servidor do frontend deve devolver `index.html` nas rotas Angular.
+para `/api` ou usar uma URL HTTPS da API no mesmo site e autorizar a origem do
+dashboard no CORS do backend. O servidor do frontend deve devolver `index.html`
+nas rotas Angular.
 
 | Funcionalidade | Endpoint da API |
 | --- | --- |
 | Iniciar login | `POST /api/v1/auth/login` |
 | Validar OTP | `POST /api/v1/auth/login/verify-otp` |
 | Reenviar OTP | `POST /api/v1/auth/login/resend-otp` |
-| Renovar sessão | `POST /api/v1/auth/refresh` |
-| Terminar sessão | `POST /api/v1/auth/logout` |
+| Restaurar sessão do navegador | `POST /api/v1/auth/browser/refresh` |
+| Terminar sessão do navegador | `POST /api/v1/auth/browser/logout` |
 | Pesquisar e listar empresas | `GET /api/v1/platform/companies?page=1&limit=20&search=` |
 | Suspender empresa | `PATCH /api/v1/platform/companies/:id/suspend` |
 | Activar empresa | `PATCH /api/v1/platform/companies/:id/activate` |
 
-Os tokens ficam apenas em memória: recarregar a página exige novo login. Pedidos
-concorrentes que recebem 401 partilham a renovação do refresh token. Um 403 não
-provoca renovação. As guards do frontend controlam a navegação; a autorização
-efectiva permanece no backend. Pedidos globais não enviam `X-Company-Id`.
+A sessão do navegador usa um cookie HttpOnly e o painel restaura a sessão antes
+de abrir a rota pedida. A chave `prontoequipas.auth.session` no `localStorage`
+regista o token de acesso, o utilizador e a sessão. O token de renovação fica no
+cookie HttpOnly. Ao terminar a sessão, a API revoga a sessão e remove o cookie,
+e o painel limpa a chave do navegador. Pedidos concorrentes que recebem 401
+partilham a renovação do token de acesso. Um 403 não provoca renovação. As guards
+do frontend controlam a navegação e a autorização efectiva permanece no backend.
+Pedidos globais não enviam `X-Company-Id`.
 
 A página de empresas apresenta dados reais, pesquisa, paginação, estados de erro,
 lista vazia e confirmação antes de alterar o estado de acesso. Não cria empresas

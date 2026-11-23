@@ -1,0 +1,85 @@
+<a class="action" [routerLink]="['/payroll', context().company.id, section().path]">Back to {{ section().title }}</a>
+@let response = state();
+@if (!response) {
+  <p role="status" class="text-sm text-gray-600 dark:text-gray-400">Loading payroll run…</p>
+} @else if ('error' in response) {
+  <p class="feedback" role="alert">{{ response.error }}</p><button class="action" type="button" (click)="refreshRun()">Try again</button>
+} @else if (run(); as record) {
+  <app-component-card [title]="titles[record.runType] + ' payroll run'">
+    <dl class="grid gap-4 text-sm text-gray-700 sm:grid-cols-2 xl:grid-cols-4 dark:text-gray-300">
+      <div><dt class="font-medium">Status</dt><dd>{{ label(record.status) }} · Version {{ record.version }}</dd></div>
+      <div><dt class="font-medium">Execution scope</dt><dd>{{ label(record.executionScope) }} · {{ record.employeeIds.length }} employees</dd></div>
+      <div><dt class="font-medium">Created</dt><dd>{{ date(record.createdAt, true) }}</dd></div>
+      <div><dt class="font-medium">Period</dt><dd>
+        @let interval = period();
+        <a class="text-brand-700 hover:underline dark:text-brand-300" [routerLink]="['/payroll', context().company.id, 'periods', record.periodId]">
+          @if (interval && 'data' in interval && interval.data) { {{ date(interval.data.startDate) }} – {{ date(interval.data.endDate) }} }
+          @else { View payroll period }
+        </a></dd>
+      </div>
+      @if (record.originalRunId; as original) {
+        <div><dt class="font-medium">Original run</dt><dd><a class="text-brand-700 hover:underline dark:text-brand-300" [routerLink]="['/payroll', context().company.id, 'overview', original]">{{ original.slice(0, 8) }}</a></dd></div>
+        <div class="sm:col-span-2"><dt class="font-medium">Adjustment reason</dt><dd>{{ record.reason }}</dd></div>
+      }
+    </dl>
+    @if (progress(); as current) {
+      @if (current.totalItems && (current.completedItems || current.failedItems || record.status === 'PROCESSING')) {
+        <div class="mt-4 max-w-lg space-y-1 text-sm text-gray-700 dark:text-gray-300">
+          <label for="payroll-item-progress">{{ current.completedItems }} completed, {{ current.failedItems }} failed, {{ current.totalItems }} total</label>
+          <progress id="payroll-item-progress" class="block h-3 w-full accent-brand-600" [value]="current.completedItems + current.failedItems" [max]="current.totalItems"></progress>
+        </div>
+      }
+    }
+    @if (record.status === 'VALIDATING') {
+      <p class="mt-4 text-sm text-gray-600 dark:text-gray-400">
+        @if (waitingForValidation()) { Pre-validation is running or waiting for a worker. }
+        @else { Processing requires a completed validation and a captured input snapshot for every employee. }
+      </p>
+    }
+    @if (ownSubmission()) {
+      <p class="mt-4 text-sm text-gray-600 dark:text-gray-400">An authorized operator other than the creator or submitter must approve this run.</p>
+    }
+    @if (progressError()) { <p class="feedback mt-4" role="alert">Progress could not be refreshed. {{ progressError() }}</p> }
+    @if (failure()) { <p class="feedback mt-4" role="alert">{{ failure() }}</p> }
+    @if (notice()) { <p class="notice mt-4" role="status">{{ notice() }}</p> }
+    @if (confirmation(); as action) {
+      <form class="mt-4 space-y-3 rounded-xl border border-warning-200 p-4 dark:border-warning-500/30" (ngSubmit)="execute(action)">
+        <p class="text-sm text-gray-700 dark:text-gray-300">{{ action.confirmation }}</p>
+        @if (action.id === 'reject') {
+          <label class="field max-w-lg">Rejection reason <textarea class="control" name="reason" maxlength="1000" required rows="3" [(ngModel)]="reason" [disabled]="busy()"></textarea></label>
+        }
+        <div class="flex flex-wrap gap-2">
+          <button class="action action-primary" type="submit" [disabled]="busy() || syncing() || !!progressError() || (action.id === 'reject' && !reason.trim())">Confirm {{ action.label.toLowerCase() }}</button>
+          <button class="action" type="button" [disabled]="busy()" (click)="confirmation.set(null)">Back</button>
+        </div>
+      </form>
+    } @else {
+      <div class="mt-4 flex flex-wrap items-center gap-2">
+        @for (action of actions(); track action.id) {
+          <button type="button" class="action" [class.action-primary]="action.id === 'validate' || action.id === 'process' || action.id === 'submit'"
+            [disabled]="busy() || syncing() || !!progressError()" (click)="begin(action)">{{ action.label }}</button>
+        }
+        <button class="action" type="button" [disabled]="busy() || syncing()" (click)="refreshProgress()">{{ syncing() ? 'Refreshing…' : 'Refresh run' }}</button>
+      </div>
+    }
+    @if (record.status === 'CLOSED') {
+      <div class="mt-4 flex flex-wrap gap-2">
+        @if (canAdjust('CORRECTION')) {
+          <a class="action" [routerLink]="['/payroll', context().company.id, 'corrections', 'new']" [queryParams]="{ original: record.id }">Create correction</a>
+        }
+        @if (canAdjust('SUPPLEMENTARY')) {
+          <a class="action" [routerLink]="['/payroll', context().company.id, 'supplements', 'new']" [queryParams]="{ original: record.id }">Create supplement</a>
+        }
+        @if (canAdjust('RETROACTIVE')) {
+          <a class="action" [routerLink]="['/payroll', context().company.id, 'retroactive', 'new']" [queryParams]="{ original: record.id }">Create retroactive run</a>
+        }
+      </div>
+    }
+  </app-component-card>
+  <div class="flex flex-wrap gap-2" role="group" aria-label="Payroll run views">
+    @for (option of tabs(); track option.id) {
+      <button type="button" class="section-link" [attr.aria-current]="tab() === option.id ? 'page' : null" (click)="tab.set(option.id)">{{ option.title }}</button>
+    }
+  </div>
+  <app-payroll-evidence [context]="context()" [run]="record" [tab]="tab()" [revision]="evidenceRevision()" />
+}

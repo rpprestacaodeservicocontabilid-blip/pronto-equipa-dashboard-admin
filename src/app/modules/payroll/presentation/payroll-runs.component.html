@@ -1,0 +1,52 @@
+@if (canCreate()) {
+  <div class="flex justify-end">
+    <a class="action action-primary" [routerLink]="[...root(), 'new']" [queryParams]="{ period: selectedPeriod() || null }">New payroll run</a>
+  </div>
+}
+@let response = data();
+@if (!response) {
+  <p role="status" class="text-sm text-gray-600 dark:text-gray-400">Loading payroll runs…</p>
+} @else if ('error' in response) {
+  <p class="feedback" role="alert">{{ response.error }}</p>
+  <button class="action" type="button" (click)="refresh()">Try again</button>
+} @else {
+  <app-component-card [title]="section().title">
+    <div class="mb-4 grid max-w-xl gap-3 sm:grid-cols-2">
+      <label class="field">Payroll period
+        <select class="control" [ngModel]="selectedPeriod()" (ngModelChange)="period.set($event); page.set(1)">
+          <option value="">All periods</option>
+          @for (option of response.data.periods; track option.id) { <option [value]="option.id">{{ periodLabel(option.id) }}</option> }
+        </select>
+      </label>
+      <label class="field">Status
+        <select class="control" [ngModel]="status()" (ngModelChange)="status.set($event); page.set(1)">
+          <option value="">All statuses</option>
+          @for (option of statuses(); track option) { <option [value]="option">{{ label(option) }}</option> }
+        </select>
+      </label>
+    </div>
+    <div class="overflow-x-auto">
+      <table class="w-full text-start text-sm text-gray-700 dark:text-gray-300">
+        <thead class="table-heading"><tr><th scope="col">Run</th><th scope="col">Period</th><th scope="col">Scope</th><th scope="col">Employees</th><th scope="col">Status</th><th scope="col">Created</th></tr></thead>
+        <tbody class="divide-y divide-gray-200 dark:divide-gray-800">
+          @for (run of visible(); track run.id) {
+            <tr>
+              <td class="table-cell"><a class="font-medium text-brand-700 hover:underline dark:text-brand-300" [routerLink]="[...root(), run.id]">{{ titles[run.runType] }} · {{ run.id.slice(0, 8) }}</a></td>
+              <td class="table-cell whitespace-nowrap">{{ periodLabel(run.periodId) }}</td><td class="table-cell">{{ label(run.executionScope) }}</td>
+              <td class="table-cell">{{ run.employeeIds.length }}</td><td class="table-cell whitespace-nowrap">{{ label(run.status) }}</td><td class="table-cell whitespace-nowrap">{{ date(run.createdAt, true) }}</td>
+            </tr>
+          } @empty { <tr><td class="table-cell" colspan="6">No payroll runs match these filters.</td></tr> }
+        </tbody>
+      </table>
+    </div>
+    @if (filtered().length > pageSize) {
+      <div class="mt-4 flex flex-wrap items-center justify-between gap-2 text-sm text-gray-600 dark:text-gray-400">
+        <span>Page {{ page() }} · {{ filtered().length }} runs</span>
+        <div class="flex gap-2">
+          <button class="action" type="button" [disabled]="page() === 1" (click)="changePage(-1)">Previous</button>
+          <button class="action" type="button" [disabled]="page() * pageSize >= filtered().length" (click)="changePage(1)">Next</button>
+        </div>
+      </div>
+    }
+  </app-component-card>
+}

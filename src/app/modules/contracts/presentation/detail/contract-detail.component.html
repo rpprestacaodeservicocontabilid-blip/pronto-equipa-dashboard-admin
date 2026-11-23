@@ -1,0 +1,138 @@
+<div class="space-y-5">
+  @if (notice()) { <p role="status" class="notice">{{ notice() }}</p> }
+  @if (loading()) {
+    <p role="status" class="text-sm text-gray-600 dark:text-gray-400">Loading contract…</p>
+  } @else if (error()) {
+    <p role="alert" class="feedback">{{ error() }}</p>
+    <button type="button" class="action" (click)="load()">Try again</button>
+  } @else if (contract(); as current) {
+    <app-component-card [title]="current.contractNumber">
+      <div class="flex flex-wrap items-start justify-between gap-4">
+        <div>
+          <p class="font-semibold text-gray-900 dark:text-gray-100">{{ type()?.name ?? current.typeCode }}</p>
+          <p class="text-sm text-gray-600 dark:text-gray-400">{{ name(employee()) }} · Version {{ current.version }}</p>
+        </div>
+        <span class="rounded-full bg-brand-50 px-3 py-1 text-sm font-medium text-brand-700 dark:bg-brand-500/15 dark:text-brand-300">{{ statuses[current.status] }}</span>
+      </div>
+      <div class="mt-4 flex flex-wrap gap-2">
+        @if (current.status === 'DRAFT' && allowed('contracts.update')) {
+          <a class="action" [routerLink]="['/contracts', context.company.id, 'details', id, 'edit']">Edit draft</a>
+        }
+        @for (key of actions(); track key) {
+          <button type="button" class="action" (click)="selectAction(key)" [disabled]="!!action()">{{ actionLabels[key].label }}</button>
+        }
+      </div>
+    </app-component-card>
+    @if (action(); as selected) {
+      <app-contract-action [companyId]="context.company.id" [contract]="current" [action]="selected"
+        (completed)="finish($event)" (dismissed)="action.set(null)" (stale)="action.set(null); load()" />
+    }
+    <nav aria-label="Contract details" class="flex flex-wrap gap-1 rounded-xl border border-gray-200 bg-white p-2 dark:border-gray-800 dark:bg-gray-900">
+      @for (entry of tabs; track entry[0]) {
+        <a class="section-link" [routerLink]="[]" [queryParams]="{tab: entry[0]}" [attr.aria-current]="tab() === entry[0] ? 'page' : null">{{ entry[1] }}</a>
+      }
+    </nav>
+    @switch (tab()) {
+      @case ('overview') {
+        <app-component-card title="Contract summary">
+          <dl class="grid gap-4 text-sm text-gray-700 dark:text-gray-300 sm:grid-cols-2 xl:grid-cols-4">
+            <div><dt>Start date</dt><dd class="font-semibold">{{ date(current.startDate) }}</dd></div>
+            <div><dt>End date</dt><dd class="font-semibold">{{ date(current.endDate) }}</dd></div>
+            <div><dt>Compensation</dt><dd class="font-semibold">{{ money(current.salaryAmount, current.currency) }}</dd></div>
+            <div><dt>Legal rule version</dt><dd class="break-all font-semibold">{{ current.legalRuleVersionId || '—' }}</dd></div>
+          </dl>
+          <h4 class="mt-5 text-sm font-semibold text-gray-800 dark:text-gray-200">Contract lifecycle</h4>
+          <ol class="mt-2 flex flex-wrap gap-2">
+            @for (state of lifecycle(); track state) {
+              <li [attr.aria-current]="state === current.status ? 'step' : null"
+                class="rounded-lg border px-3 py-2 text-xs font-medium"
+                [class]="state === current.status ? 'border-brand-300 bg-brand-50 text-brand-700 dark:border-brand-700 dark:bg-brand-500/15 dark:text-brand-300' : 'border-gray-200 text-gray-600 dark:border-gray-800 dark:text-gray-400'">{{ statuses[state] }}</li>
+            }
+          </ol>
+        </app-component-card>
+      }
+      @case ('employee') {
+        <app-component-card title="Employee record">
+          @if (employee(); as worker) {
+            <dl class="grid gap-4 text-sm text-gray-700 dark:text-gray-300 sm:grid-cols-2">
+              <div><dt>Name</dt><dd class="font-semibold">{{ name(worker) }}</dd></div>
+              <div><dt>Employee number</dt><dd class="font-semibold">{{ worker.employeeNumber }}</dd></div>
+              <div><dt>Department</dt><dd class="font-semibold">{{ current.terms.department || worker.departmentId || '—' }}</dd></div>
+              <div><dt>Job title</dt><dd class="font-semibold">{{ worker.jobTitle || '—' }}</dd></div>
+            </dl>
+          } @else {
+            <p class="text-sm text-gray-600 dark:text-gray-400">{{ employeeError() || 'Employee information is unavailable.' }}</p>
+          }
+        </app-component-card>
+      }
+      @case ('conditions') {
+        <app-component-card title="Compensation and working conditions">
+          <dl class="grid gap-4 text-sm text-gray-700 dark:text-gray-300 sm:grid-cols-2 xl:grid-cols-3">
+            <div><dt>Base salary</dt><dd class="font-semibold">{{ money(current.salaryAmount, current.currency) }}</dd></div>
+            @for (term of terms(current.terms); track term.label) {
+              <div class="min-w-0"><dt>{{ term.label }}</dt><dd class="whitespace-pre-wrap break-words font-semibold">{{ term.value }}</dd></div>
+            }
+          </dl>
+        </app-component-card>
+        @if (allowed('salary-structure:assignments:read')) {
+          <div class="mt-5"><app-contract-salary [companyId]="context.company.id" [contract]="current" /></div>
+        }
+      }
+      @case ('documents') {
+        <app-component-card title="Contract documents">
+          <app-contract-documents [context]="context" [id]="id" (attached)="finish()" />
+        </app-component-card>
+      }
+      @default {
+        <app-component-card [title]="tabLabel()">
+          @if (!allowed('contracts.history.read')) {
+            <p class="text-sm text-gray-600 dark:text-gray-400">Your company role does not include access to historical records.</p>
+          } @else if (activityError()) {
+            <p role="alert" class="feedback">{{ activityError() }}</p>
+            <button type="button" class="action mt-3" (click)="load()">Refresh history</button>
+          } @else {
+            <ol class="space-y-3">
+              @for (record of events(); track record.id) {
+                <li class="rounded-xl border border-gray-200 p-4 dark:border-gray-800">
+                  <details>
+                    <summary class="cursor-pointer text-sm font-semibold text-gray-900 dark:text-gray-100">
+                      {{ recordLabel(record.type) }}
+                      <span class="ms-2 font-normal text-gray-600 dark:text-gray-400">{{ date(record.createdAt) }}</span>
+                    </summary>
+                    <div class="mt-3 space-y-2 text-sm text-gray-700 dark:text-gray-300">
+                      @if (record.actorUserId) { <p>Recorded by account #{{ record.actorUserId }}</p> }
+                      @if (record.payload.reason) { <p>Reason · {{ termText(record.payload.reason) }}</p> }
+                      @if (record.payload.reasonCode) { <p>Reason code · {{ termText(record.payload.reasonCode) }}</p> }
+                      @if (record.payload.effectiveDate) { <p>Effective date · {{ date(termText(record.payload.effectiveDate)) }}</p> }
+                      @if (record.payload.startDate) { <p>Starts · {{ date(termText(record.payload.startDate)) }} · Ends · {{ date(record.payload.endDate ? termText(record.payload.endDate) : null) }}</p> }
+                      @if (record.payload.snapshot; as snapshot) {
+                        <p>Version {{ snapshot.version }} · {{ statuses[snapshot.status] }} · {{ money(snapshot.salaryAmount, snapshot.currency) }}</p>
+                        <p>Term · {{ date(snapshot.startDate) }} – {{ date(snapshot.endDate) }}</p>
+                      }
+                      @if (trend(record); as comparison) {
+                        @if (comparison.length) {
+                          <div class="overflow-x-auto">
+                            <table class="w-full text-start">
+                              <thead class="table-heading"><tr><th scope="col">Field</th><th scope="col">Before</th><th scope="col">After</th></tr></thead>
+                              <tbody>
+                                @for (change of comparison; track change.label) {
+                                  <tr><th class="table-cell text-start" scope="row">{{ change.label }}</th><td class="table-cell">{{ change.before }}</td><td class="table-cell">{{ change.after }}</td></tr>
+                                }
+                              </tbody>
+                            </table>
+                          </div>
+                        }
+                      }
+                    </div>
+                  </details>
+                </li>
+              } @empty {
+                <li class="text-sm text-gray-600 dark:text-gray-400">No records in this section.</li>
+              }
+            </ol>
+          }
+        </app-component-card>
+      }
+    }
+  }
+</div>

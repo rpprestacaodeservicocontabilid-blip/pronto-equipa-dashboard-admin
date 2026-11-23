@@ -1,0 +1,18 @@
+@reference "../../../../styles.css";
+
+.sidebar-grip {
+  @apply inline-flex size-9 shrink-0 cursor-grab touch-none items-center justify-center rounded-lg text-gray-500 hover:bg-gray-100 focus-visible:outline-2 focus-visible:outline-brand-500 active:cursor-grabbing dark:text-gray-400 dark:hover:bg-gray-800;
+}
+
+.cdk-drag-preview {
+  @apply rounded-xl border border-gray-200 bg-white p-1 text-gray-900 shadow-theme-md dark:border-gray-800 dark:bg-gray-900 dark:text-gray-100;
+}
+
+.cdk-drag-placeholder {
+  @apply opacity-30;
+}
+
+.cdk-drag-animating,
+.cdk-drop-list-dragging > li:not(.cdk-drag-placeholder) {
+  @apply transition-transform duration-200 motion-reduce:transition-none;
+}

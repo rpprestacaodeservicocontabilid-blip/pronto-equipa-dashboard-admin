@@ -1,0 +1,43 @@
+<div class="workspace-ui space-y-5">
+  <app-page-breadcrumb [pageTitle]="section.title" homeLink="/salary-structure" />
+  @if (state(); as view) {
+    @if ('error' in view.access) {
+      <p class="feedback" role="alert">{{ view.access.error }}</p>
+      <a class="action" routerLink="/salary-structure">Select a company</a>
+    } @else {
+      @let context = view.access.context;
+      @let available = byGrant(context.permissions);
+      <div class="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-gray-200 bg-white px-5 py-4 dark:border-gray-800 dark:bg-white/[0.03]">
+        <div><p class="text-sm text-gray-500 dark:text-gray-400">Salary structure</p>
+          <h2 class="text-lg font-semibold text-gray-900 dark:text-white">{{ context.company.name }}</h2>
+        </div>
+        <a class="action" routerLink="/salary-structure">Change company</a>
+      </div>
+      @if (available.includes(section)) {
+        @for (key of [context.company.id + ':' + view.id + ':' + view.employee + ':' + view.resource + ':' + view.status]; track key) {
+          @switch (section.path) {
+            @case ('overview') { <app-salary-dashboard [context]="context" /> }
+            @case ('assignments') {
+              <app-salary-people [context]="context" [id]="view.id" [mode]="peopleMode()" [initialEmployee]="view.employee" [initialStatus]="view.status" />
+            }
+            @case ('revisions') {
+              <app-salary-people [context]="context" [id]="view.id" [mode]="peopleMode()" [initialEmployee]="view.employee" [initialStatus]="view.status" />
+            }
+            @case ('revision-batches') { <app-salary-batch [context]="context" [id]="view.id" /> }
+            @case ('history') { <app-salary-history [context]="context" [initialEmployee]="view.employee" /> }
+            @case ('simulations') { <app-salary-simulation [context]="context" /> }
+            @case ('reports') { <app-salary-reports [context]="context" /> }
+            @case ('audit') { <app-salary-control [context]="context" [mode]="controlMode()" [initialResource]="view.resource" /> }
+            @case ('policies') { <app-salary-control [context]="context" [mode]="controlMode()" /> }
+            @case ('settings') { <app-salary-control [context]="context" [mode]="controlMode()" /> }
+            @default { <app-salary-catalog [context]="context" [id]="view.id" [mode]="section.path" [title]="section.title" /> }
+          }
+        }
+      } @else if (section.path === 'overview' && available.length) {
+        <a class="action action-primary" [routerLink]="['/salary-structure', context.company.id, available[0].path]">Open {{ available[0].title }}</a>
+      } @else {
+        <p class="feedback" role="alert">Your company permissions do not include access to this section.</p>
+      }
+    }
+  }
+</div>

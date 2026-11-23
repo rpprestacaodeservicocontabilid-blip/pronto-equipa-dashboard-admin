@@ -1,0 +1,87 @@
+<div class="space-y-5">
+  <app-component-card title="Cost allocations">
+    <div class="space-y-4">
+      @if (error()) { <p role="alert" class="feedback">{{ error() }}</p> }
+      @if (referenceError()) {
+        <p role="alert" class="feedback">{{ referenceError() }}</p>
+        <button class="action" type="button" (click)="loadReferences()">Refresh reference lists</button>
+      }
+      @if (notice()) { <p role="status" class="notice">{{ notice() }}</p> }
+      <div class="flex flex-wrap items-end gap-3">
+        <label class="field flex-1">Cost center<select class="control" [(ngModel)]="filterCenter" (ngModelChange)="historyId.set(''); load(1)" [disabled]="loading()">
+          <option value="">All cost centers</option>
+          @for (center of centers(); track center.id) { <option [value]="center.id">{{ center.name }}</option> }
+        </select></label>
+        @if (canCreate) {
+          <button class="action action-primary" type="button" (click)="showForm.set(true)">New allocation</button>
+        }
+      </div>
+      @if (showForm()) {
+        <form #allocationForm="ngForm" (ngSubmit)="allocationForm.valid && save()" class="space-y-4 rounded-lg border border-brand-200 p-4 dark:border-brand-800">
+          <fieldset [disabled]="busy()" class="space-y-4">
+            <legend class="font-semibold text-gray-900 dark:text-gray-100">Assign costs to an employee</legend>
+            <div class="grid gap-3 md:grid-cols-3">
+              <label class="field">Employee<select class="control" name="employee" [(ngModel)]="companyEmployee" required>
+                <option value="">Select employee</option>
+                @for (entry of employees(); track entry.id) { <option [value]="entry.id">{{ entry.firstName }} {{ entry.lastName }} · {{ entry.employeeNumber }}</option> }
+              </select></label>
+              <label class="field">Effective from<input class="control" name="from" type="date" [(ngModel)]="from" [attr.min]="today" required /></label>
+              <label class="field">Effective to<input class="control" name="to" type="date" [(ngModel)]="to" [attr.min]="from" /></label>
+            </div>
+            @for (entry of drafts; track entry.key) {
+              <div class="grid items-end gap-2 sm:grid-cols-[1fr_7rem_auto]">
+                <label class="field">Cost center<select class="control" [name]="'center-' + entry.key" [(ngModel)]="entry.costCenterId" required>
+                  <option value="">Select center</option>
+                  @for (center of centers(); track center.id) {
+                    @if (center.status === 'ACTIVE') { <option [value]="center.id">{{ center.name }}</option> }
+                  }
+                </select></label>
+                <label class="field">Percentage<input class="control" [name]="'share-' + entry.key" type="number" min="0.01" max="100" step="0.01" [(ngModel)]="entry.percentage" required /></label>
+                <button class="action" type="button" [disabled]="drafts.length < 2" (click)="remove(entry.key)">Remove row</button>
+              </div>
+            }
+            <div class="flex flex-wrap items-center gap-2">
+              <strong class="text-sm text-gray-900 dark:text-gray-100" aria-live="polite">Total {{ total }}%</strong>
+              <button class="action" type="button" [disabled]="drafts.length >= 50" (click)="add()">Add center</button>
+              <button class="action action-primary" type="submit" [disabled]="allocationForm.invalid || total !== 100">{{ busy() ? 'Saving…' : 'Save allocation' }}</button>
+              <button class="action" type="button" (click)="showForm.set(false)">Cancel</button>
+            </div>
+          </fieldset>
+        </form>
+      }
+      @if (loading()) { <p role="status" class="text-sm text-gray-600 dark:text-gray-400">Loading allocations…</p> }
+      @else if (rows(); as page) {
+        <div class="overflow-x-auto rounded-lg border border-gray-200 dark:border-gray-800">
+          <table class="w-full min-w-[36rem] text-start text-sm text-gray-700 dark:text-gray-300">
+            <thead class="table-heading"><tr><th scope="col">Record</th><th scope="col">Employee</th><th scope="col">Cost center</th><th scope="col">Share</th><th scope="col">Period</th></tr></thead>
+            <tbody class="divide-y divide-gray-200 dark:divide-gray-800">
+              @for (entry of page.data; track entry.id) {
+                <tr>
+                  <td class="table-cell">
+                    @if (context.permissions.includes('organization:history:read')) {
+                      <button type="button" class="text-start text-brand-700 hover:underline dark:text-brand-300" (click)="historyId.set(entry.id)">{{ entry.code }}</button>
+                    } @else { {{ entry.code }} }
+                  </td>
+                  <td class="table-cell">{{ employeeName(entry.employeeId) }}</td>
+                  <td class="table-cell">{{ centerName(entry.relatedId ?? filterCenter) }}</td>
+                  <td class="table-cell">{{ entry.percentage != null ? entry.percentage + '%' : 'Unavailable' }}</td>
+                  <td class="table-cell">{{ entry.effectiveFrom | date:'mediumDate':'UTC' }} – {{ (entry.effectiveTo | date:'mediumDate':'UTC') || 'Open-ended' }}</td>
+                </tr>
+              } @empty { <tr><td class="table-cell text-center" colspan="5">No allocations found.</td></tr> }
+            </tbody>
+          </table>
+        </div>
+        <div class="flex flex-wrap items-center justify-between gap-2">
+          <p class="text-sm text-gray-600 dark:text-gray-400">{{ page.pagination.total }} records · Page {{ page.pagination.page }} of {{ page.pagination.totalPages || 1 }}</p>
+          <div class="flex gap-2">
+            <button type="button" class="action" [disabled]="page.pagination.page <= 1" (click)="load(page.pagination.page - 1)">Previous</button>
+            <button type="button" class="action" [disabled]="page.pagination.page >= page.pagination.totalPages" (click)="load(page.pagination.page + 1)">Next</button>
+          </div>
+        </div>
+      } @else if (error()) { <button class="action" type="button" (click)="load(1)">Try again</button> }
+    </div>
+  </app-component-card>
+  @for (id of historyId() ? [historyId()] : []; track id) {
+    <app-organization-history [context]="context" resource="cost-allocations" [recordId]="id" />
+  }
+</div>

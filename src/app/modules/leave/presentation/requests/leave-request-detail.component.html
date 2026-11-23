@@ -1,0 +1,111 @@
+<div class="space-y-5">
+  <a class="action" [routerLink]="['/leave', context.company.id, 'requests']">Back to requests</a>
+  @if (notice()) { <p role="status" class="notice">{{ notice() }}</p> }
+  @if (loading()) { <p role="status" class="text-sm text-gray-600 dark:text-gray-400">Loading request…</p> }
+  @if (error()) {
+    <p role="alert" class="feedback">{{ error() }}</p>
+    @if (stale() || !request()) { <button type="button" class="action" (click)="load()">Refresh request</button> }
+  }
+  @if (!loading() && request(); as row) {
+    <app-component-card [title]="directory.name(row.employeeId)" [desc]="types[row.leaveType] + ' · ' + statuses[row.status]">
+      <dl class="grid gap-3 text-sm text-gray-700 dark:text-gray-300 sm:grid-cols-2 xl:grid-cols-4">
+        <div><dt>Department</dt><dd class="font-semibold">{{ directory.department(row.employeeId) }}</dd></div>
+        <div><dt>Requested days</dt><dd class="font-semibold">{{ row.requestedDays }}</dd></div>
+        @if (actualDays() !== null) { <div><dt>Actual days taken</dt><dd class="font-semibold">{{ actualDays() }}</dd></div> }
+        <div><dt>Submitted</dt><dd class="font-semibold">{{ (row.submittedAt | date:'medium') || '—' }}</dd></div>
+        <div><dt>Created by</dt><dd class="font-semibold">Account #{{ row.createdByUserId }}</dd></div>
+      </dl>
+      @if (row.reason) { <p class="mt-3 whitespace-pre-wrap text-sm text-gray-700 dark:text-gray-300">{{ row.reason }}</p> }
+      <ul class="mt-4 divide-y divide-gray-200 dark:divide-gray-800">
+        @for (period of row.periods; track period.id) {
+          <li class="flex flex-wrap justify-between gap-2 py-2 text-sm text-gray-700 dark:text-gray-300">
+            <span>{{ period.startDate | date:'mediumDate':'UTC' }} – {{ period.endDate | date:'mediumDate':'UTC' }}</span><strong>{{ period.calculatedDays }} working days</strong>
+          </li>
+        }
+      </ul>
+      <div class="mt-4 flex flex-wrap gap-2">
+        @if (row.status === 'DRAFT' && has('leave.requests.update')) {
+          <button type="button" class="action" [disabled]="busy() || !!action() || editing()" (click)="editing.set(true)">Edit draft</button>
+        }
+        @for (option of options(); track option) {
+          <button type="button" class="action" [disabled]="busy() || !!action() || editing()" (click)="open(option, row)">{{ labels[option].label }}</button>
+        }
+      </div>
+    </app-component-card>
+    @if (editing()) { <app-leave-draft [context]="context" [request]="row" (dismissed)="editing.set(false)" (changed)="notice.set('Draft saved.'); load()" /> }
+    @if (action(); as selected) {
+      <app-component-card [title]="labels[selected].label">
+        <form (ngSubmit)="confirm()" class="space-y-4">
+          <fieldset [disabled]="busy()" class="space-y-4">
+            @switch (selected) {
+              @case ('approve') { <p class="text-sm text-gray-700 dark:text-gray-300">Approval reserves {{ row.requestedDays }} working days. The API checks availability again before recording the decision.</p> }
+              @case ('cancel') { <p class="text-sm text-gray-700 dark:text-gray-300">Confirm cancellation. Any active reservation will be released by the API.</p> }
+              @case ('start') { <p class="text-sm text-gray-700 dark:text-gray-300">Confirm the employee has started this leave period.</p> }
+              @case ('reschedule') { <app-leave-periods [(periods)]="segments" /> }
+              @case ('interrupt') {
+                <div class="grid gap-3 sm:grid-cols-2">
+                  <label class="field">Start<input class="control" type="date" name="from" [(ngModel)]="from" [attr.min]="row.startDate" [attr.max]="row.endDate" required /></label>
+                  <label class="field">End<input class="control" type="date" name="to" [(ngModel)]="to" [attr.min]="from || row.startDate" [attr.max]="row.endDate" required /></label>
+                </div>
+                <label class="field">Reason<textarea class="control" name="reason" [(ngModel)]="reason" maxlength="500" required></textarea></label>
+              }
+              @case ('complete') {
+                <label class="field">Actual days taken<input class="control" type="number" name="usedDays" [(ngModel)]="usedDays" min="1" [attr.max]="row.requestedDays" step="1" required /></label>
+              }
+            }
+            @if (selected === 'approve' || selected === 'reject' || selected === 'return') {
+              <label class="field">{{ selected === 'reject' ? 'Rejection reason' : 'Comments' }}<textarea class="control" name="comments" [(ngModel)]="comments" maxlength="1000" [required]="selected === 'reject'"></textarea></label>
+            }
+            @if (error()) { <p role="alert" class="feedback">{{ error() }}</p> }
+            <div class="flex gap-2">
+              <button class="action action-primary" type="submit" [disabled]="stale()">{{ busy() ? 'Saving…' : 'Confirm' }}</button>
+              <button class="action" type="button" (click)="action.set(null); error.set('')">Back</button>
+            </div>
+          </fieldset>
+        </form>
+      </app-component-card>
+    }
+    <div class="grid gap-5 lg:grid-cols-2">
+      @if (has('leave.accounts.read')) {
+        <app-component-card title="Leave account">
+          @if (balance(); as ledger) {
+            <dl class="space-y-2 text-sm text-gray-700 dark:text-gray-300">
+              <div class="flex justify-between"><dt>Available now</dt><dd>{{ ledger.available }}</dd></div>
+              <div class="flex justify-between"><dt>Already reserved on account</dt><dd>{{ ledger.reserved }}</dd></div>
+              @if (row.status === 'DRAFT' || row.status === 'PENDING_APPROVAL' || row.status === 'RETURNED') {
+                <div class="flex justify-between font-semibold"><dt>Estimated available after approval</dt><dd>{{ ledger.available - row.requestedDays }}</dd></div>
+              }
+            </dl>
+          } @else { <p class="text-sm text-gray-600 dark:text-gray-400">Balance unavailable.</p> }
+          <a class="action mt-3" [routerLink]="['/leave', context.company.id, 'balances', row.accountId]">Open leave account</a>
+        </app-component-card>
+      }
+      @if (has('leave.planning.read')) {
+        <app-component-card title="Blocking overlaps">
+          @if (conflicts(); as entries) {
+            <ul class="space-y-2 text-sm text-gray-700 dark:text-gray-300">
+              @for (entry of entries; track $index) {
+                <li><a class="text-brand-700 dark:text-brand-300" [routerLink]="['/leave', context.company.id, 'requests', entry.conflictingRequestId]">
+                  {{ entry.overlapStart | date:'mediumDate':'UTC' }} – {{ entry.overlapEnd | date:'mediumDate':'UTC' }} · {{ statuses[entry.conflictingStatus] }}</a></li>
+              } @empty { <li>No blocking overlaps found.</li> }
+            </ul>
+          } @else { <p class="text-sm text-gray-600 dark:text-gray-400">Overlap check unavailable.</p> }
+        </app-component-card>
+      }
+    </div>
+    <app-component-card title="Decision history">
+      <ol class="divide-y divide-gray-200 text-sm text-gray-700 dark:divide-gray-800 dark:text-gray-300">
+        <li class="py-2">Draft created · {{ row.createdAt | date:'medium' }}</li>
+        @if (row.submittedAt) { <li class="py-2">Latest submission · {{ row.submittedAt | date:'medium' }}</li> }
+        @for (entry of history() ?? row.approvals; track $index) {
+          <li class="py-2"><strong>{{ statuses[entry.decision] }}</strong> · Account #{{ entry.approverUserId }} · {{ entry.decidedAt | date:'medium' }}
+            @if (entry.comments) { <p class="mt-1 whitespace-pre-wrap">{{ entry.comments }}</p> }
+          </li>
+        }
+      </ol>
+      @if (has('audit:records:read-tenant')) {
+        <a class="action mt-3" [routerLink]="['/leave', context.company.id, 'history']" [queryParams]="{request: row.id}">Open audit for this request</a>
+      }
+    </app-component-card>
+  }
+</div>

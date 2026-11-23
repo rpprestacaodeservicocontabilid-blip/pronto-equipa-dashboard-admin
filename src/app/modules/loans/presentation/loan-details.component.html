@@ -1,0 +1,212 @@
+<a class="action" [routerLink]="['/loans', company, mode]">Back to list</a>
+@if (notice()) { <p role="status" class="notice">{{ notice() }}</p> }
+@if (loading()) { <p role="status" class="text-sm text-gray-600 dark:text-gray-400">Loading loan…</p> }
+@if (error()) {
+  <p role="alert" class="feedback">{{ error() }}</p>
+  <button class="action" type="button" (click)="retry()">Try again</button>
+}
+@if (view(); as data) {
+  @let loan = data.loan;
+  <app-component-card [title]="loan.loanNumber" [desc]="employeeName(data)">
+    <dl class="grid gap-4 text-sm text-gray-700 sm:grid-cols-2 xl:grid-cols-4 dark:text-gray-300">
+      <div><dt class="font-semibold">Status</dt><dd>{{ label(loan.status) }}</dd></div>
+      <div><dt class="font-semibold">Granted principal</dt><dd>{{ money(loan.principalAmount, loan.currency) }}</dd></div>
+      <div><dt class="font-semibold">Principal repaid</dt><dd>{{ loan.disbursedAt ? money(amortized(loan), loan.currency) : '—' }}</dd></div>
+      <div><dt class="font-semibold">Reconciled balance</dt><dd>{{ loan.disbursedAt ? money(loan.balance.total, loan.currency) : 'Awaiting disbursement' }}</dd></div>
+      @if (loan.disbursedAt) {
+        <div><dt class="font-semibold">Principal outstanding</dt><dd>{{ money(loan.balance.principal, loan.currency) }}</dd></div>
+        <div><dt class="font-semibold">Interest outstanding</dt><dd>{{ money(loan.balance.interest, loan.currency) }}</dd></div>
+        <div><dt class="font-semibold">Disbursed</dt><dd>{{ loan.disbursedAt | date:'mediumDate' }}</dd></div>
+      }
+      @if (data.application; as original) {
+        <div><dt class="font-semibold">Loan type</dt><dd>{{ label(original.loanType) }}</dd></div>
+      }
+    </dl>
+    @if (data.employee && data.employee.status !== 'ACTIVE' && isCollecting(loan) && !zeroBalance(loan)) {
+      <p class="rounded-lg bg-warning-50 p-3 text-sm text-warning-800 dark:bg-warning-500/15 dark:text-warning-300" role="status">
+        The employee's status is {{ label(data.employee.status).toLowerCase() }} and this loan still has an outstanding balance.
+      </p>
+    }
+    <nav aria-label="Loan details" class="flex flex-wrap gap-1">
+      @for (tab of tabs; track tab.mode) {
+        <a class="section-link" [routerLink]="['/loans', company, tab.mode, id]" routerLinkActive="active" ariaCurrentWhenActive="page">{{ tab.title }}</a>
+      }
+    </nav>
+  </app-component-card>
+
+  @for (issue of data.relatedErrors; track issue) { <p class="feedback" role="alert">{{ issue }}</p> }
+  @if (hasExport(data) && mode !== 'renegotiations') {
+    <div class="flex flex-wrap gap-2">
+      <button class="action" type="button" (click)="exportRecord(data, 'excel')">Export Excel</button>
+      <button class="action" type="button" (click)="exportRecord(data, 'pdf')">Print / PDF</button>
+    </div>
+  }
+  @if (pending(); as request) {
+    <app-loan-action [company]="company" [request]="request" (cancelled)="pending.set(null)" (saved)="completed($event)" />
+  }
+
+  @switch (mode) {
+    @case ('active') {
+      <app-component-card title="Loan operations">
+        @if (nextInstallment(data); as next) {
+          <p class="text-sm text-gray-700 dark:text-gray-300">Next open installment · No. {{ next.installmentNumber }} · Due {{ next.dueDate }}</p>
+        }
+        <div class="flex flex-wrap gap-2">
+          @if (can('loans.manage') && isCollecting(loan)) {
+            <button type="button" class="action" [disabled]="!!pending()" (click)="begin({
+              action: loan.status === 'ACTIVE' ? 'suspend' : 'resume', id: loan.id, description: loan.loanNumber
+            })">{{ loan.status === 'ACTIVE' ? 'Suspend collection' : 'Resume collection' }}</button>
+          }
+          @if (can('applications.read')) {
+            <a class="action" [routerLink]="['/loans', company, 'applications', loan.applicationId]">Original application</a>
+          }
+          @if (can('audit:records:read-tenant')) {
+            <a class="action" [routerLink]="['/loans', company, 'audit']" [queryParams]="{resource: loan.id}">View audit history</a>
+          }
+          @if (can('deductions.read')) {
+            <a class="action" [routerLink]="['/loans', company, 'deductions']" [queryParams]="{loan: loan.id}">Payroll deductions</a>
+          }
+        </div>
+      </app-component-card>
+      @if (data.history; as history) {
+        <app-component-card title="Confirmed financial movements">
+          <div class="overflow-x-auto rounded-lg border border-gray-200 dark:border-gray-800">
+            <table class="w-full min-w-[44rem] text-start text-sm text-gray-700 dark:text-gray-300">
+              <thead class="table-heading"><tr><th scope="col">Recorded</th><th scope="col">Movement</th><th scope="col">Principal</th><th scope="col">Interest</th><th scope="col">Source / reference</th><th scope="col">Actor</th></tr></thead>
+              <tbody class="divide-y divide-gray-100 dark:divide-gray-800">
+                @for (entry of history.ledger; track entry.id) {
+                  <tr><td class="table-cell">{{ entry.occurredAt | date:'medium' }}</td><td class="table-cell">{{ label(entry.entryType) }}</td>
+                    <td class="table-cell">{{ money(entry.principalAmount, entry.currency) }}</td><td class="table-cell">{{ money(entry.interestAmount, entry.currency) }}</td>
+                    <td class="table-cell max-w-72 wrap-anywhere">{{ label(entry.source) }} · {{ entry.externalReference || '—' }}</td>
+                    <td class="table-cell">{{ entry.createdBy ?? '—' }}</td></tr>
+                } @empty { <tr><td class="table-cell" colspan="6">No financial movements have been recorded.</td></tr> }
+              </tbody>
+            </table>
+          </div>
+        </app-component-card>
+      }
+    }
+    @case ('repayment-plans') {
+      @if (data.plans; as plans) {
+        @for (plan of plans; track plan.id) {
+          <app-component-card [title]="'Plan version ' + plan.version" [desc]="label(plan.status) + ' · Effective ' + plan.effectiveFrom">
+            <p class="text-sm text-gray-700 dark:text-gray-300">{{ plan.installmentCount }} installments · Total {{ money(plan.totalAmount, loan.currency) }}</p>
+            <app-loan-installments [installments]="plan.installments" [currency]="loan.currency" />
+          </app-component-card>
+        } @empty { <p class="text-sm text-gray-600 dark:text-gray-400">No repayment plans.</p> }
+      }
+    }
+    @case ('installments') {
+      @if (data.installments; as installments) {
+        <app-component-card title="Installments in the current plan">
+          @if (nextInstallment(data); as next) {
+            @if (loan.status === 'ACTIVE' && can('deductions.request')) {
+              <button type="button" class="action action-primary" [disabled]="!!pending()" (click)="begin({
+                action: 'request-deduction', id: loan.id, itemId: next.id, description: 'Next open installment · ' + next.dueDate
+              })">Request payroll deduction</button>
+            }
+          }
+          <app-loan-installments [installments]="installments" [currency]="loan.currency" [showPaid]="true" />
+        </app-component-card>
+      }
+    }
+    @case ('disbursements') {
+      <app-component-card title="Disbursement records">
+        @if (showDisbursement(data)) {
+          <button class="action action-primary" type="button" [disabled]="!!pending()" (click)="begin({
+            action: 'request-disbursement', id: loan.id, itemId: failedDisbursement(data), description: loan.loanNumber + ' · ' + money(loan.principalAmount, loan.currency)
+          })">Request disbursement</button>
+        }
+        @if (data.disbursements; as disbursements) {
+          <ul class="divide-y divide-gray-100 dark:divide-gray-800">
+            @for (item of disbursements; track item.id) {
+              <li class="flex flex-wrap items-start justify-between gap-3 py-3 text-sm text-gray-700 dark:text-gray-300">
+                <div class="min-w-0">
+                  <p class="font-medium">{{ label(item.status) }} · {{ money(item.amount, loan.currency) }}</p>
+                  <p class="wrap-anywhere">Reference {{ item.paymentReference || '—' }} · User {{ item.createdBy }} · {{ item.createdAt | date:'medium' }}</p>
+                  @if (item.confirmedAt) { <p>Confirmed {{ item.confirmedAt | date:'medium' }}</p> }
+                </div>
+                @if (loan.status === 'PENDING_DISBURSEMENT' && item.status === 'REQUESTED' && can('disbursements.confirm')) {
+                  <button class="action" type="button" [disabled]="!!pending()" (click)="begin({
+                    action: 'confirm-disbursement', id: loan.id, itemId: item.id, reference: item.paymentReference ?? '',
+                    description: 'Confirm payment of ' + money(item.amount, loan.currency) + ' for ' + loan.loanNumber + '.'
+                  })">Confirm disbursement</button>
+                }
+              </li>
+            } @empty { <li class="text-sm text-gray-600 dark:text-gray-400">No disbursements have been requested.</li> }
+          </ul>
+        }
+      </app-component-card>
+    }
+    @case ('repayments') {
+      <app-component-card title="Confirmed repayments">
+        @if (isCollecting(loan) && !zeroBalance(loan) && can('repayments.register')) {
+          <button class="action action-primary" type="button" [disabled]="!!pending()" (click)="begin({
+            action: 'repayment', id: loan.id, maximum: loan.balance.total, description: loan.loanNumber + ' · Use the reference from the confirmed payment.'
+          })">Record repayment</button>
+        }
+        @if (data.repayments; as repayments) {
+          <ul class="divide-y divide-gray-100 dark:divide-gray-800">
+            @for (item of repayments; track item.id) {
+              <li class="flex flex-wrap items-start justify-between gap-3 py-3 text-sm text-gray-700 dark:text-gray-300">
+                <div class="min-w-0">
+                  <p class="font-medium">{{ money(item.amount, loan.currency) }} · {{ label(item.status) }}</p>
+                  <p class="wrap-anywhere">{{ label(item.source) }} · Reference {{ item.externalReference || '—' }} · User {{ item.createdBy ?? '—' }} · {{ item.createdAt | date:'medium' }}</p>
+                </div>
+                @if (item.status === 'CONFIRMED' && item.source !== 'PAYROLL' && can('repayments.reverse')) {
+                  <button class="action" type="button" [disabled]="!!pending()" (click)="begin({
+                    action: 'reverse', id: loan.id, itemId: item.id,
+                    description: 'Record a reversal for ' + money(item.amount, loan.currency) + ' · ' + (item.externalReference ?? item.id)
+                  })">Reverse repayment</button>
+                }
+              </li>
+            } @empty { <li class="text-sm text-gray-600 dark:text-gray-400">No repayments have been recorded.</li> }
+          </ul>
+        }
+      </app-component-card>
+    }
+    @case ('renegotiations') {
+      <app-component-card title="Renegotiate the current plan">
+        @if (data.plans?.[0]; as current) {
+          <p class="text-sm text-gray-700 dark:text-gray-300">Plan version {{ current.version }} · {{ current.installmentCount }} installments · Reconciled balance {{ money(loan.balance.total, loan.currency) }}</p>
+        }
+        <div class="flex flex-wrap gap-2">
+          @if (loan.status === 'ACTIVE' && !zeroBalance(loan) && can('renegotiations.request')) {
+            <button class="action action-primary" type="button" [disabled]="!!pending()" (click)="begin({
+              action: 'renegotiate', id: loan.id, description: loan.loanNumber + ' · Approval publishes a new plan version.'
+            })">Request renegotiation</button>
+          }
+          @if (can('renegotiations.decide')) {
+            <a class="action" [routerLink]="['/loans', company, 'renegotiations']" [queryParams]="{request: renegotiation()?.id}">Open decision by reference</a>
+          }
+        </div>
+        @if (renegotiation(); as request) {
+          <dl class="space-y-2 text-sm text-gray-700 dark:text-gray-300">
+            <div><dt class="font-semibold">Request ID</dt><dd class="break-all">{{ request.id }}</dd></div>
+            <div><dt class="font-semibold">Proposed terms</dt><dd>{{ request.installmentCount }} installments · {{ label(request.frequency) }} · From {{ request.firstDueDate }}</dd></div>
+            <div><dt class="font-semibold">Status</dt><dd>{{ label(request.status) }}</dd></div>
+          </dl>
+          @if (can('audit:records:read-tenant')) {
+            <a class="action" [routerLink]="['/loans', company, 'audit']" [queryParams]="{resource: request.id}">Audit this request</a>
+          }
+        }
+      </app-component-card>
+    }
+    @case ('settlements') {
+      <app-component-card title="Loan settlement">
+        @if (loan.status === 'SETTLED' && zeroBalance(loan)) {
+          <p class="text-sm text-gray-700 dark:text-gray-300">This loan is settled. Reconciled balance {{ money(loan.balance.total, loan.currency) }}.</p>
+          <button class="action" type="button" (click)="settlementStatement(data)">Print settlement statement / PDF</button>
+        } @else if (isCollecting(loan) && zeroBalance(loan)) {
+          @if (can('loans.settle')) {
+            <button class="action action-primary" type="button" [disabled]="!!pending()" (click)="begin({
+              action: 'settle', id: loan.id, description: loan.loanNumber + ' · Reconciled balance ' + money(loan.balance.total, loan.currency)
+            })">Settle loan</button>
+          } @else { <p class="text-sm text-gray-600 dark:text-gray-400">This loan has a zero balance and is awaiting settlement.</p> }
+        } @else {
+          <p class="text-sm text-gray-700 dark:text-gray-300">Settlement requires a confirmed disbursement and a reconciled balance of zero.</p>
+        }
+      </app-component-card>
+    }
+  }
+}

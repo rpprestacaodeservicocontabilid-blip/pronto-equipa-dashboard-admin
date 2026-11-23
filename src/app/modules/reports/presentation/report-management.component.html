@@ -1,0 +1,219 @@
+<app-page-breadcrumb [pageTitle]="section.title" />
+
+<div class="mb-5 flex flex-wrap items-center justify-between gap-3">
+  <a class="pr-link text-sm" routerLink="/reports/overview">Platform reports</a>
+  @if (section.view === 'executions') { <a class="pr-button" routerLink="/reports/analysis">Run a report</a> }
+  @if (section.view === 'exports') { <a class="pr-secondary" routerLink="/reports/executions">Open execution history</a> }
+</div>
+@if (notice()) { <p class="mb-4 rounded-lg border border-success-200 bg-success-50 p-3 text-sm text-success-700 dark:border-success-500/30 dark:bg-success-500/10 dark:text-success-300" role="status">{{ notice() }}</p> }
+@if (actionError()) { <p class="pr-error mb-4" role="alert">{{ actionError() }}</p> }
+@if (catalogueError()) { <p class="pr-error mb-4" role="alert">{{ catalogueError() }}</p> }
+
+@if (section.view === 'templates' && catalog().length) {
+  <app-component-card class="mb-5" [title]="fromTemplate() ? 'Publish a new version' : 'Save a report template'">
+    <form #templateEdit="ngForm" (ngSubmit)="saveTemplate()" class="space-y-4">
+      <div class="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
+        <label class="pr-label">Template title<input class="pr-input" name="title" required minlength="2" maxlength="100" [(ngModel)]="templateForm.title"></label>
+        <label class="pr-label">Report<select class="pr-input" name="code" [(ngModel)]="templateForm.code">
+          @for (item of catalog(); track item.code) { <option [ngValue]="item.code">{{ item.title }}</option> }
+        </select></label>
+        <app-report-company-picker [disabled]="!companyFilter(templateForm.code)" [(companyId)]="templateForm.scope.companyId" />
+        <label class="pr-label">From<input class="pr-input" type="date" name="from" required [(ngModel)]="templateForm.scope.from"></label>
+        <label class="pr-label">Through<input class="pr-input" type="date" name="to" required [(ngModel)]="templateForm.scope.to"></label>
+        <label class="pr-label">Group by<select class="pr-input" name="grouping" [(ngModel)]="templateForm.scope.grouping"><option value="month">Month</option><option value="day">Day</option></select></label>
+      </div>
+      <div class="flex flex-wrap gap-2">
+        <button class="pr-button" type="submit" [disabled]="templateEdit.invalid || writing()">{{ fromTemplate() ? 'Publish new version' : 'Publish template' }}</button>
+        @if (fromTemplate()) { <button class="pr-secondary" type="button" [disabled]="writing()" (click)="edit(null)">Cancel editing</button> }
+      </div>
+    </form>
+  </app-component-card>
+}
+
+@if (section.view === 'schedules' && catalog().length) {
+  <app-component-card class="mb-5" [title]="editingSchedule() ? 'Edit schedule' : 'Create a schedule'">
+    <p class="pr-muted mb-4">Runs start at 06:00 Luanda time and use the previous complete day, week or month.</p>
+    <form #scheduleEdit="ngForm" (ngSubmit)="saveSchedule()" class="space-y-4">
+      <div class="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
+        <label class="pr-label">Schedule title<input class="pr-input" name="title" required minlength="2" maxlength="100" [(ngModel)]="scheduleForm.title"></label>
+        <label class="pr-label">Report<select class="pr-input" name="code" [(ngModel)]="scheduleForm.code">
+          @for (item of catalog(); track item.code) { <option [ngValue]="item.code">{{ item.title }}</option> }
+        </select></label>
+        <app-report-company-picker [disabled]="!companyFilter(scheduleForm.code)" [(companyId)]="scheduleForm.companyId" />
+        <label class="pr-label">Frequency<select class="pr-input" name="cadence" [(ngModel)]="scheduleForm.cadence">
+          <option value="DAILY">Daily</option><option value="WEEKLY">Weekly on Monday</option><option value="MONTHLY">Monthly on the first day</option>
+        </select></label>
+        <label class="pr-label">Group results by<select class="pr-input" name="grouping" [(ngModel)]="scheduleForm.grouping"><option value="day">Day</option><option value="month">Month</option></select></label>
+      </div>
+      <div class="flex flex-wrap gap-2">
+        <button class="pr-button" type="submit" [disabled]="scheduleEdit.invalid || writing()">{{ editingSchedule() ? 'Save schedule' : 'Create schedule' }}</button>
+        @if (editingSchedule()) { <button class="pr-secondary" type="button" [disabled]="writing()" (click)="editSchedule(null)">Cancel editing</button> }
+      </div>
+    </form>
+  </app-component-card>
+}
+
+@if (section.view === 'executions') {
+  @if (selectionError()) { <p class="pr-error mb-4" role="alert">{{ selectionError() }}</p> }
+  @if (selectionBusy()) { <p class="pr-muted mb-4" role="status">Loading report results…</p> }
+  @if (selected(); as item) {
+    <app-component-card class="mb-5" [title]="title(item.code)">
+      <div class="mb-4 flex flex-wrap items-center justify-between gap-3">
+        <div>
+          <span class="pr-badge" [attr.data-status]="item.status">{{ label(item.status) }}</span>
+          <p class="pr-muted mt-2">{{ item.scope.from }} to {{ item.scope.to }} · {{ item.scope.companyId ? 'Company #' + item.scope.companyId : 'All companies' }} · Definition version {{ item.version }}</p>
+          <p class="pr-muted mt-1">Created {{ item.createdAt | date:'medium':'+0100' }} @if (item.durationMs !== undefined) { · {{ item.durationMs | number }} ms }</p>
+        </div>
+        <div class="flex flex-wrap items-end gap-2">
+          @if (item.status === 'COMPLETED') {
+            <label class="pr-label">Export format<select class="pr-input" [(ngModel)]="format">
+              @for (type of formats; track type) { <option [ngValue]="type">{{ label(type) }}</option> }
+            </select></label>
+            <button class="pr-button" type="button" [disabled]="writing()" (click)="prepareExport(item)">Create and download</button>
+          }
+          @if (item.status === 'FAILED') { <button class="pr-button" type="button" [disabled]="writing()" (click)="retry(item)">Retry execution</button> }
+          @if (item.status === 'QUEUED' || item.status === 'RUNNING') { <button class="pr-secondary" type="button" (click)="select(item.id)">Refresh status</button> }
+          <a class="pr-secondary" routerLink="/reports/executions">Close result</a>
+        </div>
+      </div>
+      @if (item.failure) { <p class="pr-error">{{ label(item.failure) }}</p> }
+      @if (item.status === 'COMPLETED') { <app-report-result-table [observations]="item.rows" /> }
+    </app-component-card>
+  }
+}
+
+@if (error()) {
+  <div class="pr-error flex flex-wrap items-center justify-between gap-3" role="alert">{{ error() }}
+    <button class="pr-secondary" type="button" (click)="load()">Reload data</button>
+  </div>
+} @else if (busy()) {
+  <p class="pr-muted py-5" role="status">Loading report records…</p>
+} @else {
+  @switch (section.view) {
+    @case ('executions') {
+      <app-component-card title="Recent executions">
+        <div class="overflow-x-auto"><table class="pr-table w-full">
+          <thead><tr><th scope="col">Report</th><th scope="col">Status</th><th scope="col">Scope</th><th scope="col">Groups</th><th scope="col">Duration</th><th scope="col">Created</th><th scope="col">Action</th></tr></thead>
+          <tbody>
+            @for (item of executions(); track item.id) {
+              <tr>
+                <td>{{ title(item.code) }} @if (item.scheduleId) { <p class="pr-muted">Scheduled</p> }</td>
+                <td><span class="pr-badge" [attr.data-status]="item.status">{{ label(item.status) }}</span></td>
+                <td>{{ item.scope.companyId ? 'Company #' + item.scope.companyId : 'All companies' }}<p class="pr-muted mt-1 whitespace-nowrap">{{ item.scope.from }} to {{ item.scope.to }}</p></td>
+                <td>{{ item.rowCount | number }}</td>
+                <td class="whitespace-nowrap">{{ item.durationMs === undefined ? '—' : item.durationMs + ' ms' }}</td>
+                <td class="whitespace-nowrap">{{ item.createdAt | date:'mediumDate':'+0100' }}</td>
+                <td><a class="pr-link" routerLink="/reports/executions" [queryParams]="{ id: item.id }" [attr.aria-label]="'Open ' + title(item.code) + ' execution'">Open</a></td>
+              </tr>
+            } @empty { <tr><td colspan="7">Your report executions will appear here.</td></tr> }
+          </tbody>
+        </table></div>
+      </app-component-card>
+    }
+    @case ('exports') {
+      <app-component-card title="Export history">
+        <div class="overflow-x-auto"><table class="pr-table w-full">
+          <thead><tr><th scope="col">File</th><th scope="col">Format</th><th scope="col">Status</th><th scope="col">Available until</th><th scope="col">Action</th></tr></thead>
+          <tbody>
+            @for (item of exports(); track item.id) {
+              <tr>
+                <td class="break-all">{{ item.filename }}</td><td>{{ label(item.format) }}</td>
+                <td><span class="pr-badge" [attr.data-status]="item.status">{{ label(item.status) }}</span></td>
+                <td class="whitespace-nowrap">{{ item.dueAt | date:'medium':'+0100' }}</td>
+                <td>@if (item.status === 'READY') {
+                  <button class="pr-link" type="button" [disabled]="writing()" (click)="download(item)">Download</button>
+                } @else {
+                  <a class="pr-link" routerLink="/reports/executions" [queryParams]="{ id: item.executionId }">Open execution</a>
+                }</td>
+              </tr>
+            } @empty { <tr><td colspan="5">Create an export from a completed execution.</td></tr> }
+          </tbody>
+        </table></div>
+      </app-component-card>
+    }
+    @case ('templates') {
+      <app-component-card title="Template versions">
+        <div class="overflow-x-auto"><table class="pr-table w-full">
+          <thead><tr><th scope="col">Template</th><th scope="col">Report</th><th scope="col">Version</th><th scope="col">Published</th><th scope="col">Actions</th></tr></thead>
+          <tbody>
+            @for (item of templates(); track item.id) {
+              <tr><td>{{ item.title }}</td><td>{{ title(item.code) }}</td><td>{{ item.version }}</td>
+                <td>{{ item.createdAt | date:'mediumDate':'+0100' }}</td>
+                <td><div class="flex flex-wrap gap-3">
+                  <a class="pr-link" routerLink="/reports/analysis" [queryParams]="{ code: item.code, from: item.scope.from, to: item.scope.to, companyId: item.scope.companyId, grouping: item.scope.grouping }">Use template</a>
+                  <button class="pr-link" type="button" [disabled]="writing()" (click)="edit(item)">New version</button>
+                </div></td>
+              </tr>
+            } @empty { <tr><td colspan="5">No templates have been published from this account.</td></tr> }
+          </tbody>
+        </table></div>
+      </app-component-card>
+    }
+    @case ('schedules') {
+      <app-component-card title="Schedule history and status">
+        <div class="overflow-x-auto"><table class="pr-table w-full">
+          <thead><tr><th scope="col">Schedule</th><th scope="col">Frequency</th><th scope="col">Status</th><th scope="col">Next run</th><th scope="col">Last run</th><th scope="col">Action</th></tr></thead>
+          <tbody>
+            @for (item of schedules(); track item.id) {
+              <tr><td>{{ item.title }}<p class="pr-muted mt-1">{{ title(item.code) }}</p></td>
+                <td>{{ label(item.cadence) }}</td>
+                <td><span class="pr-badge" [attr.data-status]="item.status">{{ label(item.status) }}</span></td>
+                <td>{{ (item.dueAt | date:'medium':'+0100') || '—' }}</td>
+                <td>@if (item.lastExecutionId) {
+                  <a class="pr-link" routerLink="/reports/executions" [queryParams]="{ id: item.lastExecutionId }">{{ label(item.lastState || 'Execution') }}</a>
+                } @else { {{ label(item.lastState || 'Awaiting first run') }} }</td>
+                <td><div class="flex flex-wrap gap-3">
+                  <button class="pr-link" type="button" [disabled]="writing()" (click)="editSchedule(item)">Edit</button>
+                  <button class="pr-link" type="button" [disabled]="writing()" (click)="toggle(item)">{{ item.status === 'ACTIVE' ? 'Pause' : 'Resume' }}</button>
+                </div></td>
+              </tr>
+            } @empty { <tr><td colspan="6">No platform schedules have been created.</td></tr> }
+          </tbody>
+        </table></div>
+      </app-component-card>
+    }
+    @case ('audit') {
+      <app-component-card title="Your platform reporting activity">
+        <div class="overflow-x-auto"><table class="pr-table w-full">
+          <thead><tr><th scope="col">Event</th><th scope="col">Reference</th><th scope="col">Recorded at</th></tr></thead>
+          <tbody>
+            @for (item of audit(); track item.id) {
+              <tr><td>{{ label(item.action) }}</td><td class="break-all">{{ item.reference || '—' }}</td><td>{{ item.createdAt | date:'medium':'+0100' }}</td></tr>
+            } @empty { <tr><td colspan="3">No actions have been recorded from this account.</td></tr> }
+          </tbody>
+        </table></div>
+      </app-component-card>
+    }
+    @case ('policy') {
+      @if (policy(); as item) {
+        <div class="grid gap-5 xl:grid-cols-2">
+          <app-component-card [title]="'Current policy · Version ' + item.current.version">
+            <p class="pr-muted mb-4">New runs use the maximum reporting period. New exports receive the published download window.</p>
+            <form #policyEdit="ngForm" (ngSubmit)="publish()" class="space-y-4">
+              <label class="pr-label">Maximum report period in days<input class="pr-input" type="number" name="maxDays" required min="31" max="366" step="1" [(ngModel)]="policyForm.maxDays"></label>
+              <label class="pr-label">Download window in hours<input class="pr-input" type="number" name="exportHours" required min="1" max="168" step="1" [(ngModel)]="policyForm.exportHours"></label>
+              <label class="pr-label">Reason for change<textarea class="pr-input" name="reason" rows="3" required minlength="3" maxlength="1000" [(ngModel)]="policyForm.reason"></textarea></label>
+              <button class="pr-button" type="submit" [disabled]="policyEdit.invalid || writing()">Publish policy</button>
+            </form>
+          </app-component-card>
+          <app-component-card title="Published versions">
+            <ul class="divide-y divide-gray-100 dark:divide-gray-800">
+              @for (version of item.history; track version.id) {
+                <li class="py-3"><p class="text-sm font-medium text-gray-900 dark:text-gray-200">Version {{ version.version }} · {{ version.createdAt | date:'mediumDate':'+0100' }}</p>
+                  <p class="pr-muted mt-1">{{ version.maxDays }} day maximum · {{ version.exportHours }} hour download window</p>
+                  <p class="pr-muted mt-1 break-words">{{ version.reason }}</p></li>
+              } @empty { <li class="pr-muted">The default policy is active.</li> }
+            </ul>
+          </app-component-card>
+        </div>
+      }
+    }
+  }
+  @if (total() > limit && section.view !== 'policy') {
+    <div class="mt-4 flex flex-wrap items-center justify-between gap-2">
+      <p class="pr-muted" aria-live="polite">{{ total() | number }} records · Page {{ page() }}</p>
+      <div class="flex gap-2"><button class="pr-secondary" type="button" [disabled]="page() <= 1" (click)="load(page() - 1)">Previous</button>
+        <button class="pr-secondary" type="button" [disabled]="page() * limit >= total()" (click)="load(page() + 1)">Next</button></div>
+    </div>
+  }
+}

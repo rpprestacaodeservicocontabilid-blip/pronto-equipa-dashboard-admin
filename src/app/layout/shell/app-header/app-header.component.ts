@@ -1,9 +1,10 @@
 import { CommonModule } from '@angular/common';
-import { Component } from '@angular/core';
+import { Component, inject } from '@angular/core';
 import { RouterModule } from '@angular/router';
 import { ThemeToggleButtonComponent } from '../../../shared/components/common/theme-toggle/theme-toggle-button.component';
 import { UserDropdownComponent } from '../../header/user-dropdown/user-dropdown.component';
 import { SidebarService } from '../../../core/services/sidebar.service';
+import { AuthService } from '../../../core/auth/auth.service';
 
 import { ButtonComponent } from '../../../shared/components/ui/button/button.component';
 
@@ -18,6 +19,7 @@ import { ButtonComponent } from '../../../shared/components/ui/button/button.com
   templateUrl: './app-header.component.html',
 })
 export class AppHeaderComponent {
+  protected readonly auth = inject(AuthService);
   isApplicationMenuOpen = false;
   readonly isMobileOpen$;
 

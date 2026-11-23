@@ -1,0 +1,29 @@
+<div class="workspace-ui space-y-5">
+  <app-page-breadcrumb [pageTitle]="section().title" homeLink="/payroll" />
+  @let state = view();
+  @if ('error' in state) {
+    <p class="feedback" role="alert">{{ state.error }}</p>
+    <a class="action" routerLink="/payroll">Select a company</a>
+  } @else {
+    <div class="flex flex-wrap items-center justify-between gap-3">
+      <h2 class="text-lg font-semibold text-gray-900 dark:text-white">{{ state.context.company.name }}</h2>
+      <a class="action" routerLink="/payroll">Switch company</a>
+    </div>
+    @for (page of [state]; track page.context.company.id + '/' + page.section.path + '/' + (page.create ? 'new' : page.id)) {
+      @if (page.section.view === 'periods') {
+        <app-payroll-periods [context]="page.context" [periodId]="page.id" [creating]="page.create" />
+      } @else if (page.create) {
+        <app-payroll-run-form [context]="page.context" [section]="page.section" />
+      } @else if (page.id) {
+        <app-payroll-run [context]="page.context" [section]="page.section" [runId]="page.id" />
+      } @else {
+        @switch (page.section.view) {
+          @case ('overview') { <app-payroll-overview [context]="page.context" /> }
+          @case ('reports') { <app-payroll-reports [context]="page.context" /> }
+          @case ('settings') { <app-payroll-settings [context]="page.context" /> }
+          @case ('runs') { <app-payroll-runs [context]="page.context" [section]="page.section" /> }
+        }
+      }
+    }
+  }
+</div>

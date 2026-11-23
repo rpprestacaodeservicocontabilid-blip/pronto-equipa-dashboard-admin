@@ -1,0 +1,40 @@
+<app-component-card title="Approval policies" desc="A new policy applies to runs submitted after publication. Runs already submitted keep their recorded policy.">
+  @if (failure()) { <p class="feedback mb-3" role="alert">{{ failure() }}</p> }
+  @if (notice()) { <p class="notice mb-3" role="status">{{ notice() }}</p> }
+  @let response = policies();
+  @if (!response) {
+    <p role="status" class="text-sm text-gray-600 dark:text-gray-400">Loading policies…</p>
+  } @else if ('error' in response) {
+    <p class="feedback" role="alert">{{ response.error }}</p><button type="button" class="action" (click)="refresh()">Try again</button>
+  } @else {
+    @if (editing()) {
+      <form #form="ngForm" class="mb-5 space-y-3" (ngSubmit)="save()">
+        <div class="grid max-w-xl gap-3 sm:grid-cols-2">
+          <label class="field">Policy code <input class="control" name="code" required maxlength="100" [(ngModel)]="code" [disabled]="busy()" /></label>
+          <label class="field">Required distinct approvals
+            <select class="control" name="approvers" [(ngModel)]="requiredApprovals" [disabled]="busy()">
+              @for (count of [1, 2, 3, 4, 5]; track count) { <option [ngValue]="count">{{ count }}</option> }
+            </select>
+          </label>
+        </div>
+        <div class="flex flex-wrap gap-2">
+          <button type="submit" class="action action-primary" [disabled]="busy() || form.invalid">Publish policy</button>
+          <button type="button" class="action" [disabled]="busy()" (click)="editing.set(false)">Cancel</button>
+        </div>
+      </form>
+    } @else {
+      <button type="button" class="action action-primary mb-4" (click)="editing.set(true)">New approval policy</button>
+    }
+    <div class="overflow-x-auto">
+      <table class="w-full text-start text-sm text-gray-700 dark:text-gray-300">
+        <thead class="table-heading"><tr><th scope="col">Code</th><th scope="col">Required approvals</th><th scope="col">Status</th><th scope="col">Published</th></tr></thead>
+        <tbody class="divide-y divide-gray-200 dark:divide-gray-800">
+          @for (policy of response.data; track policy.id) {
+            <tr><td class="table-cell">{{ policy.data.code }}</td><td class="table-cell">{{ policy.data.requiredApprovals }}</td>
+              <td class="table-cell">{{ label(policy.status) }}</td><td class="table-cell">{{ date(policy.createdAt, true) }}</td></tr>
+          } @empty { <tr><td class="table-cell" colspan="4">No policies are configured. Payroll uses one distinct approver by default.</td></tr> }
+        </tbody>
+      </table>
+    </div>
+  }
+</app-component-card>

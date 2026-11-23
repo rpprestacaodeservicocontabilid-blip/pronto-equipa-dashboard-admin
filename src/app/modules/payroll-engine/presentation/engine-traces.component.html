@@ -1,0 +1,78 @@
+<div class="space-y-5">
+  <app-component-card title="Find a calculation trace" desc="Select a payroll run and an employee result to view the evidence recorded at calculation time.">
+    @let runs = availableRuns();
+    @if (!runs) {
+      <p role="status" class="text-sm text-gray-600 dark:text-gray-400">Loading payroll runs…</p>
+    } @else if ('error' in runs) {
+      <p class="feedback" role="alert">{{ runs.error }}</p>
+      <button type="button" class="action mt-2" (click)="reloadRuns()">Try again</button>
+    } @else if (runs.data.length) {
+      <label class="field max-w-lg">Payroll run
+        <select class="control" name="run" [ngModel]="ids().run" (ngModelChange)="openRun($event)">
+          <option value="">Select a run</option>
+          @for (run of runs.data; track run.id) {
+            <option [value]="run.id">{{ titles[run.runType] }} · {{ date(run.createdAt) }} · {{ run.id.slice(0, 8) }}</option>
+          }
+        </select>
+      </label>
+    } @else {
+      <p class="text-sm text-gray-600 dark:text-gray-400">No payroll runs are available.</p>
+    }
+
+    @if (ids().run) {
+      @let results = availableResults();
+      <div class="mt-4">
+        @if (!results) {
+          <p role="status" class="text-sm text-gray-600 dark:text-gray-400">Loading employee results…</p>
+        } @else if ('error' in results) {
+          <p class="feedback" role="alert">{{ results.error }}</p>
+          <button type="button" class="action mt-2" (click)="reloadResults()">Try again</button>
+        } @else if (results.data.length) {
+          <label class="field mb-3 max-w-lg">Filter by employee ID
+            <input class="control" type="search" [ngModel]="search()" (ngModelChange)="setSearch($event)" />
+          </label>
+          <div class="overflow-x-auto">
+            <table class="w-full text-start text-sm text-gray-700 dark:text-gray-300">
+              <thead class="table-heading"><tr><th scope="col">Employee</th><th scope="col">Net pay</th><th scope="col">Evidence</th></tr></thead>
+              <tbody class="divide-y divide-gray-200 dark:divide-gray-800">
+                @for (row of rows(); track row.id) {
+                  <tr>
+                    <td class="table-cell break-all">{{ row.employeeId }}</td>
+                    <td class="table-cell whitespace-nowrap">{{ money(row.netAmount, row.currency) }}</td>
+                    <td class="table-cell">
+                      <a class="font-medium text-brand-700 hover:underline dark:text-brand-300" [routerLink]="[]" queryParamsHandling="merge"
+                        [queryParams]="{ result: row.id }" [attr.aria-current]="row.id === ids().result ? 'true' : null"
+                        [attr.aria-label]="'Open trace for ' + row.employeeId">Open trace</a>
+                    </td>
+                  </tr>
+                } @empty { <tr><td class="table-cell" colspan="3">No employee results match this filter.</td></tr> }
+              </tbody>
+            </table>
+          </div>
+          @if (matching().length > pageSize) {
+            <div class="mt-3 flex flex-wrap items-center gap-2 text-sm text-gray-600 dark:text-gray-400">
+              <span>Page {{ page() }} · {{ matching().length }} results</span>
+              <button type="button" class="action" [disabled]="page() === 1" (click)="changePage(-1)">Previous</button>
+              <button type="button" class="action" [disabled]="page() * pageSize >= matching().length" (click)="changePage(1)">Next</button>
+            </div>
+          }
+        } @else {
+          <p class="text-sm text-gray-600 dark:text-gray-400">No employee results have been recorded for this run.</p>
+        }
+      </div>
+    }
+  </app-component-card>
+  @if (ids().result) {
+    <app-component-card title="Recorded calculation">
+      @let trace = saved();
+      @if (!trace) {
+        <p role="status" class="text-sm text-gray-600 dark:text-gray-400">Loading calculation evidence…</p>
+      } @else if ('error' in trace) {
+        <p class="feedback" role="alert">{{ trace.error }}</p>
+        <button type="button" class="action mt-2" (click)="reloadTrace()">Try again</button>
+      } @else {
+        @if (trace.data; as evidence) { <app-engine-evidence [evidence]="evidence" /> }
+      }
+    </app-component-card>
+  }
+</div>

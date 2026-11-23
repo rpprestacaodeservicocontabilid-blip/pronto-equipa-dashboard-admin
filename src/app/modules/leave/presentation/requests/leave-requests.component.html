@@ -1,0 +1,66 @@
+<app-component-card [title]="mode === 'approvals' ? 'Requests awaiting a decision' : mode === 'history' ? 'Request history' : 'Leave requests'">
+  <div class="space-y-4">
+    <form (ngSubmit)="search()" class="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+      @if (directory.employees().length) {
+        <label class="field">Employee<select class="control" name="employee" [(ngModel)]="employee">
+          <option value="">All employees</option>
+          @for (worker of directory.employees(); track worker.id) { <option [value]="worker.id">{{ directory.name(worker.id) }} · {{ worker.employeeNumber }}</option> }
+        </select></label>
+      }
+      @if (directory.departments().length) {
+        <label class="field">Department<select class="control" name="department" [(ngModel)]="department">
+          <option value="">All departments</option>
+          @for (entry of directory.departments(); track entry.id) { <option [value]="entry.id">{{ entry.name }}</option> }
+        </select></label>
+      }
+      @if (mode !== 'approvals') {
+        <label class="field">Status<select class="control" name="status" [(ngModel)]="status">
+          <option value="">All statuses</option>
+          @for (state of statuses; track state[0]) { <option [ngValue]="state[0]">{{ state[1] }}</option> }
+        </select></label>
+      }
+      <label class="field">Leave type<select class="control" name="type" [(ngModel)]="type">
+        <option value="">All types</option>
+        @for (entry of types; track entry[0]) { <option [ngValue]="entry[0]">{{ entry[1] }}</option> }
+      </select></label>
+      <label class="field">From<input class="control" name="from" type="date" [(ngModel)]="from" [attr.max]="to || null" /></label>
+      <label class="field">To<input class="control" name="to" type="date" [(ngModel)]="to" [attr.min]="from || null" /></label>
+      @if (mode === 'history') { <label class="field">Decision maker account<input class="control" name="actor" [(ngModel)]="actor" inputmode="numeric" /></label> }
+      <div class="flex flex-wrap items-end gap-2">
+        <button class="action" type="submit" [disabled]="busy()">Apply filters</button>
+        @if (mode === 'requests' && context.permissions.includes('leave.requests.create')) {
+          <a class="action action-primary" [routerLink]="['/leave', context.company.id, 'requests', 'new']">New request</a>
+        }
+      </div>
+    </form>
+    @if (error()) { <p role="alert" class="feedback">{{ error() }}</p> }
+    @if (busy()) { <p role="status" class="text-sm text-gray-600 dark:text-gray-400">Loading requests…</p> }
+    @else if (result(); as page) {
+      <div class="overflow-x-auto rounded-lg border border-gray-200 dark:border-gray-800">
+        <table class="w-full min-w-[40rem] text-start text-sm text-gray-700 dark:text-gray-300">
+          <thead class="table-heading"><tr><th scope="col">Employee</th><th scope="col">Department</th><th scope="col">Period</th><th scope="col">Days</th><th scope="col">Submitted</th><th scope="col">Status</th></tr></thead>
+          <tbody class="divide-y divide-gray-200 dark:divide-gray-800">
+            @for (row of page.data; track row.id) {
+              <tr>
+                <td class="table-cell"><a class="font-semibold text-brand-700 dark:text-brand-300" [routerLink]="['/leave', context.company.id, 'requests', row.id]">{{ directory.name(row.employeeId) }}</a>
+                  <span class="block text-xs">{{ directory.employee(row.employeeId)?.employeeNumber || typeNames[row.leaveType] }}</span></td>
+                <td class="table-cell">{{ directory.department(row.employeeId) }}</td>
+                <td class="table-cell">{{ row.startDate | date:'mediumDate':'UTC' }} – {{ row.endDate | date:'mediumDate':'UTC' }}</td>
+                <td class="table-cell">{{ row.requestedDays }}</td>
+                <td class="table-cell">{{ (row.submittedAt | date:'mediumDate') || '—' }}</td>
+                <td class="table-cell">{{ statusNames[row.status] }}</td>
+              </tr>
+            } @empty { <tr><td class="table-cell text-center" colspan="6">No matching leave requests.</td></tr> }
+          </tbody>
+        </table>
+      </div>
+      <div class="flex flex-wrap items-center justify-between gap-2">
+        <span class="text-sm text-gray-600 dark:text-gray-400">{{ page.pagination.total }} requests · Page {{ page.pagination.page }} / {{ page.pagination.totalPages || 1 }}</span>
+        <div class="flex gap-2">
+          <button class="action" type="button" [disabled]="page.pagination.page <= 1" (click)="load(page.pagination.page - 1)">Previous</button>
+          <button class="action" type="button" [disabled]="page.pagination.page >= page.pagination.totalPages" (click)="load(page.pagination.page + 1)">Next</button>
+        </div>
+      </div>
+    }
+  </div>
+</app-component-card>

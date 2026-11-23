@@ -1,0 +1,40 @@
+<div class="space-y-4">
+  @if (error()) { <p role="alert" class="feedback">{{ error() }}</p> }
+  @if (loading()) {
+    <p role="status" class="text-sm text-gray-600 dark:text-gray-400">Loading linked documents…</p>
+  } @else if (context.permissions.includes('contracts.documents.read')) {
+    <ul class="divide-y divide-gray-200 dark:divide-gray-800">
+      @for (record of records(); track record.id) {
+        <li class="flex flex-wrap items-center justify-between gap-3 py-3">
+          <div class="min-w-0 text-sm text-gray-700 dark:text-gray-300">
+            <p class="font-medium">{{ record.payload.documentType }}</p>
+            <p class="break-all text-gray-600 dark:text-gray-400">{{ documentId(record) }} · {{ date(record.createdAt) }}</p>
+          </div>
+          @if (documentId(record); as document) {
+            <div class="flex flex-wrap gap-2">
+              @if (canOpen('preview')) { <button class="action" type="button" [disabled]="busy()" (click)="prepare(document, 'preview')">Preview</button> }
+              @if (canOpen('download')) { <button class="action" type="button" [disabled]="busy()" (click)="prepare(document, 'download')">Get download link</button> }
+              @if (access(); as link) {
+                @if (link.id === document) {
+                  <a class="action action-primary" [href]="link.url" target="_blank" rel="noopener noreferrer"
+                     [attr.download]="link.purpose === 'download' ? '' : null">{{ link.purpose === 'preview' ? 'Open preview' : 'Download document' }}</a>
+                }
+              }
+            </div>
+          }
+        </li>
+      } @empty {
+        <li class="text-sm text-gray-600 dark:text-gray-400">No linked documents.</li>
+      }
+    </ul>
+  }
+  @if (canLink) {
+    <div class="grid items-end gap-3 border-t border-gray-200 pt-4 dark:border-gray-800 sm:grid-cols-[1fr_minmax(8rem,auto)]">
+      <app-contract-document-picker [companyId]="context.company.id" [(selected)]="selected" />
+      <label class="field">Document type<select class="control" [(ngModel)]="type">
+        <option value="CONTRACT">Contract</option><option value="ATTACHMENT">Attachment</option><option value="SUPPORTING">Supporting document</option>
+      </select></label>
+      <button class="action action-primary justify-self-start" type="button" (click)="link()" [disabled]="!selected || busy()">Link document</button>
+    </div>
+  }
+</div>

@@ -1,0 +1,64 @@
+<a class="action" [routerLink]="['/loans', company, 'applications']">Back to applications</a>
+@if (notice()) { <p role="status" class="notice">{{ notice() }}</p> }
+@if (error()) {
+  <p class="feedback" role="alert">{{ error() }}</p>
+  <button class="action" type="button" (click)="load()">Try again</button>
+}
+@if (busy()) { <p role="status" class="text-sm text-gray-600 dark:text-gray-400">Loading application…</p> }
+@if (record(); as application) {
+  @if (editing()) {
+    <app-loan-application-editor [context]="context" [application]="application"
+      (cancelled)="editing.set(false)" (saved)="editing.set(false); notice.set('Draft updated.'); load()" />
+  } @else {
+    <app-component-card title="Application details">
+      <dl class="grid gap-x-6 gap-y-3 text-sm text-gray-700 sm:grid-cols-2 xl:grid-cols-3 dark:text-gray-300">
+        <div class="min-w-0"><dt class="font-semibold">Application ID</dt><dd class="break-all">{{ application.id }}</dd></div>
+        <div><dt class="font-semibold">Loan type</dt><dd>{{ label(application.loanType) }}</dd></div>
+        <div><dt class="font-semibold">Status</dt><dd>{{ label(application.status) }}</dd></div>
+        <div><dt class="font-semibold">Requested</dt><dd>{{ money(application.requestedAmount, application.currency) }}</dd></div>
+        <div><dt class="font-semibold">Repayment terms</dt><dd>{{ application.installmentCount }} · {{ label(application.frequency) }} · From {{ application.firstDueDate }}</dd></div>
+        <div><dt class="font-semibold">Annual interest</dt><dd>{{ application.annualInterestBps / 100 }}%</dd></div>
+        <div class="min-w-0"><dt class="font-semibold">Employee ID</dt><dd class="break-all">{{ application.employeeId }}</dd></div>
+        <div><dt class="font-semibold">Applicant</dt><dd>User {{ application.createdBy }} · {{ application.createdAt | date:'medium' }}</dd></div>
+        <div><dt class="font-semibold">Revision</dt><dd>{{ application.version }}</dd></div>
+        <div class="sm:col-span-2 xl:col-span-3"><dt class="font-semibold">Reason</dt><dd class="whitespace-pre-wrap wrap-anywhere">{{ application.reason }}</dd></div>
+      </dl>
+      <app-loan-eligibility [context]="context" [employeeId]="application.employeeId" />
+      <div class="flex flex-wrap gap-2">
+        @if (application.status === 'DRAFT' && can('applications.update')) {
+          <button class="action" type="button" [disabled]="!!pending() || simulating()" (click)="editing.set(true)">Edit draft</button>
+        }
+        @for (item of actions(application); track item.action) {
+          <button class="action" type="button" [disabled]="!!pending() || simulating()"
+            (click)="pending.set({action: item.action, id: application.id, description: label(application.loanType) + ' · ' + money(application.requestedAmount)})">{{ item.title }}</button>
+        }
+        @if (can('simulations.create') && (application.status === 'DRAFT' || application.status === 'PENDING_APPROVAL')) {
+          <button class="action" type="button" [disabled]="simulating() || !!pending()" (click)="runSimulation(application)">{{ simulating() ? 'Simulating…' : 'Simulate repayment' }}</button>
+        }
+        @if (can('loans.read') && ['APPROVED', 'ACTIVE', 'SETTLED'].includes(application.status)) {
+          <a class="action" [routerLink]="['/loans', company, 'active']" [queryParams]="{employee: application.employeeId, application: application.id}">Find linked loan</a>
+        }
+        @if (can('audit:records:read-tenant')) {
+          <a class="action" [routerLink]="['/loans', company, 'audit']" [queryParams]="{resource: application.id}">View audit history</a>
+        }
+      </div>
+      @if (application.status === 'PENDING_APPROVAL' && own(application) && can('applications.decide')) {
+        <p class="text-sm text-gray-600 dark:text-gray-400">Another authorized user must decide this application.</p>
+      }
+      @if (simulationError()) { <p role="alert" class="feedback">{{ simulationError() }}</p> }
+      @if (preview(); as result) { <app-loan-simulation [simulation]="result" /> }
+    </app-component-card>
+    @if (pending(); as request) {
+      <app-loan-action [company]="company" [request]="request" (cancelled)="pending.set(null)" (saved)="completed($event)" />
+    }
+    <app-component-card title="Approval history">
+      <ul class="space-y-3 text-sm text-gray-700 dark:text-gray-300">
+        @for (decision of application.approvals; track decision.id) {
+          <li><strong>{{ label(decision.decision) }}</strong> · User {{ decision.approverId }} · {{ decision.decidedAt | date:'medium' }}
+            @if (decision.comments) { <p class="whitespace-pre-wrap wrap-anywhere">{{ decision.comments }}</p> }
+          </li>
+        } @empty { <li>No decisions recorded.</li> }
+      </ul>
+    </app-component-card>
+  }
+}

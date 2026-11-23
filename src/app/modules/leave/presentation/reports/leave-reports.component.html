@@ -1,0 +1,54 @@
+<app-component-card title="Leave reports">
+  <div class="space-y-4">
+    <form (ngSubmit)="load()" class="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+      <label class="field">Report<select class="control" name="report" [(ngModel)]="report" [disabled]="loading() || exporting()">
+        @for (entry of options; track entry.id) { <option [ngValue]="entry.id">{{ entry.label }}</option> }
+      </select></label>
+      @if (directory.employees().length) {
+        <label class="field">Employee<select class="control" name="employee" [(ngModel)]="employee">
+          <option value="">All employees</option>@for (entry of directory.employees(); track entry.id) { <option [value]="entry.id">{{ directory.name(entry.id) }}</option> }
+        </select></label>
+      }
+      @if (report !== 'balances') {
+        <label class="field">From<input class="control" type="date" name="from" [(ngModel)]="from" required /></label>
+        <label class="field">To<input class="control" type="date" name="to" [(ngModel)]="to" [attr.min]="from" required /></label>
+      }
+      @if (report === 'department' && directory.departments().length) {
+        <label class="field">Department<select class="control" name="department" [(ngModel)]="department">
+          <option value="">All departments</option>@for (entry of directory.departments(); track entry.id) { <option [value]="entry.id">{{ entry.name }}</option> }
+        </select></label>
+      }
+      <button class="action action-primary self-end justify-self-start" type="submit" [disabled]="loading() || exporting() || !directory.ready()">Generate report</button>
+    </form>
+    @if (error()) { <p role="alert" class="feedback">{{ error() }}</p> }
+    @if (loading()) { <p role="status" class="text-sm text-gray-600 dark:text-gray-400">Preparing report…</p> }
+    @if (data(); as result) {
+      <div class="flex flex-wrap items-center justify-between gap-2">
+        <div><h4 class="font-semibold text-gray-900 dark:text-gray-100">{{ result.title }}</h4><p class="text-sm text-gray-600 dark:text-gray-400">{{ result.summary }}</p></div>
+        <div class="flex gap-2">
+          <button class="action" type="button" [disabled]="exporting() || !result.rows.length" (click)="export('excel')">Export Excel</button>
+          <button class="action" type="button" [disabled]="exporting() || !result.rows.length" (click)="export('pdf')">Print / save PDF</button>
+        </div>
+      </div>
+      <div class="overflow-x-auto rounded-lg border border-gray-200 dark:border-gray-800">
+        <table class="w-full min-w-[28rem] text-start text-sm text-gray-700 dark:text-gray-300">
+          <thead class="table-heading"><tr>@for (heading of result.headings; track heading) { <th scope="col">{{ heading }}</th> }</tr></thead>
+          <tbody class="divide-y divide-gray-200 dark:divide-gray-800">
+            @for (row of result.rows.slice((page() - 1) * pageSize, page() * pageSize); track $index) {
+              <tr>@for (cell of row; track $index) { <td class="table-cell">{{ cell }}</td> }</tr>
+            } @empty { <tr><td class="table-cell text-center" [attr.colspan]="result.headings.length">No data for the selected filters.</td></tr> }
+          </tbody>
+        </table>
+      </div>
+      @if (result.rows.length > pageSize) {
+        <div class="flex flex-wrap items-center justify-between gap-2">
+          <span class="text-sm text-gray-600 dark:text-gray-400">{{ result.rows.length }} rows · Page {{ page() }}</span>
+          <div class="flex gap-2">
+            <button type="button" class="action" [disabled]="page() <= 1" (click)="page.set(page() - 1)">Previous</button>
+            <button type="button" class="action" [disabled]="page() * pageSize >= result.rows.length" (click)="page.set(page() + 1)">Next</button>
+          </div>
+        </div>
+      }
+    }
+  </div>
+</app-component-card>

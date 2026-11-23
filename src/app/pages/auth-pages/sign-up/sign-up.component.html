@@ -1,3 +1,5 @@
 <app-auth-page-layout>
-  <app-sign-up-content />
+  <app-sign-up-content [isSubmitting]="busy()" [googleEnabled]="google.enabled" (formSubmit)="register($event)" (googleSelect)="googleSignUp()">
+    @if (error()) { <p role="alert" class="mb-4 rounded-lg bg-error-50 p-3 text-sm text-error-700 dark:bg-error-500/10 dark:text-error-400">{{ error() }}</p> }
+  </app-sign-up-content>
 </app-auth-page-layout>

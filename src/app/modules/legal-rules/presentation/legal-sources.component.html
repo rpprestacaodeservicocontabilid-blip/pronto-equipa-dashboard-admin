@@ -1,0 +1,71 @@
+<div class="space-y-5">
+  @if (notice()) { <p class="notice" role="status">{{ notice() }}</p> }
+  @if (open() && canCreate()) {
+    <app-component-card title="Register legislation">
+      <form class="space-y-4" (ngSubmit)="save()">
+        <fieldset [disabled]="working()" class="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+          <label class="field">Instrument type <select class="control" name="type" [(ngModel)]="draft.type">
+            @for (type of types; track type) { <option [value]="type">{{ label(type) }}</option> }
+          </select></label>
+          <label class="field">Official reference <input class="control" name="reference" [(ngModel)]="draft.reference" maxlength="120" required /></label>
+          <label class="field">Title <input class="control" name="title" [(ngModel)]="draft.title" maxlength="250" required /></label>
+          <label class="field">Issuing institution <input class="control" name="issuer" [(ngModel)]="draft.issuer" maxlength="200" required /></label>
+          <label class="field">Published on <input class="control" type="date" name="publishedOn" [(ngModel)]="draft.publishedOn" required /></label>
+          <label class="field">Effective from <input class="control" type="date" name="effectiveFrom" [(ngModel)]="draft.effectiveFrom" /></label>
+          <label class="field">Official source URL <input class="control" type="url" name="officialUrl" [(ngModel)]="draft.officialUrl" maxlength="1000" required /></label>
+          <label class="field">Official PDF or document URL <input class="control" type="url" name="documentUrl" [(ngModel)]="draft.documentUrl" maxlength="1000" /></label>
+          <label class="field">Relevant articles <input class="control" name="articles" [(ngModel)]="draft.articles" maxlength="1000" /></label>
+          <label class="field">Relationship <select class="control" name="relationship" [(ngModel)]="relationship">
+            <option value="">None</option><option value="AMENDS">Amends</option><option value="REPEALS">Repeals</option>
+          </select></label>
+          @if (relationship) {
+            <label class="field">Related reference <input class="control" name="relatedReference" [(ngModel)]="draft.relatedReference" maxlength="120" required /></label>
+          }
+          <label class="field">Legal notes <textarea class="control" name="notes" [(ngModel)]="draft.notes" maxlength="1000" rows="2"></textarea></label>
+        </fieldset>
+        @if (error()) { <p class="feedback" role="alert">{{ error() }}</p> }
+        <div class="flex flex-wrap gap-2">
+          <button class="action action-primary" type="submit" [disabled]="working()">Register instrument</button>
+          <button class="action" type="button" [disabled]="working()" (click)="open.set(false)">Cancel</button>
+        </div>
+      </form>
+    </app-component-card>
+  }
+  <app-component-card title="Legislation library" desc="Angolan instruments and their official references.">
+    <div class="mb-4 flex flex-wrap items-end gap-3">
+      <label class="field min-w-44 grow">Search legislation
+        <input class="control" type="search" [ngModel]="query()" (ngModelChange)="query.set($event)" placeholder="Reference, title or issuer" />
+      </label>
+      @if (canCreate() && !open()) { <button type="button" class="action action-primary" (click)="open.set(true)">Register legislation</button> }
+    </div>
+    @let result = response();
+    @if (!result) { <p role="status" class="text-sm text-gray-600 dark:text-gray-400">Loading legislation…</p> }
+    @else if ('error' in result) {
+      <p class="feedback" role="alert">{{ result.error }}</p><button class="action mt-3" type="button" (click)="reload()">Try again</button>
+    } @else {
+      <ul class="divide-y divide-gray-200 dark:divide-gray-800">
+        @for (source of visible(); track source.id) {
+          <li class="py-3">
+            <details>
+              <summary class="cursor-pointer text-sm text-gray-800 dark:text-gray-200">
+                <span class="font-semibold">{{ source.reference }}</span> · {{ source.title }} · {{ source.publishedOn }}
+              </summary>
+              <dl class="mt-3 grid gap-3 text-sm text-gray-700 sm:grid-cols-2 xl:grid-cols-3 dark:text-gray-300">
+                <div><dt class="font-medium">Type</dt><dd>{{ label(source.type) }}</dd></div>
+                <div><dt class="font-medium">Issuer</dt><dd>{{ source.issuer }}</dd></div>
+                <div><dt class="font-medium">Effective date</dt><dd>{{ source.effectiveFrom || '—' }}</dd></div>
+                @if (source.articles) { <div><dt class="font-medium">Articles</dt><dd>{{ source.articles }}</dd></div> }
+                @if (source.notes) { <div><dt class="font-medium">Legal notes</dt><dd class="whitespace-pre-wrap">{{ source.notes }}</dd></div> }
+                @if (source.relation) { <div><dt class="font-medium">{{ label(source.relation) }}</dt><dd>{{ source.relatedReference }}</dd></div> }
+              </dl>
+              <div class="mt-3 flex flex-wrap gap-2">
+                @if (link(source.officialUrl); as url) { <a class="action" [href]="url" target="_blank" rel="noopener noreferrer">Official source</a> }
+                @if (link(source.documentUrl); as url) { <a class="action" [href]="url" target="_blank" rel="noopener noreferrer">Official document</a> }
+              </div>
+            </details>
+          </li>
+        } @empty { <li class="py-3 text-sm text-gray-600 dark:text-gray-400">No legal instruments match this search.</li> }
+      </ul>
+    }
+  </app-component-card>
+</div>

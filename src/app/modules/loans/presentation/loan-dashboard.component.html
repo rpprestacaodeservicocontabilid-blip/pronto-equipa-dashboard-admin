@@ -1,0 +1,62 @@
+@if (can('deductions.read')) {
+  <app-component-card title="Deduction period" desc="The selected month filters confirmed deductions. Portfolio balances reflect the current ledger.">
+    <form (ngSubmit)="apply()" class="flex flex-wrap items-end gap-3">
+      <label class="field">Payroll deduction month<input class="control" type="month" name="month" [(ngModel)]="month" required /></label>
+      <button type="submit" class="action action-primary" [disabled]="busy() || loadingTrend()">Apply month</button>
+    </form>
+    @if (dateError()) { <p role="alert" class="feedback">{{ dateError() }}</p> }
+  </app-component-card>
+}
+@if (busy()) { <p class="text-sm text-gray-600 dark:text-gray-400" role="status">Loading loan overview…</p> }
+@if (error()) {
+  <p class="feedback" role="alert">{{ error() }}</p>
+  <button class="action" type="button" (click)="apply()">Try again</button>
+}
+@if (data(); as summary) {
+  <div class="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+    @for (metric of metrics(summary); track metric.title) {
+      <a [routerLink]="['/loans', company, metric.path]" [queryParams]="metric.query"
+        class="rounded-2xl border border-gray-200 bg-white p-5 hover:border-brand-300 dark:border-gray-800 dark:bg-white/[0.03] dark:hover:border-brand-500">
+        <p class="text-sm text-gray-600 dark:text-gray-400">{{ metric.title }}</p>
+        <p class="mt-2 text-title-sm font-semibold text-gray-900 tabular-nums dark:text-white">{{ metric.value }}</p>
+      </a>
+    }
+  </div>
+  @if (summary.recent; as recent) {
+    <app-component-card title="Recent applications">
+      <ul class="divide-y divide-gray-100 dark:divide-gray-800">
+        @for (item of recent; track item.id) {
+          <li><a class="flex flex-wrap items-center justify-between gap-2 py-3 text-sm text-brand-700 dark:text-brand-300"
+            [routerLink]="['/loans', company, 'applications', item.id]">
+            <span>{{ item.id.slice(0, 8) }} · {{ label(item.loanType) }} · {{ label(item.status) }}</span>
+            <span>{{ money(item.requestedAmount, item.currency) }} · {{ item.createdAt | date:'mediumDate' }}</span>
+          </a></li>
+        } @empty { <li class="text-sm text-gray-600 dark:text-gray-400">No applications yet.</li> }
+      </ul>
+    </app-component-card>
+  }
+  @if (can('loans.read')) {
+    <app-component-card title="Principal disbursed by month">
+      <div class="flex flex-wrap items-center gap-3">
+        <button class="action" type="button" [disabled]="loadingTrend()" (click)="loadTrend()">
+          {{ loadingTrend() ? 'Loading disbursements…' : trend() ? 'Refresh monthly totals' : 'Load last six months' }}
+        </button>
+        @if (can('reports.read')) {
+          <a class="action" [routerLink]="['/loans', company, 'reports']" [queryParams]="{report: 'granted', from: monthBegin, to: monthEnd}">View disbursed loans</a>
+        }
+      </div>
+      @if (trendError()) { <p class="feedback" role="alert">{{ trendError() }}</p> }
+      @if (trend(); as months) {
+        <ul class="space-y-3">
+          @for (item of months; track item.month) {
+            <li class="grid items-center gap-3 text-sm text-gray-700 sm:grid-cols-[7rem_1fr_11rem] dark:text-gray-300">
+              <span>{{ item.month }}</span>
+              <meter min="0" max="100" [value]="share(item.amount, months)" [attr.aria-label]="'Principal disbursed in ' + item.month + ' relative to the largest month'" class="h-4 w-full accent-brand-500"></meter>
+              <strong class="tabular-nums sm:text-end">{{ money(item.amount) }} · {{ item.count }}</strong>
+            </li>
+          }
+        </ul>
+      }
+    </app-component-card>
+  }
+}

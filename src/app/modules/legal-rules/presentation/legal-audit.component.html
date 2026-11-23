@@ -1,0 +1,35 @@
+<app-component-card title="Legal audit log">
+  <form class="mb-5 flex flex-wrap items-end gap-3" (ngSubmit)="search()">
+    <label class="field min-w-56 flex-1">Purpose for accessing audit history
+      <input class="control" name="purpose" [(ngModel)]="purpose" maxlength="2000" required minlength="3" />
+    </label>
+    <button type="submit" class="action action-primary" [disabled]="purpose.trim().length < 3">Load audit history</button>
+  </form>
+  @if (request()) {
+    @let history = result();
+    @if (!history) { <p role="status" class="text-sm text-gray-600 dark:text-gray-400">Loading audit history…</p> }
+    @else if ('error' in history) { <p class="feedback" role="alert">{{ history.error }}</p> }
+    @else {
+      @if (history.data; as record) {
+        <div class="overflow-x-auto">
+          <table class="w-full text-start text-sm text-gray-700 dark:text-gray-300">
+            <thead class="table-heading"><tr><th scope="col">Action</th><th scope="col">Actor</th><th scope="col">Occurred at (UTC)</th><th scope="col">Outcome</th><th scope="col">Record</th></tr></thead>
+            <tbody class="divide-y divide-gray-200 dark:divide-gray-800">
+              @for (row of record.data; track row.id) {
+                <tr><td class="table-cell">{{ row.action }}</td><td class="table-cell">{{ row.actorId ?? '—' }}</td>
+                  <td class="table-cell">{{ row.occurredAt }}</td><td class="table-cell">{{ label(row.outcome) }}</td>
+                  <td class="table-cell break-all">
+                    @if (row.resourceType === 'legal_rule_set' && row.resourceId && isRecordId(row.resourceId)) {
+                      <a class="text-brand-700 hover:underline dark:text-brand-300" [routerLink]="['/legal-rules/rule-sets', row.resourceId]">Open version</a>
+                    } @else { {{ row.resourceId ?? '—' }} }
+                  </td>
+                </tr>
+              } @empty { <tr><td colspan="5" class="table-cell">No regulatory events were found.</td></tr> }
+            </tbody>
+          </table>
+        </div>
+        @if (record.nextCursor !== null) { <button type="button" class="action mt-4" (click)="search(record.nextCursor, record.throughSequence)">Next page</button> }
+      }
+    }
+  }
+</app-component-card>

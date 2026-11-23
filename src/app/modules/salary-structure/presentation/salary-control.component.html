@@ -1,0 +1,65 @@
+@if (error()) { <p class="feedback" role="alert">{{ error() }}</p> }
+@if (notice()) { <p class="notice" role="status">{{ notice() }}</p> }
+@if (loading()) { <p class="text-sm text-gray-600 dark:text-gray-400" role="status">Loading records…</p> }
+@switch (mode) {
+  @case ('settings') {
+    <app-component-card title="Salary configuration">
+      <dl class="grid gap-4 text-sm text-gray-700 sm:grid-cols-2 dark:text-gray-300">
+        <div><dt class="font-semibold">Calculation methods</dt><dd>@for (method of methods; track method) { <span class="block">{{ human(method) }}</span> }</dd></div>
+        <div><dt class="font-semibold">Supported frequencies</dt><dd>@for (frequency of frequencies; track frequency) { <span class="block">{{ human(frequency) }}</span> }</dd></div>
+        <div><dt class="font-semibold">Currency</dt><dd>Salary assignments and all included components use the employment contract currency.</dd></div>
+        <div><dt class="font-semibold">Legal classification</dt><dd>Component versions carry the reference supplied by the legal rules source.</dd></div>
+        <div><dt class="font-semibold">Approval</dt><dd>A different authorized user decides structure versions, salary revisions and bulk revisions.</dd></div>
+        <div><dt class="font-semibold">Payroll input</dt><dd>Effective-dated snapshots identify the source assignment and component versions.</dd></div>
+      </dl>
+      <a class="action" [routerLink]="['/salary-structure', company, 'policies']">Open salary policies</a>
+    </app-component-card>
+  }
+  @case ('policies') {
+    @if (form(); as definition) {
+      <app-salary-form [context]="context" [definition]="definition" (cancelled)="form.set(null)" (completed)="published($event)" />
+    } @else if (can('policies:manage')) { <button type="button" class="action action-primary" (click)="edit()">New policy</button> }
+    @if (error() && can('read')) { <button type="button" class="action" (click)="load()">Try again</button> }
+    @if (policies(); as records) {
+      <app-component-card title="Policy versions">
+        @for (policy of records; track policy.id) {
+          <details class="rounded-lg border border-gray-200 p-4 text-sm text-gray-700 dark:border-gray-800 dark:text-gray-300">
+            <summary class="cursor-pointer font-semibold">{{ policy.code }} · v{{ policy.version }} · {{ policy.active ? 'Enabled' : 'Retired' }} · {{ policy.effectiveFrom }} – {{ policy.effectiveTo ?? 'Open' }}</summary>
+            <pre class="my-3 max-h-64 overflow-auto whitespace-pre-wrap wrap-anywhere">{{ policy.rules | json }}</pre>
+            @if (can('policies:manage')) {
+              <button class="action" type="button" [disabled]="!!form()" (click)="edit(policy)">Copy to new version</button>
+            }
+          </details>
+        } @empty { <p class="text-sm text-gray-600 dark:text-gray-400">No salary policies.</p> }
+      </app-component-card>
+    }
+  }
+  @case ('audit') {
+    <app-component-card title="Salary audit history">
+      <form class="space-y-3" (ngSubmit)="audit(true)">
+        <div class="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
+          <label class="field">Reason for access<input class="control" name="purpose" [(ngModel)]="purpose" maxlength="500" [disabled]="loading()" required /></label>
+          <label class="field">Action (optional)<input class="control" name="action" [(ngModel)]="action" maxlength="150" [disabled]="loading()" /></label>
+          <label class="field">Resource ID (optional)<input class="control" name="resource" [(ngModel)]="resource" maxlength="150" [disabled]="loading()" /></label>
+        </div>
+        <button class="action action-primary" type="submit" [disabled]="loading() || !purpose.trim()">View audit history</button>
+      </form>
+      @if (events(); as rows) {
+        <div class="overflow-x-auto rounded-lg border border-gray-200 dark:border-gray-800">
+          <table class="w-full min-w-[40rem] text-start text-sm text-gray-700 dark:text-gray-300">
+            <thead class="table-heading"><tr><th scope="col">Date</th><th scope="col">Action</th><th scope="col">Actor</th><th scope="col">Resource</th><th scope="col">Outcome</th></tr></thead>
+            <tbody class="divide-y divide-gray-100 dark:divide-gray-800">
+              @for (record of rows; track record.id) {
+                <tr><td class="table-cell">{{ record.occurredAt | date:'medium' }}</td><td class="table-cell">{{ record.action }}</td>
+                  <td class="table-cell">{{ record.actorId || '—' }}</td><td class="table-cell max-w-48 wrap-anywhere">{{ record.resourceId || '—' }}
+                    @if (batchLink(record)) { <a class="block text-brand-700 underline dark:text-brand-300" [routerLink]="['/salary-structure', company, 'revision-batches', record.resourceId]">Open batch</a> }
+                  </td><td class="table-cell">{{ human(record.outcome) }}</td></tr>
+              } @empty { <tr><td colspan="5" class="table-cell">No events match the filters.</td></tr> }
+            </tbody>
+          </table>
+        </div>
+        @if (cursor() !== null) { <button class="action" type="button" [disabled]="loading()" (click)="audit(false)">Load more</button> }
+      }
+    </app-component-card>
+  }
+}

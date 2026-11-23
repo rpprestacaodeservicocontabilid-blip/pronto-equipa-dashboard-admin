@@ -1,0 +1,46 @@
+<div class="workspace-ui space-y-5">
+  <app-page-breadcrumb pageTitle="Organization management" homeLink="/organization" />
+  @let state = access();
+  @if ('error' in state) {
+    <p role="alert" class="feedback">{{ state.error }}</p>
+    <a routerLink="/organization" class="action">Select another company</a>
+  } @else {
+    @let context = state.context;
+    @let companyId = context.company.id;
+    <div class="flex flex-wrap items-center justify-between gap-3">
+      <div><p class="text-sm text-gray-600 dark:text-gray-400">Active company</p>
+        <h2 class="text-xl font-semibold text-gray-900 dark:text-gray-100">{{ context.company.name }}</h2></div>
+      <div class="flex flex-wrap gap-2">
+        <a class="action" [routerLink]="['/contracts', companyId]">Contracts</a>
+        <a class="action" routerLink="/organization">Switch company</a>
+      </div>
+    </div>
+    @if (!context.permissions.includes('organization:read')) {
+      <p role="alert" class="feedback">Your company role does not allow access to Organization.</p>
+    } @else {
+      @if (state.readOnly) {
+        <p role="status" class="text-sm text-gray-600 dark:text-gray-400">Basic organization access is available. Company access is required to load your full permissions.</p>
+      }
+      <div>
+        <div class="min-w-0">
+          @for (key of [companyId + ':' + section() + ':' + id()]; track key) {
+            @switch (section()) {
+              @case ('overview') { <app-organization-dashboard [context]="context" /> }
+              @case ('structure') { <app-organization-hierarchy [context]="context" /> }
+              @case ('cost-allocations') { <app-organization-allocations [context]="context" [centerId]="id()" /> }
+              @case ('history') { <app-organization-history [context]="context" /> }
+              @case ('audit') { <app-organization-audit [context]="context" /> }
+              @default {
+                @if (resource(); as collection) {
+                  <app-organization-resource [context]="context" [resource]="collection" [id]="id()" [shiftsOnly]="section() === 'shifts'" />
+                } @else {
+                  <p role="alert" class="feedback">This organization section does not exist.</p>
+                }
+              }
+            }
+          }
+        </div>
+      </div>
+    }
+  }
+</div>

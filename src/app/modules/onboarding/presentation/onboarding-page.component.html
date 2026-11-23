@@ -1,0 +1,282 @@
+<app-page-breadcrumb [pageTitle]="section.title" />
+
+@if (section.kind === 'applications' || section.kind === 'resources' || section.kind === 'events') {
+  <div class="mb-5 flex flex-wrap items-center justify-between gap-3">
+    <a class="ob-link text-sm" routerLink="/onboarding/overview">Onboarding overview</a>
+    @if (section.path === 'assisted' || section.path === 'applications') {
+      <button class="ob-button" type="button" [attr.aria-expanded]="showCreate()" (click)="startCreate()">
+        {{ showCreate() ? 'Close form' : 'New assisted application' }}
+      </button>
+    }
+  </div>
+}
+
+@if (showCreate()) {
+  <app-component-card title="New assisted application" class="mb-5">
+    <p class="ob-muted mb-4">Create a draft for a company representative to claim by invitation. The representative confirms the terms after accepting.</p>
+    <form #createForm="ngForm" (ngSubmit)="create()" class="grid gap-4 md:grid-cols-2">
+      <label class="ob-label">Company name<input name="company" class="ob-input" [(ngModel)]="draft.name" required maxlength="150"></label>
+      <label class="ob-label">Tax ID<input name="taxId" class="ob-input" [(ngModel)]="draft.taxId" required minlength="5" maxlength="50"></label>
+      <label class="ob-label">Company email<input type="email" name="email" class="ob-input" [(ngModel)]="draft.email" required email></label>
+      <label class="ob-label">Phone<input name="phone" type="tel" class="ob-input" [(ngModel)]="draft.phone" maxlength="30"></label>
+      <label class="ob-label md:col-span-2">Address<input name="address" class="ob-input" [(ngModel)]="draft.address" required maxlength="500"></label>
+      <label class="ob-label">Mode<select name="mode" class="ob-input" [(ngModel)]="draft.mode">
+        @for (mode of assistedModes; track mode) { <option [value]="mode">{{ label(mode) }}</option> }
+      </select></label>
+      <label class="ob-label">Source<input name="source" class="ob-input" [(ngModel)]="draft.source" required maxlength="100"></label>
+      @if (actionError()) { <p class="ob-alert md:col-span-2" role="alert">{{ actionError() }}</p> }
+      <div><button type="submit" class="ob-button" [disabled]="createForm.invalid || saving()">{{ saving() ? 'Creating…' : 'Create draft' }}</button></div>
+    </form>
+  </app-component-card>
+}
+
+@if (section.kind !== 'settings' && section.kind !== 'overview') {
+  <form class="mb-5 grid items-end gap-3 rounded-xl border border-gray-200 bg-white p-4 sm:grid-cols-2 xl:grid-cols-4 dark:border-gray-800 dark:bg-gray-900" (ngSubmit)="changePage(1)">
+    @if (section.kind === 'applications') {
+      <label class="ob-label sm:col-span-2">Search<input type="search" name="search" class="ob-input" [(ngModel)]="filters.search" placeholder="Company, tax ID, source or reference" maxlength="150"></label>
+      <label class="ob-label">Mode<select name="mode" class="ob-input" [(ngModel)]="filters.mode">
+        <option value="">All modes</option>
+        @for (mode of modes; track mode) { <option [value]="mode">{{ label(mode) }}</option> }
+      </select></label>
+      <label class="ob-label">Applicant account<input name="owner" inputmode="numeric" pattern="[0-9]*" class="ob-input" [(ngModel)]="filters.owner"></label>
+      <label class="ob-label">Assignee account<input name="assignee" inputmode="numeric" pattern="[0-9]*" class="ob-input" [(ngModel)]="filters.assignee"></label>
+    }
+    @if ((section.kind === 'applications' || section.kind === 'resources') && !section.statuses) {
+      <label class="ob-label">Status<select name="status" class="ob-input" [(ngModel)]="filters.status">
+        <option value="">All statuses</option>
+        @for (status of statuses; track status) { <option [value]="status">{{ label(status) }}</option> }
+      </select></label>
+    }
+    @if (section.kind === 'applications' || section.kind === 'reports') {
+      <label class="ob-label">Created from<input type="date" name="from" class="ob-input" [(ngModel)]="filters.from"></label>
+      <label class="ob-label">Created through<input type="date" name="to" class="ob-input" [(ngModel)]="filters.to"></label>
+    }
+    @if (section.kind === 'events') {
+      <label class="ob-label sm:col-span-2">Application reference<input name="applicationId" class="ob-input" [(ngModel)]="filters.applicationId" maxlength="36"></label>
+    }
+    <div><button type="submit" class="ob-secondary" [disabled]="busy()">{{ section.statuses && section.kind === 'resources' ? 'Refresh' : 'Apply filters' }}</button></div>
+  </form>
+}
+
+@if (error()) {
+  <div class="ob-alert flex flex-wrap items-center justify-between gap-2" role="alert">
+    <span>{{ error() }}</span><button type="button" class="ob-secondary" (click)="refresh()">Try again</button>
+  </div>
+} @else if (busy()) {
+  <p class="ob-muted py-6" role="status">Loading onboarding data…</p>
+} @else {
+  @switch (section.kind) {
+    @case ('overview') {
+      @if (overview(); as data) {
+        <div class="space-y-5">
+          <section class="rounded-2xl border border-brand-100 bg-brand-50 p-5 dark:border-brand-500/20 dark:bg-brand-500/10">
+            <div class="flex flex-wrap items-start justify-between gap-4">
+              <div>
+                <h2 class="text-xl font-semibold text-gray-900 dark:text-white">Company onboarding</h2>
+                <p class="ob-muted mt-1">Follow applications from registration through company activation.</p>
+              </div>
+              <div class="flex flex-wrap gap-2">
+                <a class="ob-secondary" routerLink="/onboarding/applications">Browse applications</a>
+                <a class="ob-button" routerLink="/onboarding/approvals">Open review queue</a>
+              </div>
+            </div>
+            <dl class="mt-5 grid grid-cols-2 gap-3 xl:grid-cols-4">
+              <div class="ob-stat"><dt class="ob-muted">Applications</dt><dd>{{ data.total }}</dd></div>
+              <div class="ob-stat"><dt class="ob-muted">Pending review</dt><dd>{{ data.pending }}</dd></div>
+              <div class="ob-stat"><dt class="ob-muted">Completed</dt><dd>{{ data.completed }}</dd></div>
+              <div class="ob-stat"><dt class="ob-muted">Completion rate</dt><dd>{{ data.total ? ((data.completed / data.total) | percent:'1.0-1') : '—' }}</dd></div>
+            </dl>
+          </section>
+          <div class="grid gap-5 xl:grid-cols-2">
+            <app-component-card title="Applications by status">
+              <ul class="space-y-3">
+                @for (item of data.status; track item.label) {
+                  <li class="grid grid-cols-[minmax(7rem,1fr)_2fr_2rem] items-center gap-3">
+                    <span class="ob-muted">{{ label(item.label) }}</span>
+                    <progress class="h-2 w-full accent-brand-500" [value]="share(item, data.total)" max="1" [attr.aria-label]="label(item.label)"></progress>
+                    <span class="text-end text-sm font-semibold text-gray-800 dark:text-gray-200">{{ item.count }}</span>
+                  </li>
+                } @empty { <li class="ob-muted">No applications have been registered.</li> }
+              </ul>
+            </app-component-card>
+            <app-component-card title="Follow-up queues">
+              <ul class="divide-y divide-gray-100 dark:divide-gray-800">
+                <li class="flex items-center justify-between gap-2 py-2"><a class="ob-link text-sm" routerLink="/onboarding/stalled">Inactive applications</a><span class="ob-badge">{{ data.stalled }}</span></li>
+                <li class="flex items-center justify-between gap-2 py-2"><a class="ob-link text-sm" routerLink="/onboarding/documents" [queryParams]="{ status: 'CLEAN' }">Documents ready for review</a><span class="ob-badge" data-state="CLEAN">{{ data.documents }}</span></li>
+                <li class="flex items-center justify-between gap-2 py-2"><a class="ob-link text-sm" routerLink="/onboarding/failures">Provisioning failures</a><span class="ob-badge" data-state="FAILED">{{ data.failed }}</span></li>
+                <li class="flex items-center justify-between gap-2 py-2"><a class="ob-link text-sm" routerLink="/onboarding/awaiting-payment">Awaiting payment</a><span class="ob-badge" data-state="AWAITING_PAYMENT">{{ data.awaitingPayment }}</span></li>
+                <li class="flex items-center justify-between gap-2 py-2"><a class="ob-link text-sm" routerLink="/onboarding/import-errors">Import batches with errors</a><span class="ob-badge">{{ data.importFailures }}</span></li>
+              </ul>
+            </app-component-card>
+          </div>
+          <app-component-card title="Recent applications">
+            <ul class="divide-y divide-gray-100 dark:divide-gray-800">
+              @for (row of data.recent; track row.id) {
+                <li class="flex flex-wrap items-center justify-between gap-3 py-3">
+                  <div><a class="ob-link text-sm" [routerLink]="['/onboarding/applications', row.id]">{{ row.companyName || 'Draft application' }}</a>
+                    <p class="ob-muted mt-0.5">{{ label(row.mode) }} · {{ row.createdAt | date:'mediumDate' }}</p></div>
+                  <span class="ob-badge" [attr.data-state]="row.status">{{ label(row.status) }}</span>
+                </li>
+              } @empty { <li class="ob-muted">No recent applications.</li> }
+            </ul>
+          </app-component-card>
+        </div>
+      }
+    }
+    @case ('applications') {
+      @if (section.path === 'tax-verification' || section.path === 'duplicates') {
+        <p class="ob-muted mb-4">Open an application to compare its tax ID with other applications and registered companies.</p>
+      }
+      <div class="overflow-x-auto rounded-xl border border-gray-200 bg-white dark:border-gray-800 dark:bg-gray-900">
+        <table class="ob-table w-full">
+          <thead><tr><th scope="col">Company</th><th scope="col">Mode</th><th scope="col">Status</th><th scope="col">Assignee</th><th scope="col">Updated</th><th scope="col">Action</th></tr></thead>
+          <tbody>
+            @for (row of applications(); track row.id) {
+              <tr>
+                <td><div class="font-medium">{{ row.companyName || 'Draft application' }}</div>
+                  <div class="mt-1 whitespace-nowrap text-xs">{{ row.taxId || ('Applicant #' + row.ownerId) }}</div>
+                  @if (row.duplicateCount) { <span class="ob-badge mt-1" data-state="CLEAN">{{ row.duplicateCount }} matching record(s)</span> }
+                </td>
+                <td>{{ label(row.mode) }}@if (row.source) { <div class="mt-1 text-xs">{{ row.source }}</div> }</td>
+                <td><span class="ob-badge" [attr.data-state]="row.status">{{ label(row.status) }}</span></td>
+                <td>{{ row.assigneeId ? '#' + row.assigneeId : 'Unassigned' }}</td>
+                <td class="whitespace-nowrap">{{ row.updatedAt | date:'mediumDate' }}</td>
+                <td><a class="ob-link" [routerLink]="['/onboarding/applications', row.id]" [queryParams]="{ tab: applicationTab() }" [attr.aria-label]="'Open ' + (row.companyName || row.id)">Open</a></td>
+              </tr>
+            } @empty { <tr><td colspan="6">No applications match these filters.</td></tr> }
+          </tbody>
+        </table>
+      </div>
+    }
+    @case ('resources') {
+      <div class="overflow-x-auto rounded-xl border border-gray-200 bg-white dark:border-gray-800 dark:bg-gray-900">
+        <table class="ob-table w-full">
+          <thead><tr><th scope="col">Company</th><th scope="col">{{ section.resource === 'DOCUMENT' ? 'Document' : section.resource === 'INVITATION' ? 'Recipient' : 'Batch type' }}</th><th scope="col">Status</th><th scope="col">{{ section.resource === 'INVITATION' ? 'Expires' : 'Updated' }}</th><th scope="col">Action</th></tr></thead>
+          <tbody>
+            @for (row of resources(); track row.id) {
+              <tr><td>{{ row.companyName || row.applicationId }}</td>
+                <td>{{ row.fileName || row.email || label(row.importKind) }}
+                  @if (row.kind === 'IMPORT') { <p class="ob-muted mt-1">{{ row.succeeded }} of {{ row.total }} imported · {{ row.errors?.length || 0 }} errors</p> }
+                </td>
+                <td><span class="ob-badge" [attr.data-state]="row.status">{{ label(row.status) }}</span></td>
+                <td class="whitespace-nowrap">{{ (row.expiresAt || row.updatedAt) | date:'medium' }}</td>
+                <td><a class="ob-link" [routerLink]="['/onboarding/applications', row.applicationId]" [queryParams]="{ tab: resourceTab(row) }">Open application</a></td>
+              </tr>
+            } @empty { <tr><td colspan="5">No records match these filters.</td></tr> }
+          </tbody>
+        </table>
+      </div>
+    }
+    @case ('events') {
+      @if (section.path === 'communications') {
+        <p class="ob-muted mb-4">Track invitation activity and in-app reminders requested from an application.</p>
+      }
+      <div class="overflow-x-auto rounded-xl border border-gray-200 bg-white dark:border-gray-800 dark:bg-gray-900">
+        <table class="ob-table w-full">
+          <thead><tr><th scope="col">When</th><th scope="col">Event</th><th scope="col">Actor</th><th scope="col">Reason</th><th scope="col">Application</th></tr></thead>
+          <tbody>
+            @for (row of events(); track row.id) {
+              <tr><td class="whitespace-nowrap">{{ row.createdAt | date:'medium' }}</td><td>{{ label(row.type) }}
+                @if (row.decision || row.status) { <div class="mt-1 text-xs">{{ label(row.decision || row.status) }}</div> }</td>
+                <td>{{ row.actor ? '#' + row.actor : 'System' }}</td><td class="min-w-32 break-words">{{ row.reason || '—' }}</td>
+                <td><a class="ob-link" [routerLink]="['/onboarding/applications', row.applicationId]" [queryParams]="{ tab: 'history' }">{{ row.applicationId.slice(0, 8) }}</a></td>
+              </tr>
+            } @empty { <tr><td colspan="5">No events match these filters.</td></tr> }
+          </tbody>
+        </table>
+      </div>
+    }
+    @case ('reports') {
+      @if (overview(); as data) {
+        <div class="space-y-5">
+          <div class="flex flex-wrap justify-end gap-2">
+            <button type="button" class="ob-secondary" (click)="exportReport(data, false)">Export spreadsheet</button>
+            <button type="button" class="ob-secondary" (click)="exportReport(data, true)">Print report</button>
+          </div>
+          <dl class="grid grid-cols-2 gap-3 xl:grid-cols-4">
+            <div class="ob-stat"><dt class="ob-muted">Applications</dt><dd>{{ data.total }}</dd></div>
+            <div class="ob-stat"><dt class="ob-muted">Completion rate</dt><dd>{{ data.total ? ((data.completed / data.total) | percent:'1.0-1') : '—' }}</dd></div>
+            <div class="ob-stat"><dt class="ob-muted">Cancellation rate</dt><dd>{{ data.total ? ((data.cancelled / data.total) | percent:'1.0-1') : '—' }}</dd></div>
+            <div class="ob-stat"><dt class="ob-muted">Average days to complete</dt><dd>{{ (data.meanDays | number:'1.0-1') ?? '—' }}</dd></div>
+            <div class="ob-stat"><dt class="ob-muted">Failed provisionings</dt><dd>{{ data.failed }}</dd></div>
+            <div class="ob-stat"><dt class="ob-muted">Import batches</dt><dd>{{ data.importBatches }}</dd></div>
+          </dl>
+          <div class="grid gap-5 lg:grid-cols-2">
+            <app-component-card title="Applications by period">
+              <label class="ob-label mb-4 max-w-52">Group by
+                <select class="ob-input" [(ngModel)]="grouping">
+                  <option value="daily">Day</option>
+                  <option value="weekly">Week starting Monday</option>
+                  <option value="monthly">Month</option>
+                </select>
+              </label>
+              <ul class="max-h-72 space-y-2 overflow-auto">
+                @for (item of intake(data); track item.label) {
+                  <li class="flex justify-between gap-3 ob-muted"><span>{{ item.label }}</span><strong>{{ item.count }}</strong></li>
+                } @empty { <li class="ob-muted">No registrations in this period.</li> }
+              </ul>
+            </app-component-card>
+            <app-component-card title="Applications by mode">
+              <ul class="space-y-2">
+                @for (item of data.modes; track item.label) {
+                  <li class="flex justify-between gap-3 ob-muted"><span>{{ label(item.label) }}</span><strong>{{ item.count }}</strong></li>
+                } @empty { <li class="ob-muted">No applications in this period.</li> }
+              </ul>
+            </app-component-card>
+            <app-component-card title="Conversion by plan version">
+              <ul class="space-y-2">
+                @for (item of data.plans; track item.label) {
+                  <li class="flex flex-wrap justify-between gap-2 ob-muted"><span class="break-all">{{ item.label }}</span><strong>{{ item.completed }} / {{ item.total }} completed</strong></li>
+                } @empty { <li class="ob-muted">No plans selected in this period.</li> }
+              </ul>
+            </app-component-card>
+            <app-component-card title="Applications by assignee">
+              <ul class="space-y-2">
+                @for (item of data.assignees; track item.label) {
+                  <li class="flex justify-between gap-3 ob-muted"><span>Account #{{ item.label }}</span><strong>{{ item.count }}</strong></li>
+                } @empty { <li class="ob-muted">No staff assignments in this period.</li> }
+              </ul>
+            </app-component-card>
+          </div>
+        </div>
+      }
+    }
+    @case ('settings') {
+      @if (policy(); as data) {
+        <div class="grid gap-5 xl:grid-cols-2">
+          <app-component-card [title]="'Workflow policy · version ' + data.current.version">
+            <p class="ob-muted mb-4">New applications use the published version. Existing applications keep their current policy.</p>
+            <form #policyForm="ngForm" class="space-y-4" (ngSubmit)="publish(data)">
+              <label class="ob-label">Required validated documents<input class="ob-input" type="number" name="requiredDocuments" min="0" max="20" step="1" required [(ngModel)]="policyInput.requiredDocuments"></label>
+              <label class="ob-label">Invitation validity in hours<input class="ob-input" type="number" name="invitationHours" min="1" max="168" step="1" required [(ngModel)]="policyInput.invitationHours"></label>
+              <label class="ob-label">Days until flagged as inactive<input class="ob-input" type="number" name="inactivityDays" min="1" max="90" step="1" required [(ngModel)]="policyInput.inactivityDays"></label>
+              <label class="ob-label">Reason for change<textarea class="ob-input" name="reason" rows="3" required maxlength="2000" [(ngModel)]="policyInput.reason"></textarea></label>
+              @if (actionError()) { <p class="ob-alert" role="alert">{{ actionError() }}</p> }
+              @if (notice()) { <p class="text-sm text-success-700 dark:text-success-300" role="status">{{ notice() }}</p> }
+              <button type="submit" class="ob-button" [disabled]="policyForm.invalid || saving()">{{ saving() ? 'Publishing…' : 'Publish new version' }}</button>
+            </form>
+          </app-component-card>
+          <app-component-card title="Policy history">
+            <p class="ob-muted mb-3">Administrative role · {{ data.administrativeRole }}</p>
+            <ul class="divide-y divide-gray-100 dark:divide-gray-800">
+              @for (item of data.history; track item.id) {
+                <li class="py-3"><p class="text-sm font-medium text-gray-900 dark:text-white">Version {{ item.version }}</p>
+                  <p class="ob-muted break-words">{{ item.reason }}</p><p class="ob-muted mt-1">Account #{{ item.actorId }} · {{ item.createdAt | date:'medium' }}</p>
+                </li>
+              } @empty { <li class="ob-muted">No policy versions have been published from this panel.</li> }
+            </ul>
+          </app-component-card>
+        </div>
+      }
+    }
+  }
+  @if (section.kind === 'applications' || section.kind === 'resources' || section.kind === 'events') {
+    <div class="mt-4 flex flex-wrap items-center justify-between gap-3">
+      <p class="ob-muted" aria-live="polite">{{ total }} record(s) · Page {{ page }}</p>
+      <div class="flex flex-wrap gap-2">
+        <button type="button" class="ob-secondary" [disabled]="page <= 1" (click)="changePage(page - 1)">Previous</button>
+        <button type="button" class="ob-secondary" [disabled]="page * limit >= total" (click)="changePage(page + 1)">Next</button>
+      </div>
+    </div>
+  }
+}

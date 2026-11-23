@@ -1,0 +1,18 @@
+@reference "../../../../styles.css";
+
+.pr-muted { @apply text-sm text-gray-600 dark:text-gray-400; }
+.pr-label { @apply block text-sm font-medium text-gray-700 dark:text-gray-300; }
+.pr-input { @apply mt-1 min-h-10 w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 shadow-theme-xs outline-none focus:border-brand-500 focus:ring-2 focus:ring-brand-500/20 disabled:opacity-60 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-100; }
+.pr-button { @apply inline-flex min-h-10 items-center justify-center rounded-lg bg-brand-500 px-4 py-2 text-sm font-medium text-white hover:bg-brand-600 focus-visible:ring-2 focus-visible:ring-brand-500/40 disabled:opacity-50; }
+.pr-secondary { @apply inline-flex min-h-10 items-center justify-center rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:border-brand-300 hover:text-brand-600 focus-visible:ring-2 focus-visible:ring-brand-500/40 disabled:opacity-50 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-200 dark:hover:text-brand-400; }
+.pr-link { @apply font-medium text-brand-600 hover:underline dark:text-brand-400; }
+.pr-error { @apply rounded-lg border border-error-200 bg-error-50 p-3 text-sm text-error-700 dark:border-error-500/30 dark:bg-error-500/10 dark:text-error-300; }
+.pr-stat { @apply rounded-xl border border-gray-200 bg-white p-4 dark:border-gray-800 dark:bg-gray-900; }
+.pr-stat dt { @apply text-sm font-medium text-gray-700 dark:text-gray-300; }
+.pr-stat dd { @apply mt-1 break-words text-2xl font-semibold text-gray-950 dark:text-gray-100; }
+.pr-badge { @apply inline-flex whitespace-nowrap rounded-full bg-gray-100 px-2.5 py-1 text-xs font-medium text-gray-700 dark:bg-white/10 dark:text-gray-200; }
+.pr-badge[data-status="READY"], .pr-badge[data-status="COMPLETED"], .pr-badge[data-status="PUBLISHED"], .pr-badge[data-status="ACTIVE"] { @apply bg-success-50 text-success-700 dark:bg-success-500/15 dark:text-success-300; }
+.pr-badge[data-status="FAILED"], .pr-badge[data-status="ACCESS_REVOKED"] { @apply bg-error-50 text-error-700 dark:bg-error-500/15 dark:text-error-300; }
+.pr-badge[data-status="PAUSED"], .pr-badge[data-status="RUNNING"], .pr-badge[data-status="QUEUED"], .pr-badge[data-status="PENDING"], .pr-badge[data-status="EXPIRED"] { @apply bg-warning-50 text-warning-700 dark:bg-warning-500/15 dark:text-warning-300; }
+.pr-table th { @apply whitespace-nowrap bg-gray-50 px-4 py-3 text-start text-xs font-semibold text-gray-600 dark:bg-white/5 dark:text-gray-300; }
+.pr-table td { @apply border-t border-gray-100 px-4 py-3 text-sm text-gray-700 dark:border-gray-800 dark:text-gray-300; }

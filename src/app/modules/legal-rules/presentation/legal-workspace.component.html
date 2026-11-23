@@ -1,0 +1,34 @@
+<div class="workspace-ui space-y-5">
+  <app-page-breadcrumb [pageTitle]="section.title" homeLink="/legal-rules" />
+  @switch (section.view) {
+    @case ('sources') { <app-legal-sources /> }
+    @case ('analysis') { <app-legal-analysis [impact]="section.path === 'impact'" /> }
+    @case ('audit') { <app-legal-audit /> }
+    @case ('settings') {
+      @if (section.path === 'access') {
+        <app-component-card title="Your platform access">
+          <p class="mb-4 text-sm text-gray-600 dark:text-gray-400">Platform roles: {{ auth.claims()?.roles?.join(', ') || '—' }}</p>
+          <ul class="grid gap-2 text-sm text-gray-700 sm:grid-cols-2 dark:text-gray-300">
+            @for (grant of grants; track grant) {
+              <li class="flex justify-between gap-3 rounded-lg border border-gray-200 p-3 dark:border-gray-800">
+                <span>{{ grant }}</span><strong>{{ auth.claims()?.permissions?.includes('legal-rules:' + grant) ? 'Granted' : 'Unavailable' }}</strong>
+              </li>
+            }
+          </ul>
+          <a class="action mt-4" routerLink="/account/security" fragment="permissions">Check account permissions</a>
+        </app-component-card>
+      } @else {
+        <app-component-card title="Regulatory settings">
+          <dl class="grid gap-4 text-sm text-gray-700 sm:grid-cols-2 dark:text-gray-300">
+            <div><dt class="font-semibold">Jurisdiction</dt><dd>Angola (AO)</dd></div>
+            <div><dt class="font-semibold">Payroll currency</dt><dd>Angolan kwanza (AOA)</dd></div>
+            <div><dt class="font-semibold">Effective dates</dt><dd>Africa/Luanda</dd></div>
+            <div><dt class="font-semibold">Calculation rules</dt><dd>Rounding and engine compatibility are defined per version.</dd></div>
+          </dl>
+          <a class="action mt-4" routerLink="/legal-rules/rule-sets">Manage rule sets</a>
+        </app-component-card>
+      }
+    }
+    @default { <app-legal-catalog [section]="section" /> }
+  }
+</div>

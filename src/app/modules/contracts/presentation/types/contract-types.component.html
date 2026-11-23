@@ -1,0 +1,42 @@
+<app-component-card title="Contract types">
+  <div class="space-y-4">
+    @if (error()) { <p role="alert" class="feedback">{{ error() }}</p> }
+    @if (notice()) { <p role="status" class="notice">{{ notice() }}</p> }
+    @if (context.permissions.includes('contracts.types.manage')) {
+      @if (showForm()) {
+        <form #typeForm="ngForm" (ngSubmit)="typeForm.valid && create()" class="rounded-xl border border-gray-200 p-4 dark:border-gray-800">
+          <fieldset [disabled]="saving()" class="grid gap-4 md:grid-cols-2">
+            <label class="field">Code<input class="control" name="code" [(ngModel)]="code" required maxlength="50" /></label>
+            <label class="field">Name<input class="control" name="name" [(ngModel)]="name" required maxlength="120" /></label>
+            <label class="field">Legal rule version ID<input class="control" name="ruleVersion" [(ngModel)]="ruleVersion" maxlength="120" /></label>
+            <label class="field">Maximum renewals<input class="control" name="maxRenewals" [(ngModel)]="maxRenewals" type="number" min="0" step="1" placeholder="Unlimited" /></label>
+            <label class="field flex-row items-center"><input type="checkbox" name="requiresEndDate" [(ngModel)]="requiresEndDate" class="accent-brand-500" /> Requires an end date</label>
+            <div class="flex flex-wrap gap-2 md:col-span-2">
+              <button class="action action-primary" type="submit" [disabled]="typeForm.invalid || saving()">{{ saving() ? 'Saving…' : 'Create type' }}</button>
+              <button class="action" type="button" (click)="showForm.set(false); error.set('')">Cancel</button>
+            </div>
+          </fieldset>
+        </form>
+      } @else {
+        <button class="action action-primary" type="button" (click)="showForm.set(true); notice.set('')">New contract type</button>
+      }
+    }
+    @if (loading()) {
+      <p role="status" class="text-sm text-gray-600 dark:text-gray-400">Loading contract types…</p>
+    } @else {
+      <ul class="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
+        @for (type of types(); track type.id) {
+          <li class="rounded-lg border border-gray-200 p-4 text-sm text-gray-600 dark:border-gray-800 dark:text-gray-400">
+            <h4 class="font-semibold text-gray-900 dark:text-gray-100">{{ type.name }}</h4>
+            <p>{{ type.code }} · {{ type.companyId === null ? 'Shared' : 'Company' }}</p>
+            <p class="mt-2">{{ type.requiresEndDate ? 'End date required' : 'End date optional' }} · {{ type.maxRenewals === null ? 'Unlimited renewals' : 'Maximum renewals ' + type.maxRenewals }}</p>
+            @if (type.legalRuleVersionId) { <p class="mt-1 break-all">Legal rule version {{ type.legalRuleVersionId }}</p> }
+          </li>
+        } @empty {
+          <li class="text-sm text-gray-600 dark:text-gray-400">No active contract types were found.</li>
+        }
+      </ul>
+      @if (error() && !showForm()) { <button type="button" class="action" (click)="load()">Refresh types</button> }
+    }
+  </div>
+</app-component-card>

@@ -1,0 +1,53 @@
+<app-component-card title="Change history">
+  @if (!allowed) { <p role="alert" class="feedback">Your company role does not allow access to organization history.</p> }
+  @else {
+    <div class="space-y-4">
+      @if (!recordId) {
+        <div class="grid gap-3 sm:grid-cols-2">
+          <label class="field">Resource<select class="control" [(ngModel)]="selectedResource" (ngModelChange)="loadChoices()" [disabled]="loading()">
+            @for (entry of resources; track entry[0]) { <option [ngValue]="entry[0]">{{ entry[1].label }}</option> }
+          </select></label>
+          <label class="field">Record<select class="control" [(ngModel)]="selectedRecord" (ngModelChange)="load()" [disabled]="loading()">
+            <option value="">Select a record</option>
+            @for (record of choices(); track record.id) { <option [value]="record.id">{{ record.name }} · {{ record.code }}</option> }
+          </select></label>
+        </div>
+      }
+      @if (loading()) { <p role="status" class="text-sm text-gray-600 dark:text-gray-400">Loading history…</p> }
+      @else if (error()) {
+        <p role="alert" class="feedback">{{ error() }}</p>
+        <button class="action" type="button" (click)="selectedRecord ? load() : loadChoices()">Try again</button>
+      } @else if (selectedRecord) {
+        <ol class="space-y-2">
+          @for (entry of entries(); track entry.id) {
+            <li class="rounded-lg border border-gray-200 p-3 dark:border-gray-800">
+              <details>
+                <summary class="cursor-pointer text-sm font-medium text-gray-900 dark:text-gray-100">
+                  {{ entry.changeType }} · Version {{ entry.newData.version }} · {{ entry.createdAt | date:'medium' }}
+                </summary>
+                <p class="mt-3 text-sm text-gray-600 dark:text-gray-400">{{ entry.actorUserId ? 'Account #' + entry.actorUserId : 'System' }}</p>
+                @let changes = comparison(entry);
+                @if (changes.length) {
+                  <div class="mt-2 overflow-x-auto">
+                    <table class="w-full min-w-[24rem] text-start text-sm text-gray-700 dark:text-gray-300">
+                      <thead class="table-heading"><tr><th scope="col">Field</th><th scope="col">Before</th><th scope="col">After</th></tr></thead>
+                      <tbody>
+                        @for (change of changes; track change.key) {
+                          <tr>
+                            <th scope="row" class="table-cell text-start">{{ change.key }}</th>
+                            <td class="table-cell whitespace-pre-wrap break-all">{{ change.before }}</td>
+                            <td class="table-cell whitespace-pre-wrap break-all">{{ change.after }}</td>
+                          </tr>
+                        }
+                      </tbody>
+                    </table>
+                  </div>
+                }
+              </details>
+            </li>
+          } @empty { <li class="text-sm text-gray-600 dark:text-gray-400">No versions were returned.</li> }
+        </ol>
+      }
+    </div>
+  }
+</app-component-card>

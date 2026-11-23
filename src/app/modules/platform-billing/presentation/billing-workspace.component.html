@@ -1,0 +1,254 @@
+<div class="space-y-5">
+  <app-page-breadcrumb [pageTitle]="section.title" homeLink="/platform-billing" />
+
+  <div class="flex flex-wrap items-start justify-between gap-3">
+    @if (section.path === 'overview') {
+      <p class="max-w-2xl text-sm text-gray-600 dark:text-gray-400">Track invoicing, collections and customer balances for PRONTOEQUIPAS.</p>
+    }
+    <div class="ms-auto flex flex-wrap gap-2">
+      <button type="button" class="action" (click)="refresh()" [disabled]="state().loading || busy()">Refresh</button>
+      @if (mainAction; as action) {
+        <button type="button" class="action primary" [disabled]="busy()" (click)="open(action)">{{ action.title }}</button>
+      }
+    </div>
+  </div>
+
+  <form class="panel" (ngSubmit)="applyFilters()">
+    <div class="grid gap-3 sm:grid-cols-2 xl:grid-cols-5">
+      <label class="field-label">Company ID
+        <input class="field" name="company" type="number" min="1" max="2147483647" [(ngModel)]="companyId" placeholder="All companies">
+      </label>
+      @if (kind || section.path === 'accounts') {
+        <label class="field-label">{{ kind ? 'Reference' : 'Company or tax ID' }}
+          <input class="field" name="reference" maxlength="100" [(ngModel)]="search">
+        </label>
+      }
+      @if (statuses.length) {
+        <label class="field-label">Status
+          <select class="field" name="status" [(ngModel)]="status">
+            <option value="">All statuses</option>
+            @for (option of statuses; track option) { <option [value]="option">{{ label(option) }}</option> }
+          </select>
+        </label>
+      }
+      @if (kind) {
+        <label class="field-label">Registered from <input class="field" name="from" type="date" [(ngModel)]="from"></label>
+        <label class="field-label">Registered to <input class="field" name="to" type="date" [(ngModel)]="to"></label>
+      }
+    </div>
+    @if (validation()) { <p class="error mt-3" role="alert">{{ validation() }}</p> }
+    <div class="mt-3 flex flex-wrap items-center gap-2">
+      <button type="submit" class="action primary" [disabled]="busy()">Apply filters</button>
+      <button type="button" class="action" [disabled]="busy()" (click)="reset()">Clear</button>
+    </div>
+  </form>
+
+  @if (notice()) { <p class="panel text-sm text-success-700 dark:text-success-400" role="status">{{ notice() }}</p> }
+  @if (!form && actionError()) { <p class="panel error" role="alert">{{ actionError() }}</p> }
+
+  @if (form; as operation) {
+    <section tabindex="-1" id="billing-action" class="block" aria-label="Billing operation">
+      <app-component-card [title]="operation.action.title">
+        <form #actionForm="ngForm" class="space-y-4" (ngSubmit)="actionForm.valid && submit(operation)">
+          @if (operation.record; as record) {
+            <p class="font-medium text-gray-900 dark:text-white">{{ record.companyName }} · {{ cell(record, 'number') }}</p>
+          }
+          @if (operation.action.confirmation) {
+            <p class="rounded-lg bg-warning-50 p-3 text-sm text-warning-700 dark:bg-warning-500/10 dark:text-warning-400">{{ operation.action.confirmation }}</p>
+          }
+          <fieldset [disabled]="busy()" class="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
+            @if (!operation.record) {
+              <label class="field-label">Company ID
+                <input class="field" name="operationCompany" type="number" required min="1" max="2147483647" [(ngModel)]="operation.companyId">
+              </label>
+            }
+            @for (field of operation.action.fields ?? []; track field.name) {
+              <label class="field-label" [class.sm:col-span-2]="field.type === 'textarea'">
+                {{ field.label }}
+                @switch (field.type) {
+                  @case ('textarea') {
+                    <textarea class="field min-h-24 py-2" [name]="field.name" [maxlength]="field.max ?? 200000"
+                      required [(ngModel)]="operation.values[field.name]"></textarea>
+                    @if (field.name === 'entries') {
+                      <span class="muted mt-1 block">One movement per line. Use a comma or tab between fields. Dates use YYYY-MM-DD.</span>
+                    }
+                  }
+                  @case ('select') {
+                    <select class="field" [name]="field.name" required [(ngModel)]="operation.values[field.name]">
+                      @for (option of field.options; track option) { <option [value]="option">{{ option }}</option> }
+                    </select>
+                  }
+                  @case ('number') {
+                    <input class="field" type="number" [name]="field.name" [min]="field.min ?? 0"
+                      [max]="field.max ?? 1000000" step="1" required [(ngModel)]="operation.values[field.name]">
+                  }
+                  @default {
+                    <input class="field" [type]="field.type ?? 'text'" [name]="field.name" [maxlength]="field.max ?? 2000"
+                      [pattern]="field.pattern ?? '.*'" required [(ngModel)]="operation.values[field.name]">
+                  }
+                }
+              </label>
+            }
+          </fieldset>
+          @if (operation.action.lines) {
+            <fieldset [disabled]="busy()" class="space-y-3">
+              <legend class="font-medium text-gray-900 dark:text-white">Document lines</legend>
+              @for (line of operation.lines; track line; let i = $index) {
+                <div class="grid gap-3 rounded-xl border border-gray-200 p-3 sm:grid-cols-2 xl:grid-cols-3 dark:border-gray-800">
+                  <label class="field-label">Description
+                    <input class="field" [name]="'description-' + i" required maxlength="500" [(ngModel)]="line.description">
+                  </label>
+                  <label class="field-label">Quantity
+                    <input class="field" [name]="'quantity-' + i" type="number" min="1" max="1000000" required [(ngModel)]="line.quantity">
+                  </label>
+                  <label class="field-label">Unit price
+                    <input class="field" [name]="'price-' + i" inputmode="decimal" pattern="[0-9]{1,12}(\.[0-9]{1,2})?" required [(ngModel)]="line.unitPrice">
+                  </label>
+                  <label class="field-label">Line discount
+                    <input class="field" [name]="'discount-' + i" inputmode="decimal" pattern="[0-9]{1,12}(\.[0-9]{1,2})?" required [(ngModel)]="line.discount">
+                  </label>
+                  <label class="field-label">Tax version
+                    <input class="field" [name]="'tax-version-' + i" maxlength="100" required [(ngModel)]="line.taxRuleVersion">
+                  </label>
+                  <label class="field-label">Tax rate (basis points)
+                    <input class="field" [name]="'tax-rate-' + i" type="number" min="0" max="10000" required [(ngModel)]="line.taxBasisPoints">
+                  </label>
+                  @if (operation.lines.length > 1) {
+                    <button type="button" class="text-link justify-self-start" (click)="operation.lines.splice(i, 1)">Remove line</button>
+                  }
+                </div>
+              }
+              <button type="button" class="action" [disabled]="operation.lines.length >= 200" (click)="addLine(operation)">Add line</button>
+            </fieldset>
+          }
+          @if (actionError()) { <p role="alert" class="error">{{ actionError() }}</p> }
+          <div class="flex flex-wrap gap-2">
+            <button type="submit" class="action primary" [disabled]="busy() || actionForm.invalid">{{ busy() ? 'Saving…' : operation.action.title }}</button>
+            <button type="button" class="action" [disabled]="busy()" (click)="form = undefined">Cancel</button>
+          </div>
+        </form>
+      </app-component-card>
+    </section>
+  }
+
+  @if (state().loading) { <p class="panel muted" role="status">Loading billing records…</p> }
+  @else if (state().error; as error) { <p class="panel error" role="alert">{{ error }}</p> }
+
+  @if (section.path === 'accounts' && accounts(); as accountList) {
+    <app-component-card title="Customer balances">
+      <div class="overflow-x-auto">
+        <table class="billing-table">
+          <thead><tr><th scope="col">Company</th><th scope="col">Tax ID</th><th scope="col">Invoiced</th>
+            <th scope="col">Collected</th><th scope="col">Outstanding</th><th scope="col">Overdue invoices</th><th scope="col">Activity</th></tr></thead>
+          <tbody>
+            @for (account of accountList; track account.company.id) {
+              <tr>
+                <th scope="row" class="font-semibold">{{ account.company.name }}<span class="muted block">#{{ account.company.id }}</span></th>
+                <td>{{ account.company.nif || '—' }}</td>
+                <td>@for (row of account.balances; track row.currency) { <div>{{ money(row.invoiced, row.currency) }}</div> } @empty { — }</td>
+                <td>@for (row of account.balances; track row.currency) { <div>{{ money(row.paid, row.currency) }}</div> } @empty { — }</td>
+                <td>@for (row of account.balances; track row.currency) { <div>{{ money(row.outstanding, row.currency) }}</div> } @empty { — }</td>
+                <td>{{ account.overdue }}</td>
+                <td>
+                  <div class="flex flex-wrap gap-2">
+                    @for (link of accountLinks; track link.path) {
+                      <a class="text-link" [routerLink]="['/platform-billing', link.path]" [queryParams]="{ companyId: account.company.id }">{{ link.label }}</a>
+                    }
+                  </div>
+                </td>
+              </tr>
+            } @empty { <tr><td colspan="7">No companies match this filter.</td></tr> }
+          </tbody>
+        </table>
+      </div>
+    </app-component-card>
+  } @else if (!kind && section.path !== 'accounts' && overview(); as summary) {
+    <app-billing-dashboard [overview]="summary" [path]="section.path" [companyId]="applied().filters.companyId" />
+  }
+
+  @if (kind) {
+    <div class="grid gap-5" [class.2xl:grid-cols-[minmax(0,1fr)_23rem]]="selection() !== null">
+      @if (page(); as result) {
+        <app-component-card class="min-w-0" [title]="section.title">
+          <div class="overflow-x-auto">
+            <table class="billing-table" [attr.aria-label]="section.title">
+              <thead><tr>
+                @for (column of columns; track column[0]) { <th scope="col">{{ column[1] }}</th> }
+                <th scope="col"><span class="sr-only">Details</span></th>
+              </tr></thead>
+              <tbody>
+                @for (record of result.items; track record.id) {
+                  <tr [class.bg-brand-50]="selection()?.id === record.id" [class.dark:bg-brand-500/10]="selection()?.id === record.id">
+                    @for (column of columns; track column[0]) {
+                      <td>
+                        @if (column[0] === 'status') { <span class="badge" [class]="tone(record.status)">{{ cell(record, column[0]) }}</span> }
+                        @else { {{ cell(record, column[0]) }} }
+                      </td>
+                    }
+                    <td><button type="button" class="text-link" [disabled]="busy()" (click)="select(record)"
+                      [attr.aria-label]="'View ' + cell(record, 'number')">View</button></td>
+                  </tr>
+                } @empty { <tr><td [attr.colspan]="columns.length + 1">No records match these filters.</td></tr> }
+              </tbody>
+            </table>
+          </div>
+          @if (result.next || applied().cursors.length > 1) {
+            <nav class="mt-4 flex gap-2" aria-label="Billing results pages">
+              <button class="action" type="button" [disabled]="applied().cursors.length === 1" (click)="previous()">Previous</button>
+              <span class="muted self-center">Page {{ applied().cursors.length }}</span>
+              <button class="action" type="button" [disabled]="!result.next" (click)="result.next && next(result.next)">Next</button>
+            </nav>
+          }
+        </app-component-card>
+      }
+      @if (detail(); as item) {
+        <app-component-card #billingRecord class="min-w-0" title="Record details" role="region" aria-label="Record details" tabindex="-1">
+          <button class="action mb-3" type="button" [disabled]="busy()" (click)="closeRecord()">Close details</button>
+          @if (item.loading) { <p role="status" class="muted">Loading record…</p> }
+          @else if (item.error; as error) { <p role="alert" class="error">{{ error }}</p> }
+          @else if (item.data; as record) {
+            <dl class="detail-list">
+              @for (column of details; track column[0]) {
+                <div><dt>{{ column[1] }}</dt><dd>
+                  @if (related[column[0]] && record.data[column[0]]) {
+                    <a class="text-link" [routerLink]="['/platform-billing', related[column[0]]]"
+                      [queryParams]="{ companyId: record.companyId, record: record.data[column[0]] }">{{ cell(record, column[0]) }}</a>
+                  } @else { {{ cell(record, column[0]) }} }
+                </dd></div>
+              }
+            </dl>
+            @if (issuer(record); as company) {
+              <h3 class="detail-heading">Issuer</h3>
+              <p class="muted">{{ company['name'] }}<br>{{ company['taxId'] }}<br>{{ company['address'] }}</p>
+            }
+            @if (lines(record).length) {
+              <h3 class="detail-heading">Document lines</h3>
+              <ul class="divide-y divide-gray-200 text-sm dark:divide-gray-800">
+                @for (line of lines(record); track $index) {
+                  <li class="py-2 text-gray-800 dark:text-gray-200">
+                    {{ line['description'] }}
+                    <span class="muted block">{{ line['quantity'] }} × {{ line['unitPrice'] }} · {{ line['taxRuleVersion'] }}</span>
+                  </li>
+                }
+              </ul>
+            }
+            <div class="mt-4 flex flex-wrap gap-2">
+              @if (pdfAvailable(record)) {
+                <button type="button" class="action" [disabled]="busy()" (click)="download(record)">Download PDF</button>
+              }
+              @for (action of rowActions(); track action.id) {
+                <button type="button" class="action" [disabled]="busy()" (click)="open(action, record)">{{ action.title }}</button>
+              }
+            </div>
+            @if (record.kind === 'PAYMENT' && record.status === 'PENDING' && !rowActions().length) {
+              <p class="muted mt-3">Confirmation requires a different administrator.</p>
+            }
+            @if (record.kind === 'REFUND' && record.status === 'REQUESTED' && !rowActions().length) {
+              <p class="muted mt-3">Approval requires a different administrator.</p>
+            }
+          }
+        </app-component-card>
+      }
+    </div>
+  }
+</div>

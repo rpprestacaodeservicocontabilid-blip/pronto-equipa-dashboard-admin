@@ -1,0 +1,56 @@
+<form #actionForm="ngForm" (ngSubmit)="actionForm.valid && confirm()" class="rounded-xl border border-brand-200 bg-white p-4 dark:border-brand-800 dark:bg-gray-900">
+  <fieldset class="space-y-4" [disabled]="busy()">
+    <legend class="px-1 text-base font-semibold text-gray-900 dark:text-gray-100">Confirm {{ details[action].label.toLowerCase() }}</legend>
+    @if (error()) { <p role="alert" class="feedback">{{ error() }}</p> }
+    @switch (action) {
+      @case ('renewals') {
+        <div class="grid gap-4 sm:grid-cols-2">
+          <p class="text-sm text-gray-700 dark:text-gray-300">Current end date <strong class="block">{{ date(contract.endDate) }}</strong></p>
+          <label class="field">New end date<input class="control" name="newEndDate" [(ngModel)]="newEndDate" type="date" [attr.min]="contract.endDate" required /></label>
+        </div>
+      }
+      @case ('amendments') {
+        <p class="text-sm text-gray-600 dark:text-gray-400">The adjustment takes effect today ({{ date(now) }}).</p>
+        <div class="grid gap-4 sm:grid-cols-3">
+          <label class="field">New base salary<input class="control" name="salary" [(ngModel)]="salary" inputmode="decimal" maxlength="20" /></label>
+          <label class="field">Condition<select class="control" name="term" [(ngModel)]="term">
+            @for (field of termFields; track field.key) { <option [ngValue]="field.key">{{ field.label }}</option> }
+          </select></label>
+          <label class="field">New condition<input class="control" name="newValue" [(ngModel)]="newValue" maxlength="1000" /></label>
+        </div>
+        <table class="w-full text-start text-sm text-gray-700 dark:text-gray-300">
+          <thead class="table-heading"><tr><th scope="col">Condition</th><th scope="col">Current</th><th scope="col">Proposed</th></tr></thead>
+          <tbody class="divide-y divide-gray-200 dark:divide-gray-800">
+            <tr><th scope="row" class="table-cell text-start">Base salary</th><td class="table-cell">{{ amount(contract.salaryAmount, contract.currency) }}</td><td class="table-cell">{{ salary || '—' }}</td></tr>
+            <tr><th scope="row" class="table-cell text-start">Working condition</th><td class="table-cell">{{ contract.terms[term] || '—' }}</td><td class="table-cell">{{ newValue || '—' }}</td></tr>
+          </tbody>
+        </table>
+      }
+      @case ('suspensions') {
+        <div class="grid gap-4 sm:grid-cols-2">
+          <label class="field">Start date<input class="control" name="suspensionStart" [(ngModel)]="suspensionStart" type="date" [attr.min]="contract.startDate" [attr.max]="now" required /></label>
+          <label class="field">Expected end date<input class="control" name="suspensionEnd" [(ngModel)]="suspensionEnd" type="date" [attr.min]="suspensionStart" /></label>
+        </div>
+      }
+      @case ('terminations') {
+        <div class="grid gap-4 sm:grid-cols-2">
+          <p class="text-sm text-gray-700 dark:text-gray-300">Effective date <strong class="block">{{ date(now) }}</strong></p>
+          <label class="field">Reason code<input class="control" name="reasonCode" [(ngModel)]="reasonCode" type="text" maxlength="80" required /></label>
+        </div>
+      }
+    }
+    @if (action !== 'approve') {
+      <label class="field">{{ reasonRequired ? 'Reason' : 'Reason (optional)' }}
+        <textarea class="control" name="reason" [(ngModel)]="reason" [required]="reasonRequired" [maxlength]="action === 'terminations' ? 1000 : 500" rows="3"></textarea>
+      </label>
+    }
+    <div class="flex flex-wrap gap-2">
+      @if (versionMismatch()) {
+        <button class="action action-primary" type="button" (click)="stale.emit()">Reload contract</button>
+      } @else {
+        <button class="action action-primary" type="submit" [disabled]="actionForm.invalid || busy()">{{ busy() ? 'Saving…' : details[action].label }}</button>
+      }
+      <button class="action" type="button" (click)="dismissed.emit()">Back</button>
+    </div>
+  </fieldset>
+</form>

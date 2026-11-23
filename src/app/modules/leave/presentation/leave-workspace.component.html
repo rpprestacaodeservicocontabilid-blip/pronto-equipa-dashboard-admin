@@ -1,0 +1,44 @@
+<div class="workspace-ui space-y-5">
+  <app-page-breadcrumb pageTitle="Leave management" homeLink="/leave" />
+  @let result = access();
+  @if ('error' in result) {
+    <p role="alert" class="feedback">{{ result.error }}</p>
+    <a class="action" routerLink="/leave">Select another company</a>
+  } @else {
+    @let context = result.context;
+    @let company = context.company.id;
+    <div class="flex flex-wrap items-center justify-between gap-3">
+      <div><p class="text-sm text-gray-600 dark:text-gray-400">Active company</p>
+        <h2 class="text-xl font-semibold text-gray-900 dark:text-gray-100">{{ context.company.name }}</h2></div>
+      <a class="action" routerLink="/leave">Switch company</a>
+    </div>
+    <div>
+      <div class="min-w-0">
+        @if (!hasAccess(context.permissions, section())) {
+          <p role="alert" class="feedback">Your company role does not allow access to this leave section.</p>
+        } @else {
+          @for (scope of [company + ':' + section() + ':' + id() + ':' + context.permissions.join(',')]; track scope) {
+            @switch (section()) {
+              @case ('requests') {
+                @if (id() === 'new') { <app-leave-draft [context]="context" /> }
+                @else if (id()) { <app-leave-request-detail [context]="context" [id]="id()" /> }
+                @else { <app-leave-requests [context]="context" /> }
+              }
+              @case ('approvals') { <app-leave-requests [context]="context" mode="approvals" /> }
+              @case ('history') {
+                <div class="space-y-5">
+                  @if (context.permissions.includes('leave.requests.read')) { <app-leave-requests [context]="context" mode="history" /> }
+                  @if (context.permissions.includes('audit:records:read-tenant')) { <app-leave-audit [context]="context" /> }
+                </div>
+              }
+              @case ('balances') { <app-leave-balances [context]="context" [id]="id()" /> }
+              @case ('conflicts') { <app-leave-conflicts [context]="context" /> }
+              @case ('reports') { <app-leave-reports [context]="context" /> }
+              @default { @if (planningMode(); as mode) { <app-leave-planning [context]="context" [mode]="mode" /> } }
+            }
+          }
+        }
+      </div>
+    </div>
+  }
+</div>

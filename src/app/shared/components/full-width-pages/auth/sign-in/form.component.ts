@@ -13,6 +13,7 @@ import { InputDirective } from '../../../ui/input/input.directive';
 
 @Component({
   selector: 'app-sign-in-form-fields',
+  standalone: true,
   imports: [InputDirective, ButtonComponent, CommonModule, ReactiveFormsModule, RouterModule],
   templateUrl: './form.component.html',
   host: {
@@ -31,19 +32,16 @@ export class SignInFormFieldsComponent {
   @Output() formSubmit = new EventEmitter<SignInFormData>();
 
   showPassword = false;
-  isSubmitting = false;
+  @Input() isSubmitting: boolean = false;
 
   signInForm = new FormGroup({
     email: new FormControl('', {
       nonNullable: true,
-      validators: [Validators.required, Validators.email],
+      validators: [Validators.required, Validators.pattern(/\S/)],
     }),
     password: new FormControl('', {
       nonNullable: true,
       validators: [Validators.required],
-    }),
-    keepLoggedIn: new FormControl(false, {
-      nonNullable: true,
     }),
   });
 
@@ -61,8 +59,7 @@ export class SignInFormFieldsComponent {
     if (!control || !control.errors) return '';
 
     if (fieldName === 'email') {
-      if (control.errors['required']) return 'Email is required';
-      if (control.errors['email']) return 'Please enter a valid email address';
+      return 'Enter your email or phone.';
     }
 
     if (fieldName === 'password') {
@@ -73,18 +70,14 @@ export class SignInFormFieldsComponent {
   }
 
   onSubmit() {
+    if (this.isSubmitting) return;
     if (this.signInForm.invalid) {
       this.signInForm.markAllAsTouched();
       return;
     }
 
-    this.isSubmitting = true;
     const data: SignInFormData = this.signInForm.getRawValue();
     this.formSubmit.emit(data);
 
-    // Simulate completion
-    setTimeout(() => {
-      this.isSubmitting = false;
-    }, 500);
   }
 }

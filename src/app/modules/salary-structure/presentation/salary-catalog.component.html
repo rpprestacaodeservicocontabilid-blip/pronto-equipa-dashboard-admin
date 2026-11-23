@@ -1,0 +1,194 @@
+@if (notice()) { <p class="notice" role="status">{{ notice() }}</p> }
+@if (form(); as editor) {
+  @for (request of [editor]; track request) {
+    <app-salary-form [context]="context" [definition]="request" (cancelled)="cancel()" (completed)="completed($event)" />
+  }
+}
+@if (id) {
+  <a class="action" [routerLink]="['/salary-structure', company, mode]">Back to {{ title.toLowerCase() }}</a>
+} @else if (allowCreate && !form()) {
+  <button class="action action-primary" type="button" (click)="create()">
+    {{ resource === 'components' ? 'New component' : resource === 'tables' ? 'New table' : 'New structure' }}
+  </button>
+}
+
+@if (!id && can('read') && !form()) {
+  <app-component-card title="Filters">
+    <form class="space-y-3" (ngSubmit)="apply()">
+      <div class="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
+        <label class="field">Name or code<input class="control" type="search" name="search" [(ngModel)]="filters.search" maxlength="150" /></label>
+        <label class="field">Status<select class="control" name="status" [(ngModel)]="filters.status">
+          <option value="">All statuses</option><option value="ACTIVE">Active</option><option value="INACTIVE">Inactive</option>
+        </select></label>
+        @if (resource === 'components') {
+          @if (mode !== 'allowances') {
+            <label class="field">Component type<select class="control" name="type" [(ngModel)]="filters.type">
+              <option value="">All types</option>
+              @for (type of types; track type) { <option [value]="type">{{ human(type) }}</option> }
+            </select></label>
+          }
+          <label class="field">Calculation<select class="control" name="method" [(ngModel)]="filters.method">
+            <option value="">All methods</option>
+            @for (method of methods; track method) { <option [value]="method">{{ human(method) }}</option> }
+          </select></label>
+          <label class="field">Frequency<select class="control" name="frequency" [(ngModel)]="filters.frequency">
+            <option value="">All frequencies</option>
+            @for (frequency of frequencies; track frequency) { <option [value]="frequency">{{ human(frequency) }}</option> }
+          </select></label>
+        }
+      </div>
+      <button class="action action-primary" type="submit" [disabled]="loading()">Apply filters</button>
+    </form>
+  </app-component-card>
+}
+
+@if (loading()) { <p class="text-sm text-gray-600 dark:text-gray-400" role="status">Loading salary records…</p> }
+@if (error()) { <p class="feedback" role="alert">{{ error() }}</p><button class="action" type="button" (click)="refresh()">Try again</button> }
+@if (id && !can('read')) { <p class="feedback" role="alert">Your company permissions do not include catalog details.</p> }
+@if (data(); as view) {
+  @if (view.detail; as record) {
+    <app-component-card [title]="record.code + ' · ' + record.name" [desc]="record.description ?? ''">
+      <p class="text-sm text-gray-700 dark:text-gray-300">{{ human(record.status) }} · Reference <span class="break-all">{{ record.id }}</span></p>
+      <div class="flex flex-wrap gap-2">
+        @if (isComponent(record)) {
+          @if (can('components:update') && record.status === 'ACTIVE') {
+            <button class="action" type="button" [disabled]="!!form()" (click)="edit(record)">Edit identification</button>
+          }
+          @if (can('components:create') && record.status === 'ACTIVE') {
+            <button class="action" type="button" [disabled]="!!form()" (click)="version(record)">Create version</button>
+          }
+          @if (can('components:deactivate') && record.status === 'ACTIVE') {
+            <button class="action" type="button" [disabled]="!!form()" (click)="action('Deactivate component', 'deactivate')">Deactivate</button>
+          }
+        }
+        @if (isTable(record)) {
+          @if (can('tables:manage') && !newestDraft(record)) {
+            <button class="action" type="button" [disabled]="!!form()" (click)="version(record)">Create draft version</button>
+          }
+          @if (can('grades:manage') && newestDraft(record)) {
+            <button class="action" type="button" [disabled]="!!form()" (click)="grade()">Add grade</button>
+          }
+        }
+        @if (isStructure(record) && can('structures:update') && record.status === 'ACTIVE' &&
+            !['DRAFT', 'PENDING_APPROVAL', 'APPROVED'].includes(record.versions.at(0)?.status ?? '')) {
+          <button class="action" type="button" [disabled]="!!form()" (click)="version(record)">Create draft version</button>
+        }
+        @if (can('audit:records:read-tenant')) {
+          <a class="action" [routerLink]="['/salary-structure', company, 'audit']" [queryParams]="{resource: record.id}">View audit history</a>
+        }
+      </div>
+    </app-component-card>
+    @for (item of record.versions; track item.id; let latest = $first) {
+      <app-component-card [title]="'Version ' + item.version" [desc]="human(item.status) + ' · ' + item.effectiveFrom + ' – ' + (item.effectiveTo ?? 'Open')">
+        <p class="text-sm text-gray-700 dark:text-gray-300">Version ID <span class="break-all">{{ item.id }}</span> · Created by user {{ item.createdBy }}</p>
+        @if (isComponent(record)) {
+          @let version = asComponent(item);
+          <dl class="grid gap-3 text-sm text-gray-700 sm:grid-cols-2 xl:grid-cols-3 dark:text-gray-300">
+            <div><dt class="font-semibold">Component type</dt><dd>{{ human(version.componentType) }}</dd></div>
+            <div><dt class="font-semibold">Calculation</dt><dd>{{ human(version.calculationMethod) }}</dd></div>
+            <div><dt class="font-semibold">Frequency</dt><dd>{{ human(version.frequency) }}</dd></div>
+            <div><dt class="font-semibold">Currency</dt><dd>{{ version.currency }}</dd></div>
+            <div class="min-w-0"><dt class="font-semibold">Legal classification reference</dt><dd class="wrap-anywhere">{{ version.legalClassificationRef || '—' }}</dd></div>
+            @if (version.calculationMethod === 'FORMULA') {
+              <div><dt class="font-semibold">Formula</dt><dd>{{ version.calculationConfig['percentage'] }}% of base salary</dd></div>
+            }
+          </dl>
+          @if (item.status === 'DRAFT' && record.status === 'ACTIVE' && can('components:publish')) {
+            <button class="action" type="button" [disabled]="!!form()" (click)="action('Publish component version ' + item.version, 'versions/' + item.id + '/publish')">Publish version</button>
+          }
+        }
+        @if (isTable(record)) {
+          <div class="space-y-3">
+            @for (gradeItem of record.grades; track gradeItem.id) {
+              @if (gradeItem.tableVersionId === item.id) {
+                <div class="space-y-2 rounded-lg border border-gray-200 p-4 text-sm text-gray-700 dark:border-gray-800 dark:text-gray-300">
+                  <h4 class="font-semibold text-gray-900 dark:text-white">{{ gradeItem.code }} · {{ gradeItem.name }}</h4>
+                  <p>{{ money(gradeItem.minAmount, gradeItem.currency) }} – {{ money(gradeItem.maxAmount, gradeItem.currency) }}</p>
+                  @if (gradeItem.functionCode || gradeItem.categoryCode) {
+                    <p>Function {{ gradeItem.functionCode || '—' }} · Category {{ gradeItem.categoryCode || '—' }}</p>
+                  }
+                  <ul class="space-y-1">
+                    @for (stepItem of record.steps; track stepItem.id) {
+                      @if (stepItem.gradeId === gradeItem.id) {
+                        <li>{{ stepItem.code }} · {{ stepItem.name }} · {{ money(stepItem.amount, stepItem.currency) }}</li>
+                      }
+                    }
+                  </ul>
+                  @if (item.status === 'DRAFT' && can('grades:manage')) {
+                    <button class="action" type="button" [disabled]="!!form()" (click)="step(gradeItem)">Add step</button>
+                  }
+                </div>
+              }
+            }
+          </div>
+          @if (item.status === 'DRAFT' && can('tables:manage')) {
+            <button class="action" type="button" [disabled]="!!form()" (click)="action('Publish table version ' + item.version, 'versions/' + item.id + '/publish')">Publish version</button>
+          }
+        }
+        @if (isStructure(record)) {
+          <ul class="divide-y divide-gray-100 text-sm text-gray-700 dark:divide-gray-800 dark:text-gray-300">
+            @for (line of record.items; track line.id) {
+              @if (line.structureVersionId === item.id) {
+                <li class="flex flex-wrap justify-between gap-2 py-2">
+                  <span class="break-all">{{ line.componentVersionId }}</span>
+                  <span>{{ line.percentage != null ? line.percentage + '%' : line.amount ?? 'Defined by component or assignment' }}
+                    @if (line.required) { · Required }
+                  </span>
+                </li>
+              }
+            }
+          </ul>
+          @if (item.approvedBy) { <p class="text-sm text-gray-600 dark:text-gray-400">Approved by user {{ item.approvedBy }}</p> }
+          @if (latest) {
+            <div class="flex flex-wrap gap-2">
+              @if (item.status === 'DRAFT' && can('structures:update')) {
+                <button class="action" type="button" [disabled]="!!form()" (click)="action('Submit structure', 'submit')">Submit for approval</button>
+              }
+              @if (item.status === 'PENDING_APPROVAL' && can('structures:approve')) {
+                @if (!own(item)) {
+                  <button class="action" type="button" [disabled]="!!form()" (click)="action('Approve structure', 'decision', {decision: 'APPROVED'})">Approve structure</button>
+                  <button class="action" type="button" [disabled]="!!form()" (click)="action('Reject structure', 'decision', {decision: 'REJECTED'})">Reject structure</button>
+                } @else { <p class="text-sm text-gray-600 dark:text-gray-400">Another authorized user must decide this version.</p> }
+              }
+              @if (item.status === 'APPROVED' && can('structures:publish')) {
+                <button class="action" type="button" [disabled]="!!form()" (click)="action('Publish approved structure', 'publish')">Publish approved version</button>
+              }
+            </div>
+          }
+        }
+      </app-component-card>
+    } @empty { <p class="text-sm text-gray-600 dark:text-gray-400">No versions recorded.</p> }
+  } @else if (id) {
+    <p class="feedback" role="alert">Invalid salary record ID.</p>
+  } @else if (!form()) {
+    <app-component-card [title]="title">
+      <div class="overflow-x-auto rounded-lg border border-gray-200 dark:border-gray-800">
+        <table class="w-full min-w-[38rem] text-start text-sm text-gray-700 dark:text-gray-300">
+          <thead class="table-heading"><tr><th scope="col">Code</th><th scope="col">Name</th><th scope="col">Status</th>
+            <th scope="col">Version</th><th scope="col">Details</th><th scope="col"><span class="sr-only">Actions</span></th></tr></thead>
+          <tbody class="divide-y divide-gray-100 dark:divide-gray-800">
+            @for (row of visible(view); track row.id) {
+              <tr>
+                <td class="table-cell">{{ row.code }}</td><td class="table-cell">{{ row.name }}</td><td class="table-cell">{{ human(row.status) }}</td>
+                <td class="table-cell">v{{ view.versions?.get(row.id)?.version ?? row.version }}</td>
+                <td class="table-cell">
+                  @if (view.versions?.get(row.id); as version) {
+                    {{ human(version.componentType) }} · {{ human(version.calculationMethod) }} · {{ human(version.frequency) }}
+                  } @else { {{ row.description || '—' }} }
+                </td>
+                <td class="table-cell"><a class="text-brand-700 underline dark:text-brand-300" [routerLink]="['/salary-structure', company, mode, row.id]">View details</a></td>
+              </tr>
+            } @empty { <tr><td colspan="6" class="table-cell">No records match the filters.</td></tr> }
+          </tbody>
+        </table>
+      </div>
+      <div class="flex flex-wrap items-center justify-between gap-3">
+        <p class="text-sm text-gray-600 dark:text-gray-400">{{ view.total }} records · Page {{ page }}</p>
+        <div class="flex gap-2">
+          <button class="action" type="button" [disabled]="page <= 1" (click)="go(page - 1)">Previous</button>
+          <button class="action" type="button" [disabled]="page * 20 >= view.total" (click)="go(page + 1)">Next</button>
+        </div>
+      </div>
+    </app-component-card>
+  }
+}

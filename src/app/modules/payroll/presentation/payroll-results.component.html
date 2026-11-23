@@ -1,0 +1,123 @@
+<app-component-card title="Employee payroll results">
+  @if (canExport()) {
+    <div class="mb-4 space-y-2 rounded-xl border border-gray-200 p-3 dark:border-gray-800">
+      @if (exportJob(); as job) {
+        <div class="flex flex-wrap items-center gap-2">
+          <p class="me-2 text-sm text-gray-700 dark:text-gray-300">{{ job.format }} export {{ job.status === 'COMPLETED' ? 'ready' : 'requested' }}</p>
+          <button class="action action-primary" type="button" [disabled]="exportBusy()" (click)="download()">Download {{ job.format }}</button>
+          <button class="action" type="button" [disabled]="exportBusy()" (click)="resetExport()">New export</button>
+        </div>
+      } @else {
+        <div class="flex flex-wrap items-end gap-2">
+          <label class="field">Export format <select class="control" [ngModel]="exportFormat()" (ngModelChange)="exportFormat.set($event)" [disabled]="exportBusy()">
+            <option value="PDF">PDF</option><option value="XLSX">Excel (XLSX)</option>
+          </select></label>
+          <button class="action" type="button" [disabled]="exportBusy()" (click)="requestExport()">Request export</button>
+        </div>
+      }
+      @if (exportError()) { <p class="feedback" role="alert">{{ exportError() }}</p> }
+      @if (exportNotice()) { <p class="notice" role="status">{{ exportNotice() }}</p> }
+    </div>
+  }
+  @let response = results();
+  @if (!response) { <p role="status" class="text-sm text-gray-600 dark:text-gray-400">Loading results…</p> }
+  @else if ('error' in response) {
+    <p class="feedback" role="alert">{{ response.error }}</p><button class="action" type="button" (click)="refresh()">Try again</button>
+  } @else {
+    @if (response.data.length) {
+      <label class="field mb-3 max-w-sm">Filter by employee ID
+        <input type="search" class="control" [ngModel]="search()" (ngModelChange)="search.set($event); page.set(1)" />
+      </label>
+    }
+    <div class="overflow-x-auto">
+      <table class="w-full text-start text-sm text-gray-700 dark:text-gray-300">
+        <thead class="table-heading"><tr><th scope="col">Employee</th><th scope="col">Gross</th><th scope="col">Deductions</th><th scope="col">Net</th><th scope="col">Employer costs</th></tr></thead>
+        <tbody class="divide-y divide-gray-200 dark:divide-gray-800">
+          @for (row of visible(); track row.id) {
+            <tr>
+              <td class="table-cell"><button type="button" class="cursor-pointer text-start font-medium text-brand-700 hover:underline dark:text-brand-300" [attr.aria-expanded]="resultId() === row.id" (click)="resultId.set(resultId() === row.id ? '' : row.id)">{{ row.employeeId }}</button></td>
+              <td class="table-cell whitespace-nowrap">{{ money(row.grossAmount, row.currency) }}</td>
+              <td class="table-cell whitespace-nowrap">{{ money(row.deductionsAmount, row.currency) }}</td>
+              <td class="table-cell whitespace-nowrap">{{ money(row.netAmount, row.currency) }}</td>
+              <td class="table-cell whitespace-nowrap">{{ money(row.employerCostsAmount, row.currency) }}</td>
+            </tr>
+          } @empty { <tr><td class="table-cell" colspan="5">No results match the current selection.</td></tr> }
+        </tbody>
+      </table>
+    </div>
+    @if (filtered().length > pageSize) {
+      <div class="mt-4 flex flex-wrap items-center justify-between gap-2 text-sm text-gray-600 dark:text-gray-400">
+        <span>Page {{ page() }} · {{ filtered().length }} results</span>
+        <div class="flex gap-2">
+          <button class="action" type="button" [disabled]="page() === 1" (click)="changePage(-1)">Previous</button>
+          <button class="action" type="button" [disabled]="page() * pageSize >= filtered().length" (click)="changePage(1)">Next</button>
+        </div>
+      </div>
+    }
+  }
+</app-component-card>
+@if (resultId()) {
+  <div class="mt-4">
+    <app-component-card title="Calculation details">
+      @let selected = detail();
+      @if (!selected) { <p role="status" class="text-sm text-gray-600 dark:text-gray-400">Loading calculation details…</p> }
+      @else if ('error' in selected) {
+        <p class="feedback" role="alert">{{ selected.error }}</p><button class="action" type="button" (click)="refresh()">Try again</button>
+      } @else if (selected && 'data' in selected && selected.data; as evidence) {
+        <a class="action mb-4" [routerLink]="['/payroll-engine', context().company.id, 'traces']"
+          [queryParams]="{ run: run().id, result: resultId() }">Open in Payroll engine</a>
+        <app-engine-evidence [evidence]="evidence" />
+      }
+    </app-component-card>
+  </div>
+}
+@if (canCompare()) {
+  <div class="mt-4">
+    <app-component-card title="Compare payroll runs">
+      @if (!comparisonOpen()) {
+        <button class="action" type="button" (click)="comparisonOpen.set(true)">Choose a run to compare</button>
+      } @else {
+        @let options = alternatives();
+        @if (!options) { <p role="status" class="text-sm text-gray-600 dark:text-gray-400">Loading closed runs…</p> }
+        @else if ('error' in options) {
+          <p class="feedback" role="alert">{{ options.error }}</p><button class="action" type="button" (click)="refresh()">Try again</button>
+        } @else {
+          <label class="field mb-3 max-w-sm">Closed comparison run
+            <select class="control" [ngModel]="comparisonTarget()" (ngModelChange)="comparisonTarget.set($event); comparisonPage.set(1)">
+              <option value="">Select a closed payroll run</option>
+              @for (run of options.data; track run.id) {
+                <option [value]="run.id">{{ titles[run.runType] }} · {{ date(run.createdAt) }} · {{ run.id.slice(0, 8) }}</option>
+              }
+            </select>
+          </label>
+          @if (!options.data.length) { <p class="text-sm text-gray-600 dark:text-gray-400">No other closed runs are available.</p> }
+          @if (comparisonTarget()) {
+            @let diff = comparison();
+            @if (!diff) { <p role="status" class="text-sm text-gray-600 dark:text-gray-400">Comparing payroll results…</p> }
+            @else if ('error' in diff) {
+              <p class="feedback" role="alert">{{ diff.error }}</p><button class="action" type="button" (click)="refresh()">Try again</button>
+            } @else {
+              <div class="overflow-x-auto">
+                <table class="w-full text-start text-sm text-gray-700 dark:text-gray-300">
+                  <thead class="table-heading"><tr><th scope="col">Employee</th><th scope="col">Net difference</th></tr></thead>
+                  <tbody class="divide-y divide-gray-200 dark:divide-gray-800">
+                    @for (row of diff.data.slice((comparisonPage() - 1) * pageSize, comparisonPage() * pageSize); track row.employeeId) {
+                      <tr><td class="table-cell">{{ row.employeeId }}</td><td class="table-cell">{{ money(row.netDifference, row.currency) }}</td></tr>
+                    } @empty { <tr><td class="table-cell" colspan="2">There are no calculated results to compare.</td></tr> }
+                  </tbody>
+                </table>
+              </div>
+              @if (diff.data.length > pageSize) {
+                <div class="mt-4 flex flex-wrap items-center gap-2 text-sm text-gray-600 dark:text-gray-400">
+                  <button class="action" type="button" [disabled]="comparisonPage() === 1" (click)="changeComparisonPage(-1)">Previous</button>
+                  <button class="action" type="button" [disabled]="comparisonPage() * pageSize >= diff.data.length" (click)="changeComparisonPage(1)">Next</button>
+                  <span>Page {{ comparisonPage() }} · {{ diff.data.length }} comparisons</span>
+                </div>
+              }
+            }
+          }
+        }
+      }
+    </app-component-card>
+  </div>
+}

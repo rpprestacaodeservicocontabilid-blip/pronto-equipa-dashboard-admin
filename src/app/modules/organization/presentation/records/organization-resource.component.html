@@ -1,0 +1,104 @@
+<div class="space-y-5">
+  @if (!id) {
+    <app-component-card [title]="shiftsOnly ? 'Select a schedule to manage shifts' : config.label">
+      <div class="space-y-4">
+        <form class="flex flex-wrap items-end gap-3" (ngSubmit)="searchPage()">
+          <label class="field flex-1">Search<input name="search" [(ngModel)]="search" class="control" type="search" maxlength="100" placeholder="Code or name" /></label>
+          <label class="field">Status<select name="status" [(ngModel)]="status" class="control">
+            <option value="">All statuses</option><option value="ACTIVE">Active</option><option value="INACTIVE">Inactive</option>
+          </select></label>
+          <button class="action" type="submit" [disabled]="loading()">Search</button>
+          @if (can('create') && !shiftsOnly) {
+            <button class="action action-primary" type="button" (click)="edit.set(true)">New record</button>
+          }
+        </form>
+        @if (edit()) {
+          <app-organization-record-editor [context]="context" [resource]="resource" (saved)="saved($event)" (dismissed)="edit.set(false)" />
+        }
+        @if (error()) {
+          <p role="alert" class="feedback">{{ error() }}</p>
+          <button type="button" class="action" (click)="loadPage(page()?.pagination?.page ?? 1)">Try again</button>
+        }
+        @if (loading()) { <p role="status" class="text-sm text-gray-600 dark:text-gray-400">Loading records…</p> }
+        @else if (page(); as result) {
+          <div class="overflow-x-auto rounded-lg border border-gray-200 dark:border-gray-800">
+            <table class="w-full min-w-[34rem] text-start text-sm text-gray-700 dark:text-gray-300">
+              <thead class="table-heading"><tr><th scope="col">Name</th><th scope="col">Code</th><th scope="col">Details</th><th scope="col">Status</th></tr></thead>
+              <tbody class="divide-y divide-gray-200 dark:divide-gray-800">
+                @for (row of result.data; track row.id) {
+                  <tr>
+                    <td class="table-cell"><a class="font-medium text-brand-700 hover:underline dark:text-brand-300" [routerLink]="['/organization', context.company.id, section, row.id]">{{ row.name }}</a></td>
+                    <td class="table-cell">{{ row.code }}</td>
+                    <td class="table-cell">{{ summary(row) || (row.effectiveFrom | date:'mediumDate':'UTC') || '—' }}</td>
+                    <td class="table-cell">{{ row.status === 'ACTIVE' ? 'Active' : 'Inactive' }}</td>
+                  </tr>
+                } @empty { <tr><td class="table-cell text-center" colspan="4">No matching records.</td></tr> }
+              </tbody>
+            </table>
+          </div>
+          <div class="flex flex-wrap items-center justify-between gap-2">
+            <p class="text-sm text-gray-600 dark:text-gray-400">{{ result.pagination.total }} records · Page {{ result.pagination.page }} of {{ result.pagination.totalPages || 1 }}</p>
+            <div class="flex gap-2">
+              <button class="action" type="button" [disabled]="result.pagination.page <= 1" (click)="loadPage(result.pagination.page - 1)">Previous</button>
+              <button class="action" type="button" [disabled]="result.pagination.page >= result.pagination.totalPages" (click)="loadPage(result.pagination.page + 1)">Next</button>
+            </div>
+          </div>
+        }
+      </div>
+    </app-component-card>
+  } @else {
+    <a class="action" [routerLink]="['/organization', context.company.id, section]">Back to {{ shiftsOnly ? 'shifts' : config.label.toLowerCase() }}</a>
+    @if (error()) { <p role="alert" class="feedback">{{ error() }}</p><button class="action" type="button" (click)="loadRecord()">Refresh record</button> }
+    @if (notice()) { <p role="status" class="notice">{{ notice() }}</p> }
+    @if (loading()) { <p role="status" class="text-sm text-gray-600 dark:text-gray-400">Loading record…</p> }
+    @else if (record(); as row) {
+      <app-component-card [title]="row.name" [desc]="row.code + ' · Version ' + row.version">
+        <div class="space-y-4">
+          @if (!shiftsOnly) {
+            <dl class="grid gap-4 text-sm text-gray-700 dark:text-gray-300 sm:grid-cols-2">
+              <div><dt>Status</dt><dd class="font-semibold">{{ row.status === 'ACTIVE' ? 'Active' : 'Inactive' }}</dd></div>
+              @if (config.dated) {
+                <div><dt>Effective period</dt><dd class="font-semibold">{{ (row.effectiveFrom | date:'mediumDate':'UTC') || '—' }} – {{ (row.effectiveTo | date:'mediumDate':'UTC') || 'Open-ended' }}</dd></div>
+              }
+              @for (field of config.fields; track field.key) {
+                @if (field.kind !== 'reference' && field.kind !== 'weekdays' && row.data[field.key] != null) {
+                  <div class="min-w-0"><dt>{{ field.label }}</dt><dd class="break-words whitespace-pre-wrap font-semibold">{{ display(row.data[field.key]) }}</dd></div>
+                }
+              }
+            </dl>
+            <div class="flex flex-wrap gap-2">
+              @if (can('update') && (!config.dated || !row.effectiveFrom || row.effectiveFrom >= today)) {
+                <button class="action action-primary" type="button" (click)="edit.set(true); confirm.set(false)">Edit record</button>
+              }
+              @if (can(row.status === 'ACTIVE' ? 'deactivate' : 'update')) {
+                <button class="action" type="button" (click)="confirm.set(true); edit.set(false)">{{ row.status === 'ACTIVE' ? 'Deactivate' : 'Activate' }}</button>
+              }
+              @if (resource === 'departments') {
+                <a class="action" [routerLink]="['/organization', context.company.id, 'structure']">View in hierarchy</a>
+              }
+              @if (resource === 'cost-centers') {
+                <a class="action" [routerLink]="['/organization', context.company.id, 'cost-allocations', row.id]">Related allocations</a>
+              }
+            </div>
+          }
+          @if (confirm()) {
+            <div class="rounded-lg border border-warning-300 bg-warning-50 p-3 text-sm text-gray-800 dark:border-warning-700 dark:bg-warning-500/10 dark:text-gray-100">
+              <p>{{ row.status === 'ACTIVE' ? 'Deactivate' : 'Activate' }} {{ row.name }}?</p>
+              <div class="mt-3 flex gap-2">
+                <button class="action action-primary" type="button" [disabled]="busy()" (click)="changeStatus(row)">Confirm</button>
+                <button class="action" type="button" [disabled]="busy()" (click)="confirm.set(false)">Cancel</button>
+              </div>
+            </div>
+          }
+          @if (edit()) {
+            <app-organization-record-editor [context]="context" [resource]="resource" [record]="row" (saved)="saved($event)" (dismissed)="edit.set(false)" />
+          }
+        </div>
+      </app-component-card>
+      @for (version of [row.version]; track version) {
+        <app-organization-record-children [context]="context" [resource]="resource" [record]="row" [shiftsOnly]="shiftsOnly" (changed)="loadRecord()" />
+        @if (canHistory) { <app-organization-history [context]="context" [resource]="resource" [recordId]="row.id" /> }
+      }
+    }
+  }
+</div>

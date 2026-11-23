@@ -1,0 +1,74 @@
+@if (notice()) { <p class="notice" role="status">{{ notice() }}</p> }
+@if (editing()) {
+  <app-component-card title="Publish lending policy" desc="Reusing a policy code publishes a new version and retires its current version.">
+    <form #form="ngForm" (ngSubmit)="publish(form)" class="space-y-4">
+      <fieldset class="grid gap-3 sm:grid-cols-2" [disabled]="busy()">
+        <label class="field">Policy code<input class="control" name="code" maxlength="50" [(ngModel)]="input.code" required /></label>
+        <label class="field">Effective date<input class="control" type="date" name="effective" [(ngModel)]="input.effectiveFrom" required /></label>
+        <label class="field">Maximum amount (Kz)<input class="control" name="amount" inputmode="decimal" maxlength="16" [(ngModel)]="input.maxAmount" required /></label>
+        <label class="field">Maximum installments<input class="control" type="number" name="installments" min="1" max="120" [(ngModel)]="input.maxInstallments" required /></label>
+        <label class="field">Maximum open loans per employee<input class="control" type="number" name="maxActive" min="1" max="100" [(ngModel)]="input.maxActiveLoans" required /></label>
+        <fieldset class="space-y-1">
+          <legend class="mb-1 text-sm font-medium text-gray-700 dark:text-gray-300">Allowed loan types</legend>
+          @for (type of loanTypes; track type) {
+            <label class="flex items-center gap-2 text-sm text-gray-700 dark:text-gray-300">
+              <input #checkType type="checkbox" [checked]="input.allowedTypes.includes(type)" (change)="toggle(type, checkType.checked)" /> {{ label(type) }}
+            </label>
+          }
+        </fieldset>
+        <label class="flex items-center gap-2 text-sm text-gray-700 dark:text-gray-300">
+          <input type="checkbox" name="interest" [(ngModel)]="input.interestAllowed" /> Allow interest
+        </label>
+        @if (input.interestAllowed) {
+          <label class="field">Maximum annual interest in basis points (100 = 1%)
+            <input class="control" type="number" name="rate" min="0" max="100000" [(ngModel)]="input.maxAnnualInterestBps" required />
+          </label>
+        }
+        <label class="flex items-center gap-2 text-sm text-gray-700 sm:col-span-2 dark:text-gray-300">
+          <input type="checkbox" name="deduction" [(ngModel)]="input.deductionAuthorizationRequired" /> Require payroll deduction authorization
+        </label>
+        <label class="flex items-center gap-2 text-sm font-medium text-gray-700 sm:col-span-2 dark:text-gray-300">
+          <input #confirm type="checkbox" [checked]="confirmed()" (change)="confirmed.set(confirm.checked)" /> I confirm publication of this policy version.
+        </label>
+      </fieldset>
+      @if (writeError()) { <p class="feedback" role="alert">{{ writeError() }}</p> }
+      <div class="flex flex-wrap gap-2">
+        <button class="action action-primary" type="submit" [disabled]="busy() || form.invalid || !confirmed()">Publish policy</button>
+        <button class="action" type="button" [disabled]="busy()" (click)="editing.set(false)">Cancel</button>
+      </div>
+    </form>
+  </app-component-card>
+} @else if (can('policies.manage')) {
+  <button class="action action-primary" type="button" (click)="edit()">New policy version</button>
+}
+
+@if (error()) { <p class="feedback" role="alert">{{ error() }}</p><button class="action" type="button" (click)="read()">Try again</button> }
+@if (loading()) { <p class="text-sm text-gray-600 dark:text-gray-400" role="status">Loading policy versions…</p> }
+@if (policies(); as records) {
+  <app-component-card title="Policy versions">
+    <div class="overflow-x-auto rounded-lg border border-gray-200 dark:border-gray-800">
+      <table class="w-full min-w-[44rem] text-start text-sm text-gray-700 dark:text-gray-300">
+        <thead class="table-heading"><tr><th scope="col">Code</th><th scope="col">Version</th><th scope="col">Validity</th><th scope="col">Types</th><th scope="col">Limits</th><th scope="col">Controls</th><th scope="col"><span class="sr-only">Actions</span></th></tr></thead>
+        <tbody class="divide-y divide-gray-100 dark:divide-gray-800">
+          @for (policy of records; track policy.id) {
+            <tr>
+              <td class="table-cell">{{ policy.code }}</td>
+              <td class="table-cell">v{{ policy.version }} · {{ policy.active ? 'Enabled' : 'Retired' }}</td>
+              <td class="table-cell whitespace-nowrap">{{ policy.effectiveFrom }} – {{ policy.effectiveTo || 'Open' }}</td>
+              <td class="table-cell">@for (type of policy.allowedTypes; track type) { <span class="block">{{ label(type) }}</span> }</td>
+              <td class="table-cell">{{ money(policy.maxAmount) }} · {{ policy.maxInstallments }} installments · {{ policy.maxActiveLoans }} open loans</td>
+              <td class="table-cell">{{ policy.interestAllowed ? policy.maxAnnualInterestBps / 100 + '% maximum interest' : 'Interest disabled' }}
+                <p>{{ policy.deductionAuthorizationRequired ? 'Deduction authorization required' : 'Deduction authorization optional' }}</p>
+              </td>
+              <td class="table-cell">
+                @if (can('policies.manage')) {
+                  <button class="action" type="button" [disabled]="editing()" (click)="edit(policy)">Copy to new version</button>
+                }
+              </td>
+            </tr>
+          } @empty { <tr><td class="table-cell" colspan="7">No lending policies.</td></tr> }
+        </tbody>
+      </table>
+    </div>
+  </app-component-card>
+}

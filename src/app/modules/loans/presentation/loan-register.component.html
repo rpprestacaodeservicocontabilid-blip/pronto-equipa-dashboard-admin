@@ -1,0 +1,90 @@
+@if (notice()) { <p role="status" class="notice break-words">{{ notice() }}</p> }
+@if (editing()) {
+  <app-loan-application-editor [context]="context" [advance]="mode === 'advances'" (cancelled)="editing.set(false)" (saved)="saved($event)" />
+} @else if (isApplication && mode !== 'approvals' && can('applications.create')) {
+  <button class="action action-primary" type="button" (click)="editing.set(true)">{{ mode === 'advances' ? 'New salary advance' : 'New application' }}</button>
+}
+
+@if (mode === 'renegotiations' && can('renegotiations.decide')) {
+  @if (deciding()) {
+    <app-loan-action [company]="company" [request]="{action: 'decide-renegotiation', reference: initialRenegotiation, description: 'Use the request ID and verify the proposed terms before recording the decision.'}"
+      (cancelled)="deciding.set(false)" (saved)="decided($event)" />
+  } @else {
+    <button class="action action-primary" type="button" (click)="deciding.set(true)">Decide by renegotiation ID</button>
+  }
+}
+
+@if (canRead && !editing()) {
+  <app-component-card title="Filters">
+    <div class="grid gap-4 lg:grid-cols-[minmax(0,1fr)_2fr]">
+      <app-loan-employee-picker [company]="company" [canSearch]="canSearch" [value]="filters.employee" (employeeChange)="filters.employee = $event" />
+      <form (ngSubmit)="apply()" class="space-y-3">
+        <div class="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
+          @if (!lockedStatus) {
+            <label class="field">Status<select class="control" name="status" [(ngModel)]="filters.status">
+              <option value="">{{ mode === 'active' && !applicationFilter ? 'Active and suspended' : 'All statuses' }}</option>
+              @for (status of statuses; track status) { <option [value]="status">{{ label(status) }}</option> }
+            </select></label>
+          }
+          @if (isApplication) {
+            <label class="field">Loan type<select class="control" name="type" [(ngModel)]="filters.type">
+              <option value="">All types</option>
+              @for (type of types; track type) { <option [value]="type">{{ label(type) }}</option> }
+            </select></label>
+          }
+          <label class="field">Created from<input type="date" class="control" name="from" [(ngModel)]="filters.from" /></label>
+          <label class="field">Created through<input type="date" class="control" name="to" [(ngModel)]="filters.to" /></label>
+          <label class="field">Minimum (Kz)<input class="control" name="min" maxlength="16" inputmode="decimal" [(ngModel)]="filters.min" /></label>
+          <label class="field">Maximum (Kz)<input class="control" name="max" maxlength="16" inputmode="decimal" [(ngModel)]="filters.max" /></label>
+        </div>
+        <button class="action action-primary" type="submit" [disabled]="loading()">Apply filters</button>
+        @if (filterError()) { <p class="feedback" role="alert">{{ filterError() }}</p> }
+      </form>
+    </div>
+    @if (context.permissions.includes('organization:read')) {
+      <app-organization-filter [company]="company" (scopeChange)="scope = $event" />
+    }
+  </app-component-card>
+
+  @if (loading()) { <p role="status" class="text-sm text-gray-600 dark:text-gray-400">Loading {{ title.toLowerCase() }}…</p> }
+  @if (error()) { <p role="alert" class="feedback">{{ error() }}</p><button type="button" class="action" (click)="retry()">Try again</button> }
+  @if (result(); as data) {
+    <app-component-card [title]="title" [desc]="isApplication || mode === 'active' || mode === 'settlements' ? '' : 'Select a loan to review its records and available actions.'">
+      <div class="overflow-x-auto rounded-lg border border-gray-200 dark:border-gray-800">
+        <table class="w-full min-w-[42rem] text-start text-sm text-gray-700 dark:text-gray-300">
+          <thead class="table-heading"><tr>
+            <th scope="col">Reference</th><th scope="col">Employee</th><th scope="col">Status</th>
+            <th scope="col">{{ isApplication ? 'Requested' : 'Principal' }}</th><th scope="col">{{ isApplication ? 'Type' : 'Balance' }}</th>
+            <th scope="col">Created</th><th scope="col"><span class="sr-only">Details</span></th>
+          </tr></thead>
+          <tbody class="divide-y divide-gray-100 dark:divide-gray-800">
+            @for (row of visible(data); track row.id) {
+              <tr>
+                <td class="table-cell">{{ application(row) ? row.id.slice(0, 8) : row.loanNumber }}</td>
+                <td class="table-cell max-w-72 wrap-anywhere">{{ employees().get(row.employeeId) ?? row.employeeId }}</td>
+                <td class="table-cell">{{ label(row.status) }}</td>
+                @if (application(row)) {
+                  <td class="table-cell whitespace-nowrap">{{ money(row.requestedAmount, row.currency) }}</td><td class="table-cell">{{ label(row.loanType) }}</td>
+                } @else {
+                  <td class="table-cell whitespace-nowrap">{{ money(row.principalAmount, row.currency) }}</td>
+                  <td class="table-cell whitespace-nowrap">{{ row.disbursedAt ? money(row.balance.total, row.currency) : 'Awaiting disbursement' }}</td>
+                }
+                <td class="table-cell whitespace-nowrap">{{ row.createdAt | date:'mediumDate' }}</td>
+                <td class="table-cell"><a class="text-brand-700 underline dark:text-brand-300"
+                  [attr.aria-label]="'View ' + (application(row) ? 'application ' + row.id : row.loanNumber)"
+                  [routerLink]="['/loans', company, isApplication ? 'applications' : mode, row.id]">View details</a></td>
+              </tr>
+            } @empty { <tr><td colspan="7" class="table-cell">No records match the filters.</td></tr> }
+          </tbody>
+        </table>
+      </div>
+      <div class="flex flex-wrap items-center justify-between gap-3">
+        <p class="text-sm text-gray-600 dark:text-gray-400">{{ data.total }} records · Page {{ page }}</p>
+        <div class="flex gap-2">
+          <button type="button" class="action" [disabled]="page <= 1" (click)="go(page - 1)">Previous</button>
+          <button type="button" class="action" [disabled]="page * pageSize >= data.total" (click)="go(page + 1)">Next</button>
+        </div>
+      </div>
+    </app-component-card>
+  }
+}

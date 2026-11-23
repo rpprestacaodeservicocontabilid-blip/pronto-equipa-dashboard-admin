@@ -1,0 +1,59 @@
+<app-component-card title="Organization hierarchy">
+  <div class="space-y-4">
+    <div class="flex flex-wrap items-end gap-3">
+      <label class="field flex-1">Find department<input type="search" class="control" [ngModel]="search()" (ngModelChange)="search.set($event)" placeholder="Code, name or manager" /></label>
+      @if (context.permissions.includes('organization:history:read')) {
+        <label class="field">View as of<input type="date" class="control" [(ngModel)]="asOf" [attr.max]="today" /></label>
+        <button class="action" type="button" [disabled]="loading() || saving()" (click)="showHistory()">View historical structure</button>
+        @if (historical()) { <button type="button" class="action" (click)="currentStructure()">Current structure</button> }
+      }
+    </div>
+    @if (error()) { <p role="alert" class="feedback">{{ error() }}</p><button type="button" class="action" (click)="load()" [disabled]="loading() || saving()">Refresh hierarchy</button> }
+    @if (notice()) { <p role="status" class="notice">{{ notice() }}</p> }
+    @if (selected(); as item) {
+      <form (ngSubmit)="move()" class="space-y-3 rounded-lg border border-gray-200 p-3 dark:border-gray-800">
+        <label class="field">Move {{ item.name }} under
+          <select name="parent" [(ngModel)]="parent" class="control">
+            <option value="">Top-level department</option>
+            @for (option of parentOptions(); track option.id) { <option [value]="option.id">{{ option.name }} · {{ option.code }}</option> }
+          </select>
+        </label>
+        <div class="flex flex-wrap gap-2">
+          <button class="action action-primary" type="submit" [disabled]="saving() || (item.parentId || '') === parent">Confirm move</button>
+          <button class="action" type="button" [disabled]="saving()" (click)="selected.set(null)">Cancel</button>
+        </div>
+      </form>
+    }
+    @if (loading()) { <p role="status" class="text-sm text-gray-600 dark:text-gray-400">Loading hierarchy…</p> }
+    @else { <ng-container [ngTemplateOutlet]="branch" [ngTemplateOutletContext]="{ $implicit: visible() }" /> }
+  </div>
+</app-component-card>
+
+<ng-template #branch let-nodes>
+  <ul class="space-y-2 border-s border-gray-200 ps-3 dark:border-gray-800">
+    @for (node of nodes; track node.id) {
+      <li class="space-y-2">
+        <div class="flex flex-wrap items-center gap-2 rounded-lg border border-gray-200 bg-gray-50 p-2 dark:border-gray-800 dark:bg-gray-800/40">
+          @if (node.children.length) {
+            <button type="button" class="action px-2" [attr.aria-expanded]="expanded().has(node.id) || !!search().trim()"
+              [attr.aria-label]="'Toggle ' + node.name" (click)="toggle(node.id)">{{ expanded().has(node.id) || search().trim() ? '−' : '+' }}</button>
+          }
+          <div class="min-w-0 flex-1 text-sm">
+            @if (historical()) {
+              <p class="font-semibold text-gray-900 dark:text-gray-100">{{ node.name }}</p>
+            } @else {
+              <a class="font-semibold text-brand-700 dark:text-brand-300" [routerLink]="['/organization', context.company.id, 'departments', node.id]">{{ node.name }}</a>
+            }
+            <p class="text-gray-600 dark:text-gray-400">{{ node.code }} · {{ node.status }} @if (manager(node)) { · {{ manager(node) }} }</p>
+          </div>
+          @if (!historical() && context.permissions.includes('organization:hierarchy:manage')) {
+            <button class="action" type="button" [disabled]="saving()" (click)="beginMove(node)">Move</button>
+          }
+        </div>
+        @if (node.children.length && (expanded().has(node.id) || search().trim())) {
+          <ng-container [ngTemplateOutlet]="branch" [ngTemplateOutletContext]="{ $implicit: node.children }" />
+        }
+      </li>
+    } @empty { <li class="text-sm text-gray-600 dark:text-gray-400">No departments found.</li> }
+  </ul>
+</ng-template>

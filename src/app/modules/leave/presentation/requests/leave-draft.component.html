@@ -1,0 +1,39 @@
+<app-component-card [title]="request ? 'Edit draft' : planYear ? 'Add annual plan period · ' + planYear : 'New leave request'">
+  @if (!allowed) { <p role="alert" class="feedback">Creating a request requires leave and employee access. Editing requires an editable draft.</p> }
+  @else {
+    <form (ngSubmit)="save()" class="space-y-4">
+      <fieldset class="space-y-4" [disabled]="busy()">
+        <div class="grid gap-3 sm:grid-cols-2">
+          @if (!request) {
+            <label class="field">Employee<select class="control" name="employeeId" [(ngModel)]="employeeId" (ngModelChange)="preview.set(null)" required>
+              <option value="">Select employee</option>
+              @for (worker of directory.employees(); track worker.id) { <option [value]="worker.id">{{ directory.name(worker.id) }} · {{ worker.employeeNumber }}</option> }
+            </select></label>
+          }
+          @if (!planYear) {
+            <label class="field">Leave type<select class="control" name="type" [(ngModel)]="type">
+              @for (entry of types; track entry[0]) { <option [ngValue]="entry[0]">{{ entry[1] }}</option> }
+            </select></label>
+          }
+        </div>
+        <app-leave-periods [periods]="periods" (periodsChange)="periods = $event; preview.set(null)"
+          [minimum]="planYear ? planYear + '-01-01' : ''" [maximum]="planYear ? planYear + '-12-31' : ''" />
+        <label class="field">Reason<textarea class="control" rows="3" name="reason" [(ngModel)]="reason" maxlength="1000"></textarea></label>
+        @if (error()) { <p role="alert" class="feedback">{{ error() }}</p> }
+        @if (preview(); as validation) {
+          <div class="rounded-lg border border-gray-200 p-3 text-sm text-gray-700 dark:border-gray-800 dark:text-gray-300">
+            <p>Company calendar estimate · {{ validation.days === null ? 'Unavailable' : validation.days + ' working days' }}</p>
+            <p>Blocking overlaps · {{ validation.conflicts === null ? 'Check unavailable' : validation.conflicts.length }}</p>
+            <p>The API calculates the request against the employee’s applicable calendar when it is saved.</p>
+          </div>
+        }
+        <div class="flex flex-wrap gap-2">
+          <button class="action action-primary" type="submit">{{ busy() ? 'Working…' : 'Save draft' }}</button>
+          @if (has('leave.planning.read')) { <button class="action" type="button" (click)="inspect()">Check dates</button> }
+          @if (request) { <button class="action" type="button" (click)="dismissed.emit()">Cancel editing</button> }
+          @else { <a class="action" [routerLink]="['/leave', context.company.id, planYear ? 'plans' : 'requests']">Back</a> }
+        </div>
+      </fieldset>
+    </form>
+  }
+</app-component-card>

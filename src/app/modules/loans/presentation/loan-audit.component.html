@@ -1,0 +1,30 @@
+<app-component-card title="Loan audit history">
+  <form class="grid gap-3 md:grid-cols-2 xl:grid-cols-3" (ngSubmit)="read(true)">
+    <label class="field">Reason for access <input class="control" name="purpose" maxlength="500" [(ngModel)]="purpose" [disabled]="loading()" required /></label>
+    <label class="field">Action (optional) <input class="control" name="action" maxlength="150" [(ngModel)]="action" [disabled]="loading()" placeholder="loans.application.approved" /></label>
+    <label class="field">Resource ID (optional) <input class="control" name="resource" maxlength="150" [(ngModel)]="resource" [disabled]="loading()" /></label>
+    <div><button class="action action-primary" type="submit" [disabled]="loading() || !purpose.trim()">View audit history</button></div>
+  </form>
+  @if (error()) { <p class="feedback" role="alert">{{ error() }}</p> }
+  @if (loading()) { <p role="status" class="text-sm text-gray-600 dark:text-gray-400">Loading audit events…</p> }
+  @if (events(); as rows) {
+    <div class="overflow-x-auto rounded-lg border border-gray-200 dark:border-gray-800">
+      <table class="w-full min-w-[40rem] text-start text-sm text-gray-700 dark:text-gray-300">
+        <thead class="table-heading"><tr><th scope="col">Date</th><th scope="col">Action</th><th scope="col">User</th><th scope="col">Resource</th><th scope="col">Outcome</th></tr></thead>
+        <tbody class="divide-y divide-gray-100 dark:divide-gray-800">
+          @for (event of rows; track event.id) {
+            <tr><td class="table-cell">{{ event.occurredAt | date:'medium' }}</td><td class="table-cell">{{ event.action }}</td>
+              <td class="table-cell">{{ event.actorId || '—' }}</td><td class="table-cell max-w-56 wrap-anywhere">
+                {{ event.resourceId || '—' }}
+                @if (isRenegotiation(event)) {
+                  <a class="block text-brand-700 underline dark:text-brand-300" [routerLink]="['/loans', company, 'renegotiations']"
+                    [queryParams]="{request: event.resourceId}">Use request ID</a>
+                }
+              </td><td class="table-cell">{{ label(event.outcome) }}</td></tr>
+          } @empty { <tr><td colspan="5" class="table-cell">No audit events match the filters.</td></tr> }
+        </tbody>
+      </table>
+    </div>
+    @if (cursor() !== null) { <button class="action" type="button" [disabled]="loading()" (click)="read(false)">Load more</button> }
+  }
+</app-component-card>

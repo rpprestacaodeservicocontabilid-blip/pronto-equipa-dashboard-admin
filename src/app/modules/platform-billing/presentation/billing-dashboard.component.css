@@ -1,0 +1,18 @@
+@reference "../../../../styles.css";
+
+.tile { @apply rounded-2xl border border-gray-200 bg-white p-5 text-gray-900 dark:border-gray-800 dark:bg-gray-900 dark:text-white; }
+.tile-lead { @apply border-brand-600 bg-brand-600 text-white dark:border-brand-700 dark:bg-brand-700; }
+.value { @apply mt-3 break-words text-2xl font-semibold tracking-tight tabular-nums; }
+.metric-label { @apply text-sm font-medium text-gray-600 dark:text-gray-400; }
+.metric-link { @apply mt-3 inline-block text-sm font-medium text-brand-600 hover:underline dark:text-brand-400; }
+.muted { @apply text-sm text-gray-500 dark:text-gray-400; }
+.data-row { @apply flex min-h-10 items-center justify-between gap-3 rounded-lg px-2 text-sm text-gray-700 dark:text-gray-300; }
+a.data-row { @apply hover:bg-brand-50 dark:hover:bg-brand-500/10; }
+.action { @apply rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-200 dark:hover:bg-gray-800; }
+.plot { @apply grid grid-cols-[minmax(2rem,1fr)_auto] items-center gap-2 text-end text-xs tabular-nums text-gray-700 dark:text-gray-300; }
+progress { @apply block h-2 w-full overflow-hidden rounded-full bg-gray-100 dark:bg-gray-800; appearance: none; }
+progress::-webkit-progress-bar { @apply rounded-full bg-gray-100 dark:bg-gray-800; }
+progress::-webkit-progress-value { @apply rounded-full bg-brand-500; }
+progress.received::-webkit-progress-value { @apply bg-success-500; }
+progress::-moz-progress-bar { @apply bg-brand-500; }
+progress.received::-moz-progress-bar { @apply bg-success-500; }

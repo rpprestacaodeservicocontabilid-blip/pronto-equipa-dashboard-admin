@@ -1,0 +1,65 @@
+@let action = request.action;
+<app-component-card [title]="titles[action]">
+  <form #form="ngForm" (ngSubmit)="save(form)" class="space-y-4">
+    <fieldset [disabled]="busy()" class="grid gap-4 sm:grid-cols-2">
+      @if (action === 'punch' || action === 'calculate') {
+        <label class="field">Employee
+          @if (employees.length) {
+            <select class="control" name="employeeId" [ngModel]="request.employeeId ?? ''" required>
+              <option value="">Select an employee</option>
+              @for (employee of employees; track employee.id) {
+                <option [value]="employee.id">{{ employee.firstName }} {{ employee.lastName }} · {{ employee.employeeNumber }}</option>
+              }
+            </select>
+          } @else {
+            <input class="control" name="employeeId" [ngModel]="request.employeeId ?? ''" [pattern]="uuidPattern" required placeholder="Employee ID" />
+          }
+        </label>
+        <label class="field">{{ action === 'punch' ? 'Work date (optional)' : 'Work date' }}
+          <input type="date" class="control" name="workDate" [ngModel]="request.date ?? (action === 'calculate' ? today : '')" [required]="action === 'calculate'" />
+        </label>
+      }
+      @if (action === 'punch' || action === 'correct' || action === 'rectify') {
+        <label class="field">{{ action === 'punch' ? 'Punch type' : 'Proposed punch type' }}
+          <select class="control" name="punchType" [ngModel]="''" [required]="action === 'punch'">
+            <option value="">{{ action === 'punch' ? 'Select a type' : 'Keep original type' }}</option>
+            @for (type of types; track type[0]) { <option [value]="type[0]">{{ type[1] }}</option> }
+          </select>
+        </label>
+        <label class="field">{{ action === 'punch' ? 'Punch time' : 'Proposed time' }} (your local time)
+          <input type="datetime-local" class="control" name="occurredAt" step="1" ngModel [required]="action === 'punch'" />
+        </label>
+      }
+      @if (action === 'rectify' || (!request.id && (action === 'correct' || action === 'justify'))) {
+        <label class="field">{{ action === 'justify' ? 'Occurrence ID' : 'Original time record ID' }}
+          <input class="control" name="recordId" ngModel [pattern]="uuidPattern" required />
+        </label>
+      }
+      @if (action === 'justify') {
+        <label class="field">Evidence reference (optional)
+          <input class="control" name="evidence" ngModel maxlength="1000" placeholder="Document reference or HTTPS link" />
+        </label>
+      }
+      @if (action === 'justify' || action === 'correct' || action === 'rectify' || action === 'approve' || action === 'reject' || action === 'return') {
+        <label class="field sm:col-span-2">Reason {{ action === 'approve' ? '(optional)' : '' }}
+          <textarea class="control" rows="3" name="reason" ngModel maxlength="2000" [required]="action !== 'approve'"></textarea>
+        </label>
+      }
+      @if (action === 'period') {
+        <label class="field">Start date<input type="date" class="control" name="startDate" ngModel required /></label>
+        <label class="field">End date<input type="date" class="control" name="endDate" ngModel required /></label>
+      }
+      @if (action === 'close') {
+        <label class="flex items-start gap-2 text-sm text-gray-700 dark:text-gray-300 sm:col-span-2">
+          <input #confirmation type="checkbox" name="confirm" [checked]="confirmed()" (change)="confirmed.set(confirmation.checked)" class="mt-1" />
+          I confirm this period is ready to lock and release its immutable snapshot for payroll processing.
+        </label>
+      }
+    </fieldset>
+    @if (error()) { <p class="feedback" role="alert">{{ error() }}</p> }
+    <div class="flex flex-wrap gap-2">
+      <button type="submit" class="action action-primary" [disabled]="form.invalid || busy() || (action === 'close' && !confirmed())">{{ busy() ? 'Saving…' : titles[action] }}</button>
+      <button type="button" class="action" [disabled]="busy()" (click)="cancelled.emit()">Cancel</button>
+    </div>
+  </form>
+</app-component-card>

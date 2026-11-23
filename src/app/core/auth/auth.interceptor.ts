@@ -9,25 +9,31 @@ export const authInterceptor: HttpInterceptorFn = (request, next) => {
   const base = inject(API_CONFIG).apiBaseUrl;
   // Never send tokens to assets, unrelated servers, or public authentication endpoints.
   if (!request.url.startsWith(`${base}/`)) return next(request);
-  const publicAuth = request.url.startsWith(`${base}/auth/`) && request.url !== `${base}/auth/logout`;
-  if (publicAuth || !auth.tokens()) return next(request);
-  const token = auth.tokens()!.accessToken;
-  const authenticated = request.clone({ setHeaders: { Authorization: `Bearer ${token}` } });
-  return next(authenticated).pipe(catchError((error: unknown) => {
+  const path = request.url.slice(base.length).split('?')[0];
+  const publicAuth = (path.startsWith('/auth/') && !['/auth/logout', '/auth/change-password'].includes(path))
+    || path === '/oauth/google';
+  const token = auth.tokens()?.accessToken;
+  if (publicAuth || !token) return next(request);
+  const revision = auth.revision;
+  const send = (accessToken: string) => next(request.clone({ setHeaders: { Authorization: `Bearer ${accessToken}` } }));
+  const clearOnUnauthorized = (error: unknown) => {
+    if (error instanceof HttpErrorResponse && error.status === 401 && auth.revision === revision) auth.clear();
+    return throwError(() => error);
+  };
+
+  return send(token).pipe(catchError((error: unknown) => {
     if (!(error instanceof HttpErrorResponse) || error.status !== 401) return throwError(() => error);
+    // Do not replay a previous user's request under a newly authenticated identity.
+    if (auth.revision !== revision) return throwError(() => error);
     const current = auth.tokens();
     if (!current) return throwError(() => error);
     // Another request may already have rotated this token while this request was in flight.
     if (current.accessToken !== token) {
-      return next(request.clone({ setHeaders: { Authorization: `Bearer ${current.accessToken}` } }));
+      return send(current.accessToken).pipe(catchError(clearOnUnauthorized));
     }
     return auth.refresh().pipe(
-      catchError(refreshError => { auth.clear(); return throwError(() => refreshError); }),
-      switchMap(tokens => next(request.clone({ setHeaders: { Authorization: `Bearer ${tokens.accessToken}` } }))),
-      catchError(retryError => {
-        if (retryError instanceof HttpErrorResponse && retryError.status === 401) auth.clear();
-        return throwError(() => retryError);
-      }),
+      switchMap(tokens => auth.revision === revision ? send(tokens.accessToken) : throwError(() => error)),
+      catchError(clearOnUnauthorized),
     );
   }));
 };

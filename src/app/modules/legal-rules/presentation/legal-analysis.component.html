@@ -1,0 +1,75 @@
+<div class="space-y-5">
+  <app-component-card [title]="impact ? 'Configure impact simulation' : 'Compare legal rule versions'"
+    [desc]="impact ? 'Compare the payroll engine results for fictional salaries under two rule versions.' : 'Compare effective dates, sources and rule parameters side by side.'">
+    @let options = versions();
+    @if (!options) { <p role="status" class="text-sm text-gray-600 dark:text-gray-400">Loading rule sets…</p> }
+    @else if ('error' in options) {
+      <p class="feedback" role="alert">{{ options.error }}</p><button class="action mt-3" type="button" (click)="reload()">Try again</button>
+    } @else {
+      <form class="space-y-4" (ngSubmit)="run()">
+        <fieldset [disabled]="working()" class="grid gap-4 md:grid-cols-2">
+          <label class="field">Baseline version
+            <select class="control" name="baseline" [ngModel]="left()" (ngModelChange)="change($event, 'left')">
+              <option value="">Select a version</option>
+              @for (item of options.data; track item.id) { <option [value]="item.id">{{ item.ruleSetId }} · {{ item.version }} · {{ scope(item) }}</option> }
+            </select>
+          </label>
+          <label class="field">Proposal version
+            <select class="control" name="proposal" [ngModel]="right()" (ngModelChange)="change($event, 'right')">
+              <option value="">Select a version</option>
+              @for (item of options.data; track item.id) { <option [value]="item.id">{{ item.ruleSetId }} · {{ item.version }} · {{ scope(item) }}</option> }
+            </select>
+          </label>
+          @if (impact) {
+            <label class="field">Baseline month <input name="leftMonth" class="control" type="month" [(ngModel)]="baselineMonth" (ngModelChange)="clear()" /></label>
+            <label class="field">Proposal month <input name="rightMonth" class="control" type="month" [(ngModel)]="proposalMonth" (ngModelChange)="clear()" /></label>
+            <label class="field md:col-span-2">Fictional monthly salaries in Kz
+              <textarea class="control" name="salaries" rows="4" maxlength="600" [(ngModel)]="salaryList" (ngModelChange)="clear()" placeholder="One amount per line"></textarea>
+            </label>
+          }
+        </fieldset>
+        @if (impact) {
+          <button type="submit" class="action action-primary" [disabled]="working() || !left() || !right()">{{ working() ? 'Calculating…' : 'Run simulation' }}</button>
+          @if (error()) { <p class="feedback" role="alert">{{ error() }}</p> }
+        }
+      </form>
+    }
+  </app-component-card>
+  @if (!impact && difference(); as changes) {
+    <app-component-card title="Differences">
+      <div class="overflow-x-auto">
+        <table class="w-full text-start text-sm text-gray-700 dark:text-gray-300">
+          <thead class="table-heading"><tr><th>Field</th><th>Baseline</th><th>Proposal</th></tr></thead>
+          <tbody class="divide-y divide-gray-200 dark:divide-gray-800">
+            @for (change of changes; track change.key) {
+              <tr><td class="table-cell break-all font-medium">{{ change.key }}</td><td class="table-cell">{{ change.baseline }}</td><td class="table-cell">{{ change.proposal }}</td></tr>
+            } @empty { <tr><td class="table-cell" colspan="3">The selected versions have identical parameters.</td></tr> }
+          </tbody>
+        </table>
+      </div>
+    </app-component-card>
+  }
+  @if (result(); as simulation) {
+    <app-component-card title="Simulated impact" [desc]="'Payroll engine ' + simulation.engineVersion">
+      <div class="mb-4"><button class="action" type="button" (click)="export()">Export worksheet</button></div>
+      <div class="overflow-x-auto">
+        <table class="w-full text-start text-sm text-gray-700 dark:text-gray-300">
+          <thead class="table-heading"><tr><th>Monthly salary</th><th>Metric</th><th>Baseline</th><th>Proposal</th><th>Difference</th></tr></thead>
+          <tbody class="divide-y divide-gray-200 dark:divide-gray-800">
+            @for (row of simulation.rows; track $index) {
+              @for (metric of metrics; track metric) {
+                <tr>
+                  <td class="table-cell whitespace-nowrap">{{ money(row.salary, simulation.currency) }}</td>
+                  <td class="table-cell font-medium">{{ captions[metric] }}</td>
+                  <td class="table-cell whitespace-nowrap">{{ money(row.baseline[metric], simulation.currency) }}</td>
+                  <td class="table-cell whitespace-nowrap">{{ money(row.proposal[metric], simulation.currency) }}</td>
+                  <td class="table-cell whitespace-nowrap">{{ money(row.difference[metric], simulation.currency) }}</td>
+                </tr>
+              }
+            }
+          </tbody>
+        </table>
+      </div>
+    </app-component-card>
+  }
+</div>

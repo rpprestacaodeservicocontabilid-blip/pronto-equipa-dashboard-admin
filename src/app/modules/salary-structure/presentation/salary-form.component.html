@@ -1,0 +1,44 @@
+<app-component-card [title]="definition.title" [desc]="definition.description ?? ''">
+  <form (ngSubmit)="submit()" class="space-y-4">
+    <fieldset class="grid gap-4 sm:grid-cols-2 xl:grid-cols-3" [disabled]="busy()">
+      @for (field of definition.fields; track field.key) {
+        @if (!field.when || field.when(values)) {
+          <app-salary-field [context]="context" [field]="field" [value]="values[field.key]" [disabled]="busy()"
+            [employeeId]="string(values, 'employeeId')" [date]="string(values, 'effectiveFrom')" (update)="values[field.key] = $event" />
+        }
+      }
+    </fieldset>
+    @if (definition.group; as group) {
+      <fieldset [disabled]="busy()" class="space-y-3">
+        <legend class="text-sm font-semibold text-gray-800 dark:text-white">{{ group.title }}</legend>
+        @for (row of rows; track row; let index = $index) {
+          <div class="space-y-3 rounded-lg border border-gray-200 p-3 dark:border-gray-800">
+            <div class="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
+              @for (field of group.fields; track field.key) {
+                @if (!field.when || field.when(row)) {
+                  <app-salary-field [context]="context" [field]="field" [value]="row[field.key]" [disabled]="busy()"
+                    [date]="string(values, 'effectiveFrom')" (update)="row[field.key] = $event" />
+                }
+              }
+            </div>
+            <button class="action" type="button" [disabled]="rows.length <= (group.min ?? 0) || busy()" (click)="remove(index)">Remove entry {{ index + 1 }}</button>
+          </div>
+        }
+        <button class="action" type="button" [disabled]="busy() || rows.length >= (group.max ?? 100)" (click)="add()">Add entry</button>
+      </fieldset>
+    }
+    @if (definition.confirm; as prompt) {
+      <label class="flex items-start gap-2 text-sm text-gray-700 dark:text-gray-300">
+        <input #confirmation type="checkbox" class="mt-1" [checked]="confirmed()" [disabled]="busy()" (change)="confirmed.set(confirmation.checked)" />
+        {{ prompt }}
+      </label>
+    }
+    @if (error()) { <p class="feedback" role="alert">{{ error() }}</p> }
+    <div class="flex flex-wrap gap-2">
+      <button class="action action-primary" type="submit" [disabled]="busy() || (!!definition.confirm && !confirmed())">
+        {{ busy() ? 'Processing…' : definition.submitLabel ?? 'Save' }}
+      </button>
+      <button class="action" type="button" [disabled]="busy()" (click)="cancelled.emit()">Cancel</button>
+    </div>
+  </form>
+</app-component-card>

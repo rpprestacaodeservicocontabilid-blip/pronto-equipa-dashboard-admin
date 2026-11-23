@@ -1,5 +1,6 @@
 import { CommonModule } from '@angular/common';
-import { Component, Input } from '@angular/core';
+import { Component, EventEmitter, Input, Output } from '@angular/core';
+import { SignInFormData } from './schema';
 import { RouterModule } from '@angular/router';
 import { AuthDividerComponent } from '../../shared/auth-divider/auth-divider.component';
 import { SignInFormFieldsComponent } from './form.component';
@@ -30,4 +31,9 @@ import { SocialButtonsComponent } from './social-button.component';
 })
 export class SignInContentComponent {
   @Input() className: string = '';
+  @Input() showForm: boolean = true;
+  @Input() isSubmitting: boolean = false;
+  @Input() googleEnabled: boolean = false;
+  @Output() googleSelect = new EventEmitter<void>();
+  @Output() formSubmit = new EventEmitter<SignInFormData>();
 }

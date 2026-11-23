@@ -1,0 +1,61 @@
+<div class="space-y-5">
+  <app-component-card title="Simulate a payroll calculation"
+    desc="Use synthetic pay amounts to exercise the payroll engine. This calculation uses a fictional rule set and creates no payroll records.">
+    <form class="space-y-4" (ngSubmit)="run()">
+      <fieldset class="grid gap-3 sm:grid-cols-2 xl:grid-cols-3" [disabled]="working()">
+        <label class="field">Payroll month
+          <input type="month" name="month" class="control" min="2000-01" max="2099-12" required
+            [ngModel]="scenario.month" (ngModelChange)="change('month', $event)" />
+        </label>
+        <label class="field">Base salary (Kz)
+          <input class="control" type="text" inputmode="decimal" maxlength="23" name="baseSalary" required
+            [ngModel]="scenario.baseSalary" (ngModelChange)="change('baseSalary', $event)" />
+        </label>
+        <label class="field">Monthly allowance (Kz)
+          <input class="control" type="text" inputmode="decimal" maxlength="23" name="allowance" required
+            [ngModel]="scenario.allowance" (ngModelChange)="change('allowance', $event)" />
+        </label>
+        <label class="field">Annual allowance (Kz)
+          <input class="control" type="text" inputmode="decimal" maxlength="23" name="annualAllowance" required
+            [ngModel]="scenario.annualAllowance" (ngModelChange)="change('annualAllowance', $event)" />
+        </label>
+        <label class="field">Requested deduction (Kz)
+          <input class="control" type="text" inputmode="decimal" maxlength="23" name="deduction" required
+            [ngModel]="scenario.deduction" (ngModelChange)="change('deduction', $event)" />
+        </label>
+        <label class="field">Rounding policy
+          <select class="control" name="rounding" [ngModel]="scenario.rounding" (ngModelChange)="change('rounding', $event)">
+            @for (mode of modes; track mode.id) { <option [value]="mode.id">{{ mode.label }}</option> }
+          </select>
+        </label>
+        <label class="flex items-center gap-2 text-sm font-medium text-gray-700 dark:text-gray-300">
+          <input name="authorized" type="checkbox" class="size-4 accent-brand-600"
+            [ngModel]="scenario.deductionAuthorized" (ngModelChange)="change('deductionAuthorized', $event)" />
+          Authorize the sample deduction
+        </label>
+      </fieldset>
+      <div class="flex flex-wrap gap-2">
+        <button class="action action-primary" type="submit" [disabled]="working()">{{ working() ? 'Calculating…' : 'Run simulation' }}</button>
+        <button class="action" type="button" [disabled]="working()" (click)="reset()">Reset sample</button>
+      </div>
+      @if (error()) { <p class="feedback" role="alert">{{ error() }}</p> }
+    </form>
+  </app-component-card>
+
+  @if (result(); as totals) {
+    <p class="sr-only" role="status">Simulation complete.</p>
+    <app-component-card title="Simulated totals">
+      <dl class="grid gap-4 text-sm text-gray-700 sm:grid-cols-2 xl:grid-cols-4 dark:text-gray-300">
+        <div><dt>Gross pay</dt><dd class="mt-1 text-xl font-semibold">{{ money(totals.grossAmount, totals.currency) }}</dd></div>
+        <div><dt>Total deductions</dt><dd class="mt-1 text-xl font-semibold">{{ money(totals.totalDeductions, totals.currency) }}</dd></div>
+        <div><dt>Net pay</dt><dd class="mt-1 text-xl font-semibold text-brand-700 dark:text-brand-300">{{ money(totals.netAmount, totals.currency) }}</dd></div>
+        <div><dt>Total employer cost</dt><dd class="mt-1 text-xl font-semibold">{{ money(totals.totalEmployerCost, totals.currency) }}</dd></div>
+        <div><dt>Taxable base</dt><dd class="mt-1 font-semibold">{{ money(totals.taxableAmount, totals.currency) }}</dd></div>
+        <div><dt>Contribution base</dt><dd class="mt-1 font-semibold">{{ money(totals.contributionBase, totals.currency) }}</dd></div>
+      </dl>
+    </app-component-card>
+    <app-component-card title="Simulation evidence">
+      <app-engine-evidence [evidence]="{currency: totals.currency, lines: totals.lines, issues: totals.issues, trace: totals.trace}" />
+    </app-component-card>
+  }
+</div>

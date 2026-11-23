@@ -1,0 +1,305 @@
+<app-page-breadcrumb pageTitle="Application details" />
+<a class="ob-link mb-5 inline-block text-sm" routerLink="/onboarding/applications">All applications</a>
+
+@if (error()) {
+  <div class="ob-alert flex flex-wrap items-center justify-between gap-3" role="alert">
+    {{ error() }} <button type="button" class="ob-secondary" (click)="refresh()">Try again</button>
+  </div>
+} @else if (busy()) {
+  <p class="ob-muted py-5" role="status">Loading application…</p>
+} @else if (workspace(); as detail) {
+  @let row = detail.application;
+  <div class="space-y-5">
+    <header class="rounded-2xl border border-gray-200 bg-white p-5 dark:border-gray-800 dark:bg-gray-900">
+      <div class="flex flex-wrap items-start justify-between gap-3">
+        <div class="min-w-0">
+          <h2 class="break-words text-xl font-semibold text-gray-900 dark:text-white">{{ row.companyName || 'Draft application' }}</h2>
+          <p class="ob-muted mt-1">{{ label(row.mode) }} · Created {{ row.createdAt | date:'mediumDate' }}</p>
+          <p class="ob-muted mt-2 break-all">{{ row.id }}</p>
+        </div>
+        <span class="ob-badge" [attr.data-state]="row.status">{{ label(row.status) }}</span>
+      </div>
+      <nav class="mt-5 flex flex-wrap gap-1 border-t border-gray-100 pt-4 dark:border-gray-800" aria-label="Application sections">
+        @for (item of tabs; track item.id) {
+          <a [routerLink]="[]" [queryParams]="{ tab: item.id }" [attr.aria-current]="tab() === item.id ? 'page' : null"
+            class="rounded-lg px-3 py-2 text-sm font-medium text-gray-600 hover:bg-gray-100 focus-visible:ring-2 focus-visible:ring-brand-500/40 aria-[current=page]:bg-brand-50 aria-[current=page]:text-brand-700 dark:text-gray-300 dark:hover:bg-white/10 dark:aria-[current=page]:bg-brand-500/15 dark:aria-[current=page]:text-brand-300">
+            {{ item.label }}
+          </a>
+        }
+      </nav>
+    </header>
+
+    @if (notice()) {
+      <p class="rounded-lg border border-success-200 bg-success-50 p-3 text-sm text-success-700 dark:border-success-500/30 dark:bg-success-500/10 dark:text-success-300" role="status">{{ notice() }}</p>
+    }
+    @if (action(); as pending) {
+      <app-component-card [title]="pending.title">
+        <form #decisionForm="ngForm" (ngSubmit)="confirm(pending)" class="max-w-xl space-y-4">
+          @if (pending.assignee) {
+            <label class="ob-label">Assignee account ID
+              <input class="ob-input" type="number" name="assignee" min="1" step="1" [(ngModel)]="assignee">
+            </label>
+            <p class="ob-muted">Choose a platform administrator by account ID. Leave the field empty to remove the assignment.</p>
+          }
+          <label class="ob-label">{{ pending.path === 'notes' ? 'Note' : 'Reason' }}
+            <textarea name="reason" [(ngModel)]="reason" class="ob-input" rows="3" required maxlength="2000"></textarea>
+          </label>
+          <div class="flex flex-wrap gap-2">
+            <button type="submit" class="ob-button" [disabled]="decisionForm.invalid || !reason.trim() || saving()">{{ saving() ? 'Saving…' : pending.title }}</button>
+            <button type="button" class="ob-secondary" [disabled]="saving()" (click)="closeAction()">Cancel</button>
+          </div>
+        </form>
+      </app-component-card>
+    }
+    @if (actionError()) { <p class="ob-alert" role="alert">{{ actionError() }}</p> }
+
+    @switch (tab()) {
+      @case ('summary') {
+        <div class="grid gap-5 lg:grid-cols-2">
+          <app-component-card title="Workflow progress">
+            <ol class="divide-y divide-gray-100 dark:divide-gray-800">
+              @for (stage of stages(detail); track stage.title) {
+                <li class="flex items-center justify-between gap-3 py-2">
+                  <span class="ob-muted">{{ stage.title }}</span>
+                  <span class="ob-badge" [attr.data-state]="stage.complete ? 'COMPLETED' : null">{{ stage.complete ? 'Complete' : 'Pending' }}</span>
+                </li>
+              }
+            </ol>
+          </app-component-card>
+          <app-component-card title="Case management">
+            <dl class="ob-facts grid grid-cols-2 gap-4">
+              <div><dt>Applicant</dt><dd>Account #{{ row.ownerId }}</dd></div>
+              <div><dt>Assigned to</dt><dd>{{ row.assigneeId ? 'Account #' + row.assigneeId : 'Unassigned' }}</dd></div>
+              <div><dt>Workflow version</dt><dd>{{ detail.workflowVersion ?? '—' }}</dd></div>
+              <div><dt>Last change</dt><dd>{{ row.updatedAt | date:'medium' }}</dd></div>
+              <div><dt>Source</dt><dd>{{ row.source || '—' }}</dd></div>
+              <div><dt>Terms confirmed</dt><dd>{{ (detail.termsAcceptedAt | date:'mediumDate') || 'Pending' }}</dd></div>
+              @if (detail.decisionReason) {
+                <div class="col-span-2"><dt>Latest decision reason</dt><dd>{{ detail.decisionReason }}</dd></div>
+              }
+            </dl>
+            @if (row.status === 'PENDING_REVIEW') {
+              @if (differentReviewer(detail)) {
+                <div class="mt-5 flex flex-wrap gap-2">
+                  <button type="button" class="ob-button" [disabled]="saving()" (click)="startAction({ title: 'Approve application', path: 'approve', success: 'Application approved.' })">Approve</button>
+                  <button type="button" class="ob-secondary" [disabled]="saving()" (click)="startAction({ title: 'Request information', path: 'request-info', success: 'Additional information requested.' })">Request information</button>
+                  <button type="button" class="ob-secondary" [disabled]="saving()" (click)="startAction({ title: 'Reject application', path: 'reject', success: 'Application rejected.' })">Reject</button>
+                </div>
+              } @else { <p class="ob-muted mt-4">An independent administrator must review this application.</p> }
+            }
+            <div class="mt-5 flex flex-wrap gap-2 border-t border-gray-100 pt-4 dark:border-gray-800">
+              @if (row.status !== 'COMPLETED' && row.status !== 'REJECTED' && row.status !== 'CANCELLED') {
+                <button type="button" class="ob-secondary" [disabled]="saving()" (click)="startAction({ title: 'Update assignment', path: 'assignment', success: 'Assignment updated.', assignee: true })">Assign</button>
+              }
+              <button type="button" class="ob-secondary" [disabled]="saving()" (click)="startAction({ title: 'Save internal note', path: 'notes', success: 'Internal note saved.' })">Add note</button>
+              @if (detail.canRemind) {
+                <button type="button" class="ob-secondary" [disabled]="saving()" (click)="startAction({ title: 'Send in-app reminder', path: 'remind', success: 'Today’s in-app reminder is queued for delivery.' })">Send reminder</button>
+              }
+              @if (detail.canClose) {
+                <button type="button" class="ob-secondary" [disabled]="saving()" (click)="startAction({ title: 'Cancel application', path: 'close', success: 'Application cancelled.' })">Cancel application</button>
+              }
+            </div>
+          </app-component-card>
+        </div>
+      }
+      @case ('company') {
+        <div class="grid gap-5 lg:grid-cols-2">
+          <app-component-card title="Company and contact details">
+            @if (detail.company; as company) {
+              <dl class="ob-facts grid gap-4 sm:grid-cols-2">
+                <div><dt>Legal name</dt><dd>{{ company.name }}</dd></div>
+                <div><dt>Tax ID</dt><dd>{{ company.taxId }}</dd></div>
+                <div><dt>Company email</dt><dd>{{ company.email }}</dd></div>
+                <div><dt>Telephone</dt><dd>{{ company.phone || '—' }}</dd></div>
+                <div class="sm:col-span-2"><dt>Address</dt><dd>{{ company.address }}</dd></div>
+              </dl>
+            } @else { <p class="ob-muted">Company information is pending.</p> }
+          </app-component-card>
+          <app-component-card title="Tax ID checks">
+            @if (!detail.company?.taxId) {
+              <p class="ob-muted">A tax ID is required for comparison.</p>
+            } @else {
+              <p class="ob-muted mb-3">Matches from PRONTOEQUIPAS applications and registered companies.</p>
+              <ul class="space-y-3">
+                @for (match of detail.duplicates; track match.id) {
+                  <li><a class="ob-link text-sm" [routerLink]="['/onboarding/applications', match.id]" [queryParams]="{ tab: 'company' }">{{ match.companyName || 'Matching application' }}</a>
+                    <p class="ob-muted">Application · {{ label(match.status) }}</p></li>
+                }
+                @for (match of detail.registered; track match.id) {
+                  <li class="ob-muted"><strong>{{ match.name }}</strong> · Registered company #{{ match.id }}</li>
+                }
+                @if (!detail.registered.length && !detail.duplicates.length) { <li class="ob-muted">No matching tax IDs found.</li> }
+              </ul>
+              <div class="mt-4 border-t border-gray-100 pt-4 dark:border-gray-800">
+                @if (detail.companyVerification; as verification) {
+                  <p class="ob-muted">{{ label(verification.decision) }} · Account #{{ verification.actor }} · {{ verification.reviewedAt | date:'mediumDate' }}</p>
+                  <p class="ob-muted mt-1 break-words">{{ verification.reason }}</p>
+                } @else {
+                  <p class="ob-muted">Company data is awaiting review.</p>
+                }
+                @if (differentReviewer(detail) && !row.companyId && row.status !== 'CANCELLED' && row.status !== 'COMPLETED') {
+                  <div class="mt-3 flex flex-wrap gap-2">
+                    <button type="button" class="ob-button" [disabled]="saving()"
+                      (click)="startAction({ title: 'Verify company data', path: 'company-verification', approved: true, version: row.version, success: 'Company data review recorded.' })">Verify data</button>
+                    <button type="button" class="ob-secondary" [disabled]="saving()"
+                      (click)="startAction({ title: 'Flag company data', path: 'company-verification', approved: false, version: row.version, success: 'Company data flagged for correction.' })">Flag for correction</button>
+                  </div>
+                }
+              </div>
+            }
+          </app-component-card>
+        </div>
+      }
+      @case ('documents') {
+        <app-component-card title="Submitted documents">
+          <p class="ob-muted mb-3">{{ detail.requiredDocuments }} validated document(s) required by this workflow.</p>
+          @if (documentLink(); as file) {
+            <div class="mb-3 rounded-lg border border-brand-200 p-3 dark:border-brand-500/30">
+              <a class="ob-link text-sm" [href]="file.url" target="_blank" rel="noopener noreferrer">Open {{ file.fileName }}</a>
+              <p class="ob-muted mt-1">The secure link expires after two minutes.</p>
+            </div>
+          }
+          <ul class="divide-y divide-gray-100 dark:divide-gray-800">
+            @for (file of documents(); track file.id) {
+              <li class="flex flex-wrap items-start justify-between gap-3 py-3">
+                <div class="min-w-0 break-words">
+                  <p class="text-sm font-medium text-gray-900 dark:text-gray-100">{{ file.fileName || 'Document' }}</p>
+                  <p class="ob-muted">{{ file.createdAt | date:'mediumDate' }} @if (file.sizeBytes) { · {{ file.sizeBytes / 1024 | number:'1.0-0' }} KB }</p>
+                  @if (file.reason) { <p class="ob-muted mt-1">{{ file.reason }} · Account #{{ file.reviewedBy }}</p> }
+                </div>
+                <div class="flex flex-wrap items-center gap-2">
+                  <span class="ob-badge" [attr.data-state]="file.status">{{ label(file.status) }}</span>
+                  @if (file.status === 'CLEAN' || file.status === 'VALIDATED') {
+                    <button class="ob-secondary" type="button" [disabled]="saving()" (click)="prepareDownload(file)">Prepare download</button>
+                  }
+                  @if (file.status === 'CLEAN' && differentReviewer(detail)) {
+                    <button class="ob-button" type="button" [disabled]="saving()"
+                      (click)="startAction({ title: 'Validate document', path: 'documents/' + file.id + '/decision', approved: true, success: 'Document validated.' })">Validate</button>
+                    <button class="ob-secondary" type="button" [disabled]="saving()"
+                      (click)="startAction({ title: 'Reject document', path: 'documents/' + file.id + '/decision', approved: false, success: 'Document rejected.' })">Reject</button>
+                  }
+                </div>
+              </li>
+            } @empty { <li class="ob-muted">No documents have been submitted.</li> }
+          </ul>
+        </app-component-card>
+      }
+      @case ('subscription') {
+        <app-component-card title="Plan and subscription">
+          <dl class="ob-facts grid gap-4 sm:grid-cols-2">
+            <div><dt>Selected plan version</dt><dd>{{ detail.plan?.planVersionId || 'Pending selection' }}</dd></div>
+            <div><dt>Billing interval</dt><dd>{{ label(detail.plan?.interval) }}</dd></div>
+            <div><dt>Trial days</dt><dd>{{ detail.plan?.trialDays ?? '—' }}</dd></div>
+            <div><dt>Subscription status</dt><dd>{{ label(detail.subscriptionStatus) }}</dd></div>
+          </dl>
+        </app-component-card>
+      }
+      @case ('configuration') {
+        <div class="grid gap-5 lg:grid-cols-2">
+          <app-component-card title="Initial organisation">
+            <dl class="ob-facts grid gap-4">
+              <div><dt>Departments</dt><dd>{{ detail.organization?.departments?.join(', ') || '—' }}</dd></div>
+              <div><dt>Cost centres</dt><dd>{{ detail.organization?.costCenters?.join(', ') || '—' }}</dd></div>
+            </dl>
+          </app-component-card>
+          <app-component-card title="Payroll setup">
+            @if (detail.payroll; as payroll) {
+              <dl class="ob-facts grid gap-4 sm:grid-cols-2">
+                <div><dt>Currency</dt><dd>{{ payroll.currency }}</dd></div>
+                <div><dt>Pay day</dt><dd>{{ payroll.payDay }}</dd></div>
+                <div><dt>Effective from</dt><dd>{{ payroll.effectiveFrom }}</dd></div>
+                <div><dt>Salary components</dt><dd>{{ payroll.componentCount }}</dd></div>
+                <div class="sm:col-span-2"><dt>Legal rule set</dt><dd>{{ payroll.legalRuleSetId }}</dd></div>
+              </dl>
+            } @else { <p class="ob-muted">Payroll configuration is pending.</p> }
+          </app-component-card>
+        </div>
+      }
+      @case ('provisioning') {
+        <app-component-card title="Provisioning activity">
+          <dl class="ob-facts mb-4 grid gap-4 sm:grid-cols-3">
+            <div><dt>Environment</dt><dd>{{ row.companyId ? 'Company #' + row.companyId : 'Pending creation' }}</dd></div>
+            <div><dt>Application state</dt><dd>{{ label(row.status) }}</dd></div>
+            <div><dt>Subscription</dt><dd>{{ label(detail.subscriptionStatus) }}</dd></div>
+          </dl>
+          @if (row.recoverable) {
+            <p class="ob-muted mb-3">Retry uses the saved workflow and existing company environment.</p>
+            <button class="ob-button mb-4" type="button" [disabled]="saving()"
+              (click)="startAction({ title: 'Retry provisioning', path: 'retry', success: 'Provisioning attempt recorded. Check the current status and timeline.' })">Retry provisioning</button>
+          }
+          <ol class="divide-y divide-gray-100 dark:divide-gray-800">
+            @for (event of timeline(); track event.id) {
+              <li class="flex flex-wrap justify-between gap-2 py-3 ob-muted">
+                <span>{{ label(event.type) }} @if (event.step) { · {{ label(event.step) }} } @if (event.reason) { · {{ event.reason }} }</span><time>{{ event.createdAt | date:'medium' }}</time>
+              </li>
+            } @empty { <li class="ob-muted">No provisioning events have been recorded.</li> }
+          </ol>
+        </app-component-card>
+      }
+      @case ('invitations') {
+        <app-component-card title="Representative invitations">
+          @if (detail.canInvite) {
+            <form #inviteForm="ngForm" (ngSubmit)="createInvitation()" class="mb-4 flex flex-wrap items-end gap-3">
+              <label class="ob-label grow">Representative’s verified email
+                <input class="ob-input" type="email" name="inviteEmail" [(ngModel)]="email" email required>
+              </label>
+              <button type="submit" class="ob-button" [disabled]="inviteForm.invalid || saving()">{{ saving() ? 'Creating…' : 'Generate invitation' }}</button>
+            </form>
+            <p class="ob-muted mb-4">Generating an invitation revokes the previous pending code.</p>
+          }
+          @if (inviteCode(); as code) {
+            <div class="mb-4 rounded-lg border border-brand-200 p-3 dark:border-brand-500/30">
+              <label class="ob-label">Invitation code<input class="ob-input font-mono" readonly [value]="code.token"></label>
+              <p class="ob-muted mt-2">Share this code directly with the representative. It expires {{ code.expiresAt | date:'medium' }}.</p>
+              <button type="button" class="ob-secondary mt-3" (click)="copyCode(code.token)">Copy code</button>
+            </div>
+          }
+          <ul class="divide-y divide-gray-100 dark:divide-gray-800">
+            @for (item of invitations(); track item.id) {
+              <li class="flex flex-wrap items-center justify-between gap-2 py-3">
+                <div><p class="ob-muted">{{ item.email }}</p><p class="ob-muted mt-0.5">Expires {{ item.expiresAt | date:'medium' }}</p></div>
+                <span class="ob-badge" [attr.data-state]="item.status">{{ label(item.status) }}</span>
+              </li>
+            } @empty { <li class="ob-muted">No invitations have been issued.</li> }
+          </ul>
+        </app-component-card>
+      }
+      @case ('imports') {
+        <app-component-card title="Import batches">
+          <div class="space-y-3">
+            @for (batch of imports(); track batch.id) {
+              <details class="rounded-lg border border-gray-200 p-3 dark:border-gray-800">
+                <summary class="cursor-pointer text-sm font-medium text-gray-800 dark:text-gray-200">
+                  {{ label(batch.importKind) }} · {{ label(batch.status) }} · {{ batch.succeeded }} / {{ batch.total }}
+                </summary>
+                <p class="ob-muted mt-2">Updated {{ batch.updatedAt | date:'medium' }}</p>
+                <ul class="mt-2 space-y-1">
+                  @for (issue of batch.errors; track issue.row) { <li class="ob-muted">Row {{ issue.row }} · {{ issue.reason }}</li> }
+                  @empty { <li class="ob-muted">No row errors are recorded.</li> }
+                </ul>
+              </details>
+            } @empty { <p class="ob-muted">No import batches have been submitted.</p> }
+          </div>
+        </app-component-card>
+      }
+      @case ('history') {
+        <app-component-card title="Application history">
+          <ol class="divide-y divide-gray-100 dark:divide-gray-800">
+            @for (item of detail.events; track item.id) {
+              <li class="py-3">
+                <div class="flex flex-wrap justify-between gap-2">
+                  <span class="text-sm font-medium text-gray-900 dark:text-gray-100">{{ label(item.type) }}</span>
+                  <time class="ob-muted">{{ item.createdAt | date:'medium' }}</time>
+                </div>
+                <p class="ob-muted">{{ item.actor ? 'Account #' + item.actor : 'System' }}
+                  @if (item.decision || item.step) { · {{ label(item.decision || item.step) }} }
+                </p>
+                @if (item.reason) { <p class="ob-muted mt-1 whitespace-pre-wrap break-words">{{ item.reason }}</p> }
+              </li>
+            } @empty { <li class="ob-muted">No events have been recorded.</li> }
+          </ol>
+        </app-component-card>
+      }
+    }
+  </div>
+}

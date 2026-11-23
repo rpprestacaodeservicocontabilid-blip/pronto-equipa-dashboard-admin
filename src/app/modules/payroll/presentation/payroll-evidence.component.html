@@ -1,0 +1,98 @@
+@if (tab() === 'results') {
+  <app-payroll-results [context]="context()" [run]="run()" [revision]="revision()" />
+} @else {
+  @let response = data();
+  @if (!response) {
+    <p role="status" class="text-sm text-gray-600 dark:text-gray-400">Loading payroll details…</p>
+  } @else if ('error' in response) {
+    <p class="feedback" role="alert">{{ response.error }}</p><button class="action" type="button" (click)="refresh()">Try again</button>
+  } @else if (response && 'data' in response && response.data; as details) {
+    @switch (details.tab) {
+      @case ('summary') {
+        <app-component-card title="Payroll totals">
+          @if (details.value.currency) {
+            <dl class="grid gap-5 text-sm text-gray-700 sm:grid-cols-2 xl:grid-cols-4 dark:text-gray-300">
+              <div><dt>Gross pay</dt><dd class="mt-1 font-semibold">{{ money(details.value.grossAmount, details.value.currency) }}</dd></div>
+              <div><dt>Deductions</dt><dd class="mt-1 font-semibold">{{ money(details.value.deductionsAmount, details.value.currency) }}</dd></div>
+              <div><dt>Net pay</dt><dd class="mt-1 font-semibold">{{ money(details.value.netAmount, details.value.currency) }}</dd></div>
+              <div><dt>Employer costs</dt><dd class="mt-1 font-semibold">{{ money(details.value.employerCostsAmount, details.value.currency) }}</dd></div>
+            </dl>
+            <p class="mt-4 text-sm text-gray-600 dark:text-gray-400">{{ details.value.employees }} calculated employee results</p>
+            @if (run().originalRunId) { <p class="mt-2 text-sm text-gray-600 dark:text-gray-400">These totals show the complete revised results. Payment preparation uses the difference against the original run.</p> }
+          } @else {
+            <p class="text-sm text-gray-600 dark:text-gray-400">There are no calculated results for this run.</p>
+          }
+        </app-component-card>
+      }
+      @case ('issues') {
+        <app-component-card title="Validation issues">
+          <div class="max-h-[34rem] overflow-auto">
+            <table class="w-full text-start text-sm text-gray-700 dark:text-gray-300">
+              <thead class="table-heading"><tr><th scope="col">Employee</th><th scope="col">Issue</th><th scope="col">Severity</th><th scope="col">Status</th></tr></thead>
+              <tbody class="divide-y divide-gray-200 dark:divide-gray-800">
+                @for (issue of details.value; track issue.id) {
+                  <tr><td class="table-cell">{{ issue.employeeId || '—' }}</td>
+                    <td class="table-cell"><p>{{ issue.data.message || '—' }}</p><p class="text-xs text-gray-500 dark:text-gray-400">{{ issue.data.code }}</p></td>
+                    <td class="table-cell">{{ issue.data.severity ? label(issue.data.severity) : '—' }}</td><td class="table-cell">{{ label(issue.status) }}</td></tr>
+                } @empty { <tr><td class="table-cell" colspan="4">No validation issues have been recorded.</td></tr> }
+              </tbody>
+            </table>
+          </div>
+        </app-component-card>
+      }
+      @case ('approvals') { <ng-container [ngTemplateOutlet]="history" [ngTemplateOutletContext]="{ $implicit: details.value, title: 'Approval decisions' }" /> }
+      @case ('history') { <ng-container [ngTemplateOutlet]="history" [ngTemplateOutletContext]="{ $implicit: details.value, title: 'Payroll approval history' }" /> }
+      @case ('closing') {
+        <app-component-card title="Closing evidence">
+          @for (event of details.value; track event.id) {
+            <dl class="grid gap-4 text-sm text-gray-700 sm:grid-cols-2 dark:text-gray-300">
+              <div><dt class="font-medium">Closed at</dt><dd>{{ date(event.data.closedAt, true) }}</dd></div>
+              <div><dt class="font-medium">Operator</dt><dd>#{{ event.data.closedBy }}</dd></div>
+              <div><dt class="font-medium">Final net pay</dt><dd>{{ money(event.data.totals.netAmount, event.data.totals.currency) }}</dd></div>
+              <div><dt class="font-medium">Employee results</dt><dd>{{ event.data.totals.employees }}</dd></div>
+              <div class="sm:col-span-2"><dt class="font-medium">Closing hash</dt><dd class="break-all font-mono">{{ event.data.closingHash }}</dd></div>
+            </dl>
+          } @empty { <p class="text-sm text-gray-600 dark:text-gray-400">This payroll run has no closing evidence yet.</p> }
+        </app-component-card>
+      }
+      @case ('payments') {
+        <app-component-card title="Payment instructions" desc="Prepared instructions are sent to the payments module for execution and reconciliation.">
+          <div class="max-h-[34rem] overflow-auto">
+            <table class="w-full text-start text-sm text-gray-700 dark:text-gray-300">
+              <thead class="table-heading"><tr><th scope="col">Employee</th><th scope="col">Reference</th><th scope="col">Amount</th><th scope="col">Status</th></tr></thead>
+              <tbody class="divide-y divide-gray-200 dark:divide-gray-800">
+                @for (instruction of details.value; track instruction.id) {
+                  <tr><td class="table-cell">{{ instruction.employeeId }}</td><td class="table-cell">{{ instruction.data.reference }}</td>
+                    <td class="table-cell whitespace-nowrap">{{ money(instruction.data.amount, instruction.data.currency) }}</td><td class="table-cell">{{ label(instruction.status) }}</td></tr>
+                } @empty { <tr><td class="table-cell" colspan="4">No payment instructions have been prepared.</td></tr> }
+              </tbody>
+            </table>
+          </div>
+        </app-component-card>
+      }
+    }
+  } @else if (tab() === 'approvals') {
+    <app-component-card title="Approvals"><p class="text-sm text-gray-600 dark:text-gray-400">Available approval actions appear above. Viewing previous decisions requires payroll history access.</p></app-component-card>
+  } @else if (tab() === 'closing') {
+    <app-component-card title="Closing"><p class="text-sm text-gray-600 dark:text-gray-400">Available closing actions appear above. Viewing closing evidence requires access to sensitive payroll results.</p></app-component-card>
+  } @else if (tab() === 'payments') {
+    <app-component-card title="Payment preparation"><p class="text-sm text-gray-600 dark:text-gray-400">Viewing prepared instructions requires payment read access.</p></app-component-card>
+  }
+}
+
+<ng-template #history let-approvals let-title="title">
+  <app-component-card [title]="title">
+    <div class="overflow-x-auto">
+      <table class="w-full text-start text-sm text-gray-700 dark:text-gray-300">
+        <thead class="table-heading"><tr><th scope="col">Decision</th><th scope="col">Operator</th><th scope="col">Run version</th><th scope="col">Date</th><th scope="col">Details</th></tr></thead>
+        <tbody class="divide-y divide-gray-200 dark:divide-gray-800">
+          @for (approval of approvals; track approval.id) {
+            <tr><td class="table-cell">{{ label(approval.status) }}</td><td class="table-cell">#{{ approval.data.actorUserId }}</td>
+              <td class="table-cell">{{ approval.data.runVersion }}</td><td class="table-cell whitespace-nowrap">{{ date(approval.createdAt, true) }}</td>
+              <td class="table-cell">{{ approval.data.reason || (approval.data.requiredApprovals ? approval.data.requiredApprovals + ' distinct approvals required' : '—') }}</td></tr>
+          } @empty { <tr><td class="table-cell" colspan="5">No approval decisions have been recorded.</td></tr> }
+        </tbody>
+      </table>
+    </div>
+  </app-component-card>
+</ng-template>

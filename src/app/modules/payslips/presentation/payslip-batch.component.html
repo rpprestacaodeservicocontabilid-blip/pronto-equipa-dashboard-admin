@@ -1,0 +1,39 @@
+<app-page-breadcrumb pageTitle="Batch details" />
+<div class="mb-5 flex flex-wrap gap-4">
+  <a class="ps-link text-sm" routerLink="/payslips/batches">Batch issuance</a>
+  <a class="ps-link text-sm" routerLink="/payslips/failures">Failed batches</a>
+</div>
+@if (error()) {
+  <div class="ps-error flex flex-wrap items-center justify-between gap-2" role="alert">{{ error() }}
+    <button type="button" class="ps-secondary" (click)="refresh()">Reload batch</button>
+  </div>
+} @else if (busy()) {
+  <p class="ps-muted py-6" role="status">Loading batch details…</p>
+} @else if (batch(); as data) {
+  <div class="space-y-5">
+    <app-component-card [title]="data.company.name">
+      <div class="mb-4 flex flex-wrap items-center justify-between gap-3">
+        <div><p class="ps-muted break-all">Batch {{ data.id }}</p>
+          <p class="ps-muted mt-1">{{ label(data.type) }} · Created {{ data.createdAt | date:'medium':'+0100' }} · Updated {{ data.updatedAt | date:'medium':'+0100' }}</p></div>
+        <span class="ps-badge" [attr.data-status]="data.status">{{ label(data.status) }}</span>
+      </div>
+      <dl class="grid grid-cols-2 gap-3 xl:grid-cols-4">
+        <div class="ps-stat"><dt>Items</dt><dd>{{ data.total | number }}</dd></div>
+        <div class="ps-stat"><dt>Generated</dt><dd>{{ data.completed | number }}</dd></div>
+        <div class="ps-stat"><dt>Pending</dt><dd>{{ pending(data) | number }}</dd></div>
+        <div class="ps-stat"><dt>Failed</dt><dd>{{ data.failed | number }}</dd></div>
+      </dl>
+    </app-component-card>
+    <app-component-card title="Current item status">
+      <ul class="divide-y divide-gray-100 dark:divide-gray-800">
+        @for (item of data.progress; track item.status) {
+          <li class="ps-queue"><span class="ps-badge" [attr.data-status]="item.status">{{ label(item.status) }}</span><span class="ps-muted">{{ item.total | number }}</span></li>
+        } @empty { <li class="ps-muted">No items are registered for this batch.</li> }
+      </ul>
+      @if (data.failed) {
+        <p class="ps-muted mt-4">Company payroll teams can retry failed generation items through their authorised workflow.</p>
+      }
+      <button type="button" class="ps-secondary mt-4" (click)="refresh()">Refresh status</button>
+    </app-component-card>
+  </div>
+}

@@ -1,0 +1,136 @@
+@if (notice()) { <p class="notice" role="status">{{ notice() }}</p> }
+@if (pending(); as deduction) {
+  <app-loan-action [company]="company" [request]="{ action: 'confirm-deduction', id: deduction.id, maximum: deduction.requestedAmount,
+      description: 'Record the amount actually applied by Payroll for installment ' + deduction.installmentId + '.' }"
+    (cancelled)="pending.set(null)" (saved)="confirmed($event)" />
+}
+
+<app-component-card title="Filters">
+  <form (ngSubmit)="apply()" class="space-y-4">
+    @if (mode === 'reports') {
+      <label class="field max-w-sm">Report
+        <select class="control" name="report" [disabled]="exporting()" [ngModel]="report" (ngModelChange)="chooseReport($event)">
+          @for (option of reports; track option.report) { <option [ngValue]="option.report">{{ option.title }}</option> }
+        </select>
+      </label>
+    }
+    @if (report !== 'summary') {
+      <fieldset class="grid gap-3 sm:grid-cols-2 xl:grid-cols-3" [disabled]="exporting()">
+        @if (!byEmployee) {
+          <label class="field">Loan ID <input class="control" name="loan" [(ngModel)]="filters.loanId" maxlength="36" /></label>
+        }
+        @if (report === 'deductions') {
+          <label class="field">Status<select class="control" name="status" [(ngModel)]="filters.status">
+            <option value="">All statuses</option>
+            <option value="APPLIED">Confirmed and partial</option>
+            @for (status of states; track status) { <option [value]="status">{{ label(status) }}</option> }
+          </select></label>
+        }
+        <label class="field">{{ report === 'overdue' ? 'Due' : report === 'granted' ? 'Disbursed' : 'Record date' }} from
+          <input type="date" class="control" name="from" [(ngModel)]="filters.from" /></label>
+        <label class="field">Through <input type="date" class="control" name="to" [(ngModel)]="filters.to" /></label>
+        <label class="field">Minimum (Kz) <input class="control" name="min" maxlength="16" inputmode="decimal" [(ngModel)]="filters.min" /></label>
+        <label class="field">Maximum (Kz) <input class="control" name="max" maxlength="16" inputmode="decimal" [(ngModel)]="filters.max" /></label>
+      </fieldset>
+      @if (byEmployee) {
+        <div class="max-w-sm">
+          <app-loan-employee-picker [company]="company" [canSearch]="context.permissions.includes('employees.read')" [disabled]="exporting()"
+            [value]="filters.employee" (employeeChange)="filters.employee = $event" />
+        </div>
+        @if (context.permissions.includes('organization:read')) {
+          <app-organization-filter [company]="company" [disabled]="exporting()" (scopeChange)="scope = $event" />
+        }
+      }
+      <button type="submit" class="action action-primary" [disabled]="busy() || exporting()">Apply filters</button>
+    }
+    @if (filterError()) { <p class="feedback" role="alert">{{ filterError() }}</p> }
+  </form>
+</app-component-card>
+
+@if (busy()) { <p class="text-sm text-gray-600 dark:text-gray-400" role="status">Loading financial records…</p> }
+@if (error()) {
+  <p class="feedback" role="alert">{{ error() }}</p>
+  <button class="action" type="button" (click)="retry()">Try again</button>
+}
+@if (data(); as view) {
+  <app-component-card [title]="title">
+    @if (view.summary; as summary) {
+      <dl class="grid gap-4 text-sm text-gray-700 sm:grid-cols-2 xl:grid-cols-4 dark:text-gray-300">
+        <div><dt class="font-semibold">Active and suspended</dt><dd>{{ summary.activeLoans }}</dd></div>
+        <div><dt class="font-semibold">Outstanding principal</dt><dd>{{ money(summary.outstandingPrincipal, summary.currency) }}</dd></div>
+        <div><dt class="font-semibold">Outstanding interest</dt><dd>{{ money(summary.outstandingInterest, summary.currency) }}</dd></div>
+        <div><dt class="font-semibold">Outstanding total</dt><dd>{{ money(summary.outstandingTotal, summary.currency) }}</dd></div>
+      </dl>
+    } @else {
+      @if (report === 'overdue') {
+        <p class="text-sm text-gray-600 dark:text-gray-400">Scheduled amounts show the original installment value. Open a loan to see confirmed payments and its reconciled balance.</p>
+      }
+      @if (report === 'deductions' && can('deductions.request') && can('loans.read')) {
+        <a class="action" [routerLink]="filters.loanId ? ['/loans', company, 'installments', filters.loanId] : ['/loans', company, 'installments']">Find a loan to request a deduction</a>
+      }
+      <div class="overflow-x-auto rounded-lg border border-gray-200 dark:border-gray-800">
+        <table class="w-full min-w-[40rem] text-start text-sm text-gray-700 dark:text-gray-300">
+          <thead class="table-heading"><tr>
+            <th scope="col">Loan</th><th scope="col">{{ byEmployee ? 'Employee ID' : 'Installment' }}</th><th scope="col">Status</th>
+            <th scope="col">{{ report === 'deductions' ? 'Requested' : report === 'overdue' ? 'Scheduled' : 'Granted' }}</th>
+            <th scope="col">{{ report === 'deductions' ? 'Confirmed' : report === 'overdue' ? 'Days overdue' : 'Balance' }}</th>
+            <th scope="col">{{ report === 'deductions' ? 'Payroll run' : report === 'overdue' ? 'Due date' : 'Record date' }}</th>
+            @if (report === 'deductions' && can('deductions.confirm')) { <th scope="col"><span class="sr-only">Actions</span></th> }
+          </tr></thead>
+          <tbody class="divide-y divide-gray-100 dark:divide-gray-800">
+            @for (row of visible(view); track row.id) {
+              <tr>
+                @if (isDeduction(row)) {
+                  <td class="table-cell max-w-48 wrap-anywhere">
+                    @if (can('loans.read')) { <a class="text-brand-700 underline dark:text-brand-300" [routerLink]="['/loans', company, 'active', row.loanId]">{{ row.loanId }}</a> }
+                    @else { {{ row.loanId }} }
+                  </td>
+                  <td class="table-cell max-w-48 wrap-anywhere">{{ row.installmentId }}</td>
+                  <td class="table-cell">{{ label(row.status) }}</td>
+                  <td class="table-cell">{{ money(row.requestedAmount) }}</td><td class="table-cell">{{ money(row.confirmedAmount) }}</td>
+                  <td class="table-cell max-w-48 wrap-anywhere">{{ row.payrollRunId || '—' }}</td>
+                  @if (can('deductions.confirm')) {
+                    <td class="table-cell">
+                      @if (row.status === 'REQUESTED') {
+                        <button class="action" type="button" [disabled]="!!pending() || exporting()" (click)="pending.set(row)">Reconcile</button>
+                      }
+                    </td>
+                  }
+                } @else if (isInstallment(row)) {
+                  <td class="table-cell max-w-52 wrap-anywhere">
+                    @if (can('loans.read')) { <a class="text-brand-700 underline dark:text-brand-300" [routerLink]="['/loans', company, 'installments', row.loanId]">{{ row.loanId }}</a> }
+                    @else { {{ row.loanId }} }
+                  </td>
+                  <td class="table-cell">{{ row.installmentNumber }}</td><td class="table-cell">{{ label(row.status) }}</td>
+                  <td class="table-cell">{{ money(totalDue(row)) }}</td><td class="table-cell">{{ age(row) }} · {{ ageBand(row) }}</td><td class="table-cell whitespace-nowrap">{{ row.dueDate }}</td>
+                } @else {
+                  <td class="table-cell">
+                    @if (can('loans.read')) { <a class="text-brand-700 underline dark:text-brand-300" [routerLink]="['/loans', company, report === 'settled' ? 'settlements' : 'active', row.id]">{{ row.loanNumber }}</a> }
+                    @else { {{ row.loanNumber }} }
+                  </td>
+                  <td class="table-cell max-w-48 wrap-anywhere">{{ row.employeeId }}</td><td class="table-cell">{{ label(row.status) }}</td>
+                  <td class="table-cell">{{ money(row.principalAmount, row.currency) }}</td><td class="table-cell">{{ money(row.balance.total, row.currency) }}</td>
+                  <td class="table-cell whitespace-nowrap">{{ (report === 'settled' ? row.updatedAt : row.disbursedAt ?? row.createdAt).slice(0, 10) }}</td>
+                }
+              </tr>
+            } @empty { <tr><td colspan="7" class="table-cell">No financial records match the filters.</td></tr> }
+          </tbody>
+        </table>
+      </div>
+      <div class="flex flex-wrap items-center justify-between gap-2">
+        <p class="text-sm text-gray-600 dark:text-gray-400">{{ view.total }} records · Page {{ page }}</p>
+        <div class="flex gap-2">
+          <button class="action" type="button" [disabled]="page <= 1 || exporting()" (click)="go(page - 1)">Previous</button>
+          <button class="action" type="button" [disabled]="page * pageSize >= view.total || exporting()" (click)="go(page + 1)">Next</button>
+        </div>
+      </div>
+    }
+    @if (can('reports.read') && (view.summary || view.total)) {
+      <div class="flex flex-wrap gap-2">
+        <button class="action" type="button" [disabled]="exporting()" (click)="export(view, 'excel')">Export Excel</button>
+        <button class="action" type="button" [disabled]="exporting()" (click)="export(view, 'pdf')">Print / PDF</button>
+        @if (exporting()) { <p role="status" class="self-center text-sm text-gray-600 dark:text-gray-400">Preparing report…</p> }
+      </div>
+    }
+  </app-component-card>
+}

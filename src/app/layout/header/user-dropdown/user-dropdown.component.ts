@@ -1,5 +1,6 @@
 import { inject } from '@angular/core';
 import { AuthService } from '../../../core/auth/auth.service';
+import { apiErrorMessage } from '../../../core/api/api-error';
 import { ChangeDetectorRef, Component, ElementRef, HostListener, OnDestroy, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { RouterModule } from '@angular/router';
@@ -23,12 +24,23 @@ interface Language {
 export class UserDropdownComponent implements OnInit, OnDestroy {
   readonly auth = inject(AuthService);
   signingOut = false;
+  signOutError = '';
   signOut(event: Event) {
     event.preventDefault();
     if (this.signingOut) return;
     this.signingOut = true;
-    this.closeDropdown();
-    this.auth.logout().subscribe({ error: () => this.signingOut = false, complete: () => this.signingOut = false });
+    this.signOutError = '';
+    this.auth.logout().subscribe({
+      error: error => {
+        this.signOutError = apiErrorMessage(error);
+        this.signingOut = false;
+        this.cdr.markForCheck();
+      },
+      complete: () => {
+        this.signingOut = false;
+        this.closeDropdown();
+      },
+    });
   }
   readonly dropdownId = 'user-dropdown';
   isOpen = false;

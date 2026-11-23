@@ -1,0 +1,266 @@
+<app-page-breadcrumb [pageTitle]="section.title" />
+
+<form class="mb-5 space-y-4 rounded-xl border border-gray-200 bg-white p-4 dark:border-gray-800 dark:bg-gray-900" (ngSubmit)="applyFilters()">
+  <div class="grid items-end gap-3 sm:grid-cols-2 xl:grid-cols-[minmax(12rem,1.5fr)_minmax(9rem,1fr)_minmax(9rem,1fr)_auto]">
+    <label class="ps-label">Company
+      <select class="ps-input" name="companyId" [ngModel]="draft.companyId" (ngModelChange)="selectCompany($event)">
+        <option [ngValue]="null">{{ companyOnly ? 'Select a company' : 'All companies' }}</option>
+        @for (option of options(); track option.id) { <option [ngValue]="option.id">{{ option.name }}</option> }
+      </select>
+    </label>
+    @if (dated) {
+      <label class="ps-label">From<input class="ps-input" type="date" name="from" [(ngModel)]="draft.from" required></label>
+      <label class="ps-label">Through<input class="ps-input" type="date" name="to" [(ngModel)]="draft.to" required></label>
+    }
+    <div><button type="submit" class="ps-button" [disabled]="busy() || (companyOnly && !draft.companyId)">Apply filters</button></div>
+  </div>
+  @if (usesVolume || usesAudit || section.view === 'batches') {
+    <div class="grid gap-3 border-t border-gray-100 pt-4 sm:grid-cols-2 xl:grid-cols-4 dark:border-gray-800">
+      @if (usesVolume || usesAudit) {
+        <label class="ps-label">Group by
+          <select class="ps-input" name="grouping" [(ngModel)]="draft.granularity">
+            <option value="month">Month</option><option value="day">Day</option>
+          </select>
+        </label>
+      }
+      @if (usesVolume && !section.type) {
+        <label class="ps-label">Receipt type
+          <select class="ps-input" name="type" [(ngModel)]="draft.type">
+            <option value="">All types</option>
+            @for (type of types; track type) { <option [value]="type">{{ label(type) }}</option> }
+          </select>
+        </label>
+      }
+      @if (usesVolume && !section.status) {
+        <label class="ps-label">Receipt status
+          <select class="ps-input" name="status" [(ngModel)]="draft.status">
+            <option value="">All statuses</option>
+            @for (status of statuses; track status) { <option [value]="status">{{ label(status) }}</option> }
+          </select>
+        </label>
+      }
+      @if (section.view === 'batches') {
+        <label class="ps-label">Batch status
+          <select class="ps-input" name="batchStatus" [(ngModel)]="draft.batchStatus">
+            <option value="">All statuses</option>
+            @for (status of batchStatuses; track status) { <option [value]="status">{{ label(status) }}</option> }
+          </select>
+        </label>
+      }
+    </div>
+  }
+  <details class="border-t border-gray-100 pt-3 dark:border-gray-800">
+    <summary class="ps-link cursor-pointer text-sm">Find a company</summary>
+    <div class="mt-3 flex flex-wrap items-end gap-3">
+      <label class="ps-label min-w-40 grow">Company name<input class="ps-input" name="companySearch" type="search" [(ngModel)]="companySearch" maxlength="100"></label>
+      <button type="button" class="ps-secondary" [disabled]="companyBusy()" (click)="searchCompanies(1, true)">Search companies</button>
+      <button type="button" class="ps-secondary" [disabled]="companyBusy() || companyPage() <= 1" (click)="searchCompanies(companyPage() - 1)">Previous companies</button>
+      <button type="button" class="ps-secondary" [disabled]="companyBusy() || companyPage() * 50 >= companyTotal()" (click)="searchCompanies(companyPage() + 1)">More companies</button>
+    </div>
+    <p class="ps-muted mt-2" role="status">{{ companyBusy() ? 'Loading companies…' : (companyTotal() + ' matching companies. Choose a result in the company field above.') }}</p>
+  </details>
+  @if (companyError()) {
+    <div class="ps-error flex flex-wrap items-center justify-between gap-2" role="alert">{{ companyError() }}
+      <button type="button" class="ps-secondary" (click)="searchCompanies(companyPage())">Reload companies</button>
+    </div>
+  }
+</form>
+
+@if (error()) {
+  <div class="ps-error flex flex-wrap items-center justify-between gap-2" role="alert">{{ error() }}
+    <button type="button" class="ps-secondary" (click)="load()">Reload data</button>
+  </div>
+} @else if (busy()) {
+  <p class="ps-muted py-6" role="status">Loading payslip activity…</p>
+} @else if (companyOnly && !applied().companyId) {
+  <app-component-card title="Choose a company">
+    <p class="ps-muted">Select a company and apply the filters to view {{ section.title.toLowerCase() }}.</p>
+  </app-component-card>
+} @else {
+  @switch (section.view) {
+    @case ('overview') {
+      @if (overview(); as data) {
+        <div class="space-y-5">
+          <section class="rounded-2xl border border-brand-100 bg-brand-50 px-5 py-6 sm:px-6 dark:border-brand-500/20 dark:bg-brand-500/10">
+            <div class="flex flex-wrap justify-between gap-4">
+              <div>
+                <h2 class="text-xl font-semibold tracking-tight text-gray-950 sm:text-2xl dark:text-white">Payslip supervision</h2>
+                <p class="ps-muted mt-1">Track payroll document generation, publication and distribution across client companies.</p>
+              </div>
+              <div class="flex flex-wrap items-start gap-2">
+                <a class="ps-secondary" routerLink="/payslips/batches">View batches</a>
+                <a class="ps-button" routerLink="/payslips/reports">View reports</a>
+              </div>
+            </div>
+            <dl class="mt-5 grid grid-cols-2 gap-3 xl:grid-cols-4">
+              <div class="ps-stat"><dt>Generated</dt><dd>{{ data.generated | number }}</dd><p>Includes validated and archived</p></div>
+              <div class="ps-stat"><dt>Published</dt><dd>{{ data.published | number }}</dd><p>Current publication status</p></div>
+              <div class="ps-stat"><dt>Pending</dt><dd>{{ data.pending | number }}</dd><p>Awaiting or in generation</p></div>
+              <div class="ps-stat"><dt>Failed</dt><dd>{{ data.failed | number }}</dd><p>Generation or publication</p></div>
+            </dl>
+            <p class="ps-muted mt-4">{{ data.companyCount | number }} {{ data.companyCount === 1 ? 'company' : 'companies' }} · Receipt creation date in Luanda</p>
+          </section>
+          <div class="grid gap-5 xl:grid-cols-2">
+            <app-component-card title="Receipt status">
+              <ul class="space-y-3">
+                @for (item of data.metrics; track item.category + item.status) {
+                  @if (item.category === 'receipts') {
+                    <li class="grid grid-cols-[minmax(7.5rem,1fr)_minmax(3rem,1.5fr)_3rem] items-center gap-3">
+                      <span class="ps-muted">{{ label(item.status) }}</span>
+                      <progress class="h-2 w-full accent-brand-500" [value]="percentage(item.total, data.generated + data.pending + data.failed)" max="1" [attr.aria-label]="label(item.status)"></progress>
+                      <span class="text-end text-sm font-medium text-gray-800 dark:text-gray-200">{{ item.total | number }}</span>
+                    </li>
+                  }
+                }
+                @if (!data.generated && !data.pending && !data.failed && !count(data, 'receipts', 'OTHER')) { <li class="ps-muted">No receipts in this period.</li> }
+              </ul>
+            </app-component-card>
+            <app-component-card title="Queues and exceptions">
+              <ul class="divide-y divide-gray-100 dark:divide-gray-800">
+                <li class="ps-queue"><a class="ps-link" routerLink="/payslips/failures">Batches completed with issues</a><span class="ps-badge" data-status="PARTIALLY_COMPLETED">{{ count(data, 'batches', 'PARTIALLY_COMPLETED', 'FAILED') }}</span></li>
+                <li class="ps-queue"><a class="ps-link" routerLink="/payslips/distribution">Publication events awaiting hand-off</a><span class="ps-badge" data-status="PENDING">{{ count(data, 'delivery', 'PENDING') }}</span></li>
+                <li class="ps-queue"><a class="ps-link" routerLink="/payslips/integrity">Recorded hash mismatches</a><span class="ps-badge" data-status="MISMATCH">{{ count(data, 'integrity', 'MISMATCH') }}</span></li>
+                <li class="ps-queue"><a class="ps-link" routerLink="/payslips/archive">Archived receipts</a><span class="ps-badge">{{ data.archived }}</span></li>
+              </ul>
+            </app-component-card>
+          </div>
+        </div>
+      }
+    }
+    @case ('batches') {
+      <app-component-card [title]="section.failures ? 'Batches with generation failures' : 'Document generation batches'">
+        <div class="overflow-x-auto">
+          <table class="ps-table w-full">
+            <thead><tr><th scope="col">Batch</th><th scope="col">Type</th><th scope="col">Status</th><th scope="col">Progress</th><th scope="col">Failed</th><th scope="col">Updated</th></tr></thead>
+            <tbody>
+              @for (row of batches(); track row.id) {
+                <tr>
+                  <td><a class="ps-link font-mono" [routerLink]="['/payslips/batches', row.companyId, row.id]" [attr.aria-label]="'Open batch ' + row.id">{{ row.id.slice(0, 8) }}</a></td>
+                  <td>{{ label(row.type) }}</td>
+                  <td><span class="ps-badge" [attr.data-status]="row.status">{{ label(row.status) }}</span></td>
+                  <td class="min-w-28"><div>{{ row.completed | number }} / {{ row.total | number }}</div>
+                    <progress class="h-1.5 w-full accent-brand-500" [value]="percentage(row.completed, row.total)" max="1" aria-label="Generated items"></progress></td>
+                  <td>{{ row.failed | number }}</td>
+                  <td class="whitespace-nowrap">{{ row.updatedAt | date:'mediumDate':'+0100' }}</td>
+                </tr>
+              } @empty { <tr><td colspan="6">No batches match these filters.</td></tr> }
+            </tbody>
+          </table>
+        </div>
+      </app-component-card>
+    }
+    @case ('publication') {
+      @if (overview(); as data) {
+        <app-component-card title="Publication activity">
+          <dl class="grid grid-cols-1 gap-3 sm:grid-cols-3">
+            <div class="ps-stat"><dt>Publication records</dt><dd>{{ count(data, 'publications', 'PUBLISHED') | number }}</dd><p>Recorded during this period</p></div>
+            <div class="ps-stat"><dt>Currently published</dt><dd>{{ data.published | number }}</dd><p>Receipts created in this period</p></div>
+            <div class="ps-stat"><dt>Publication failures</dt><dd>{{ count(data, 'receipts', 'PUBLICATION_FAILED') | number }}</dd><p>Current status of receipts created in this period</p></div>
+          </dl>
+        </app-component-card>
+      }
+    }
+    @case ('distribution') {
+      @if (overview(); as data) {
+        <app-component-card title="Distribution activity">
+          <dl class="grid grid-cols-1 gap-3 sm:grid-cols-3">
+            <div class="ps-stat"><dt>Available in the portal</dt><dd>{{ count(data, 'portal', 'AVAILABLE') | number }}</dd><p>Availability records</p></div>
+            <div class="ps-stat"><dt>Awaiting hand-off</dt><dd>{{ count(data, 'delivery', 'PENDING') | number }}</dd><p>Publication events queued for the integration</p></div>
+            <div class="ps-stat"><dt>Handed off</dt><dd>{{ count(data, 'delivery', 'PUBLISHED') | number }}</dd><p>Publication events accepted by the integration</p></div>
+          </dl>
+          <p class="ps-muted mt-4">Worker notification outcomes are tracked in the notification service.</p>
+        </app-component-card>
+      }
+    }
+    @case ('integrity') {
+      @if (overview(); as data) {
+        <app-component-card title="Document integrity activity">
+          <dl class="grid grid-cols-1 gap-3 sm:grid-cols-3">
+            <div class="ps-stat"><dt>PDFs recorded in storage</dt><dd>{{ count(data, 'storage', 'STORED') | number }}</dd></div>
+            <div class="ps-stat"><dt>Matching hashes</dt><dd>{{ count(data, 'integrity', 'MATCH') | number }}</dd></div>
+            <div class="ps-stat"><dt>Hash mismatches</dt><dd>{{ count(data, 'integrity', 'MISMATCH') | number }}</dd></div>
+          </dl>
+          <p class="ps-muted mt-4">Counts reflect checks performed through authorised company workflows.</p>
+        </app-component-card>
+      }
+    }
+    @case ('templates') {
+      <app-component-card title="Published and draft template versions">
+        <div class="overflow-x-auto">
+          <table class="ps-table w-full">
+            <thead><tr><th scope="col">Template reference</th><th scope="col">Version</th><th scope="col">Status</th><th scope="col">Created</th></tr></thead>
+            <tbody>
+              @for (item of templates(); track item.id) {
+                <tr><td class="font-mono">{{ item.templateId ?? '—' }}</td><td>{{ item.version ?? '—' }}</td>
+                  <td><span class="ps-badge" [attr.data-status]="item.status">{{ label(item.status) }}</span></td>
+                  <td>{{ item.createdAt | date:'mediumDate':'+0100' }}</td></tr>
+              } @empty { <tr><td colspan="4">No template versions are registered for this company.</td></tr> }
+            </tbody>
+          </table>
+        </div>
+      </app-component-card>
+    }
+    @case ('policies') {
+      <app-component-card title="Versioned payslip policies">
+        <div class="overflow-x-auto">
+          <table class="ps-table w-full">
+            <thead><tr><th scope="col">Version</th><th scope="col">Status</th><th scope="col">Retention</th><th scope="col">Worker downloads</th><th scope="col">Notify on publication</th><th scope="col">Manual publication</th><th scope="col">Created</th></tr></thead>
+            <tbody>
+              @for (item of policies(); track item.id) {
+                <tr><td>{{ item.version }}</td><td><span class="ps-badge" [attr.data-status]="item.status">{{ label(item.status) }}</span></td>
+                  <td>{{ item.retentionDays === null ? 'Unspecified' : item.retentionDays + ' days' }}</td>
+                  <td>{{ yesNo(item.allowWorkerDownload) }}</td><td>{{ yesNo(item.notifyWorkerOnPublish) }}</td><td>{{ yesNo(item.requireManualPublication) }}</td>
+                  <td class="whitespace-nowrap">{{ item.createdAt | date:'mediumDate':'+0100' }}</td></tr>
+              } @empty { <tr><td colspan="7">This company is using the default policy.</td></tr> }
+            </tbody>
+          </table>
+        </div>
+      </app-component-card>
+    }
+  }
+
+  @if (usesVolume) {
+    <app-component-card [title]="section.view === 'reports' ? 'Payslip volume report' : 'Receipt volume'">
+      <div class="mb-4 flex flex-wrap items-center justify-between gap-3">
+        <p class="ps-muted">{{ totalVolume() | number }} receipts · Grouped by creation date and current status</p>
+        @if (section.view === 'reports') {
+          <button type="button" class="ps-secondary" [disabled]="exporting() || !total()" (click)="download()">{{ exporting() ? 'Exporting…' : 'Export CSV' }}</button>
+        }
+      </div>
+      @if (exportError()) { <p class="ps-error mb-4" role="alert">{{ exportError() }}</p> }
+      <div class="overflow-x-auto">
+        <table class="ps-table w-full">
+          <thead><tr><th scope="col">Period</th><th scope="col">Type</th><th scope="col">Current status</th><th scope="col">Count</th></tr></thead>
+          <tbody>
+            @for (item of visibleVolume(); track item.period + item.type + item.status) {
+              <tr><td>{{ item.period }}</td><td>{{ label(item.type) }}</td><td><span class="ps-badge" [attr.data-status]="item.status">{{ label(item.status) }}</span></td><td>{{ item.total | number }}</td></tr>
+            } @empty { <tr><td colspan="4">No receipts match these filters.</td></tr> }
+          </tbody>
+        </table>
+      </div>
+    </app-component-card>
+  }
+  @if (usesAudit) {
+    <app-component-card [title]="section.view === 'portal' ? 'Recorded employee portal access' : 'Operational audit and history'">
+      <div class="overflow-x-auto">
+        <table class="ps-table w-full">
+          <thead><tr><th scope="col">Period</th><th scope="col">Event</th><th scope="col">Count</th></tr></thead>
+          <tbody>
+            @for (item of visibleAudit(); track item.period + item.event) {
+              <tr><td>{{ item.period }}</td><td>{{ label(item.event) }}</td><td>{{ item.total | number }}</td></tr>
+            } @empty { <tr><td colspan="3">No events match these filters.</td></tr> }
+          </tbody>
+        </table>
+      </div>
+    </app-component-card>
+  }
+  @if ((companyOnly || usesVolume || usesAudit) && total()) {
+    <div class="mt-4 flex flex-wrap items-center justify-between gap-3">
+      <p class="ps-muted" aria-live="polite">{{ total() | number }} rows · Page {{ page() }}</p>
+      <div class="flex gap-2">
+        <button type="button" class="ps-secondary" [disabled]="page() <= 1" (click)="turnPage(page() - 1)">Previous</button>
+        <button type="button" class="ps-secondary" [disabled]="page() * limit >= total()" (click)="turnPage(page() + 1)">Next</button>
+      </div>
+    </div>
+  }
+}

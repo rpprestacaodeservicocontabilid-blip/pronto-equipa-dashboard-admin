@@ -1,0 +1,377 @@
+@if (notice()) { <p role="status" class="notice">{{ notice() }}</p> }
+@if (editor(); as request) {
+  @for (activeRequest of [request]; track activeRequest) {
+    <app-attendance-editor [request]="activeRequest" [company]="company" [employees]="employeeList()" (cancelled)="editor.set(null)" (saved)="saved($event)" />
+  }
+}
+
+@if (!id) {
+  @if (primary(); as action) {
+    <button type="button" class="action action-primary" [disabled]="!!editor()" (click)="begin({action: action.action})">{{ action.label }}</button>
+  }
+  @if (canReadList || mode === 'overview' || mode === 'reports') {
+    <app-component-card [title]="mode === 'reports' ? 'Report filters' : 'Filters'">
+      <form (ngSubmit)="apply()" class="space-y-4">
+        @if (mode === 'reports') {
+          <label class="field max-w-sm">Report
+            <select class="control" name="report" [ngModel]="reportIndex" (ngModelChange)="chooseReport($event)">
+              @if (can('reports.read')) { <option [ngValue]="-1">Company attendance summary</option> }
+              @for (report of availableReports; track report.title) { <option [ngValue]="reportNumber(report)">{{ report.title }}</option> }
+            </select>
+          </label>
+        }
+        @if (hasDates) {
+          @if (mode === 'map' || mode === 'overview') {
+            <div class="flex flex-wrap gap-2">
+              <button class="action" type="button" (click)="setRange('day'); apply()">Day</button>
+              <button class="action" type="button" (click)="setRange('week'); apply()">Week</button>
+              <button class="action" type="button" (click)="setRange('month'); apply()">Month</button>
+            </div>
+          }
+          <div class="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
+            <label class="field">From<input class="control" type="date" name="from" [(ngModel)]="from" /></label>
+            <label class="field">To<input class="control" type="date" name="to" [(ngModel)]="to" /></label>
+            @if (hasEmployeeScope) {
+              <label class="field">Employee
+              @if (employeeList().length) {
+                <select class="control" name="employee" [(ngModel)]="employee">
+                  <option value="">All employees</option>
+                  @for (person of employeeList(); track person.id) {
+                    <option [value]="person.id">{{ person.firstName }} {{ person.lastName }} · {{ person.employeeNumber }}</option>
+                  }
+                </select>
+              } @else {
+                <input class="control" name="employee" [(ngModel)]="employee" placeholder="Employee ID (optional)" [pattern]="uuidPattern" />
+              }
+              </label>
+            }
+            @if (hasEmployeeScope && organizationReady() && departments().length) {
+              <label class="field">Department
+                <select class="control" name="department" [(ngModel)]="department">
+                  <option value="">All departments</option>
+                  @for (item of departments(); track item.id) { <option [value]="item.id">{{ item.name }}</option> }
+                </select>
+              </label>
+            }
+            @if (hasEmployeeScope && organizationReady() && establishments().length && departments().length) {
+              <label class="field">Establishment
+                <select class="control" name="establishment" [(ngModel)]="establishment">
+                  <option value="">All establishments</option>
+                  @for (item of establishments(); track item.id) { <option [value]="item.id">{{ item.name }}</option> }
+                </select>
+              </label>
+            }
+            @if (statuses.length) {
+              <label class="field">Attendance status
+                <select class="control" name="status" [(ngModel)]="status">
+                  <option value="">All statuses</option>
+                  @for (state of statuses; track state) { <option [value]="state">{{ label(state) }}</option> }
+                </select>
+              </label>
+            }
+          </div>
+          <button class="action action-primary" type="submit">Apply filters</button>
+        } @else {
+          <button class="action" type="button" (click)="retry()" [disabled]="loading()">Refresh</button>
+        }
+        @if (inputError()) { <p class="feedback" role="alert">{{ inputError() }}</p> }
+        @if (organizationError()) { <p class="text-sm text-gray-600 dark:text-gray-400">{{ organizationError() }}</p> }
+      </form>
+    </app-component-card>
+  }
+} @else {
+  <a class="action" [routerLink]="['/attendance', company, mode]"><span aria-hidden="true" class="rtl:rotate-180">←</span> {{ section.title }}</a>
+}
+
+@if (loading()) { <p role="status" class="text-sm text-gray-600 dark:text-gray-400">Loading attendance…</p> }
+@if (loadError()) {
+  <p role="alert" class="feedback">{{ loadError() }}</p>
+  <button type="button" class="action" (click)="retry()">Try again</button>
+}
+@if (result(); as data) {
+  @if (mode === 'overview') {
+    <div class="grid gap-4 sm:grid-cols-2 xl:grid-cols-5">
+      @for (metric of indicators(data); track metric.label) {
+        <div class="rounded-2xl border border-gray-200 bg-white p-5 dark:border-gray-800 dark:bg-white/[0.03]">
+          <p class="text-sm text-gray-600 dark:text-gray-400">{{ metric.label }}</p>
+          <p class="mt-2 text-title-sm font-semibold tabular-nums text-gray-900 dark:text-white">{{ metric.value }}</p>
+        </div>
+      }
+    </div>
+    @if (can('days.read')) {
+      <div class="grid gap-4 xl:grid-cols-2">
+        <ng-container [ngTemplateOutlet]="breakdownCard" [ngTemplateOutletContext]="{ title: 'Monthly attendance', entries: breakdown(data.rows, 'month') }" />
+        @if (departments().length) {
+          <ng-container [ngTemplateOutlet]="breakdownCard" [ngTemplateOutletContext]="{ title: 'Attendance by department', entries: breakdown(data.rows, 'department') }" />
+        }
+      </div>
+    }
+    <div class="grid gap-4 xl:grid-cols-2">
+      @if (can('punches.read')) {
+        <app-component-card title="Recent time records">
+          <ul class="divide-y divide-gray-100 dark:divide-gray-800">
+            @for (punch of data.recent; track punch.id) {
+              <li><a [routerLink]="['/attendance', company, 'records', punch.id]" class="flex flex-wrap justify-between gap-2 py-3 text-sm text-brand-700 dark:text-brand-300">
+                <span>{{ employeeName(punch.employeeId) }} · {{ label(punch.punchType) }}</span>
+                <time [attr.datetime]="punch.occurredAt">{{ punch.occurredAt | date:'medium' }}</time>
+              </a></li>
+            } @empty { <li class="text-sm text-gray-600 dark:text-gray-400">No time records in this selection.</li> }
+          </ul>
+        </app-component-card>
+      }
+      @if (can('periods.read')) {
+        <app-component-card title="Recent attendance periods">
+          <ul class="divide-y divide-gray-100 dark:divide-gray-800">
+            @for (period of data.periods; track period.id) {
+              <li><a [routerLink]="['/attendance', company, 'periods', period.id]" class="flex justify-between gap-3 py-3 text-sm text-brand-700 dark:text-brand-300">
+                <span>{{ period.periodStart }} – {{ period.periodEnd }}</span><span>{{ label(period.status) }}</span>
+              </a></li>
+            } @empty { <li class="text-sm text-gray-600 dark:text-gray-400">No attendance periods.</li> }
+          </ul>
+        </app-component-card>
+      }
+    </div>
+  } @else if (id) {
+    @if (data.rows[0]; as row) {
+      <app-component-card [title]="isEntity(row) ? label(row.type) + ' details' : 'Time record details'">
+        <dl class="grid gap-x-6 gap-y-4 text-sm text-gray-700 sm:grid-cols-2 dark:text-gray-300">
+          <div class="min-w-0"><dt class="font-semibold">Record ID</dt><dd class="break-all">{{ row.id }}</dd></div>
+          @if (row.employeeId) {
+            <div class="min-w-0"><dt class="font-semibold">Employee</dt><dd class="break-all">{{ employeeName(row.employeeId) }}</dd></div>
+            <div><dt class="font-semibold">Department</dt><dd>{{ departmentName(row) }}</dd></div>
+          }
+          <div><dt class="font-semibold">{{ isEntity(row) ? 'Status' : 'Source' }}</dt><dd>{{ statusText(row) }}</dd></div>
+          @if (row.workDate) { <div><dt class="font-semibold">Work date</dt><dd>{{ row.workDate }}</dd></div> }
+          <div><dt class="font-semibold">Created</dt><dd>{{ row.createdAt | date:'medium' }} · User {{ row.createdBy ?? '—' }}</dd></div>
+          @if (isEntity(row)) {
+            <div><dt class="font-semibold">Version</dt><dd>{{ row.version }}</dd></div>
+            @if (row.type === 'DAY') {
+              <div><dt class="font-semibold">Worked / expected</dt><dd>{{ resultText(row) }}</dd></div>
+              <div class="min-w-0"><dt class="font-semibold">Work schedule</dt><dd class="break-all">
+                @if (row.data.scheduleId && context.permissions.includes('organization:read')) {
+                  <a class="text-brand-700 underline dark:text-brand-300" [routerLink]="['/organization', company, 'schedules', row.data.scheduleId]">View assigned schedule</a>
+                } @else { {{ row.data.scheduleId || '—' }} }
+              </dd></div>
+              <div><dt class="font-semibold">Policy version</dt><dd>{{ row.data.policyVersion ?? '—' }}</dd></div>
+              <div><dt class="font-semibold">Calculated</dt><dd>{{ (row.data.calculatedAt | date:'medium') || '—' }}</dd></div>
+            }
+            @if (row.type === 'OCCURRENCE') {
+              <div><dt class="font-semibold">Occurrence</dt><dd>{{ resultText(row) }}</dd></div>
+              <div><dt class="font-semibold">Tolerance</dt><dd>{{ duration(row.data.toleranceMinutes) }}</dd></div>
+              @if (row.parentId && can('days.read')) {
+                <div><dt class="font-semibold">Workday</dt><dd><a class="text-brand-700 underline dark:text-brand-300" [routerLink]="['/attendance', company, 'daily', row.parentId]">View daily attendance</a></dd></div>
+              }
+              @if (row.data.justificationId && can('justifications.read')) {
+                <div><dt class="font-semibold">Justification</dt><dd><a class="text-brand-700 underline dark:text-brand-300" [routerLink]="['/attendance', company, 'justifications', row.data.justificationId]">View justification</a></dd></div>
+              }
+            }
+            @if (row.type === 'JUSTIFICATION') {
+              <div class="min-w-0"><dt class="font-semibold">Evidence</dt><dd class="wrap-anywhere">
+                @if (evidenceLink(row.data.evidence); as url) {
+                  <a [href]="url" target="_blank" rel="noopener noreferrer" class="text-brand-700 underline dark:text-brand-300">Open evidence reference</a>
+                } @else { {{ row.data.evidence || '—' }} }
+              </dd></div>
+              @if (row.parentId && can('occurrences.read')) {
+                <div><dt class="font-semibold">Occurrence</dt><dd><a class="text-brand-700 underline dark:text-brand-300" [routerLink]="['/attendance', company, 'absences', row.parentId]">View associated occurrence</a></dd></div>
+              }
+            }
+            @if (row.type === 'CORRECTION' || row.type === 'RECTIFICATION') {
+              <div class="rounded-xl bg-gray-50 p-4 dark:bg-gray-900">
+                <dt class="font-semibold">Original punch</dt><dd>{{ label(row.data.originalPunchType) }} · {{ row.data.originalOccurredAt | date:'medium' }}</dd>
+                @if (row.parentId && can('punches.read')) { <a class="text-brand-700 underline dark:text-brand-300" [routerLink]="['/attendance', company, 'records', row.parentId]">View original</a> }
+              </div>
+              <div class="rounded-xl bg-brand-50 p-4 dark:bg-brand-500/10">
+                <dt class="font-semibold">Proposed punch</dt><dd>{{ label(row.data.requestedPunchType) }} · {{ row.data.requestedOccurredAt | date:'medium' }}</dd>
+                @if (row.data.replacementId && can('punches.read')) { <a class="text-brand-700 underline dark:text-brand-300" [routerLink]="['/attendance', company, 'records', row.data.replacementId]">View replacement</a> }
+              </div>
+            }
+            @if (row.data.reason) { <div class="sm:col-span-2"><dt class="font-semibold">Reason</dt><dd class="whitespace-pre-wrap wrap-anywhere">{{ row.data.reason }}</dd></div> }
+            @if (row.data.decidedAt) {
+              <div><dt class="font-semibold">Latest decision</dt><dd>{{ row.data.decidedAt | date:'medium' }} · User {{ row.data.decidedBy }}</dd></div>
+              <div><dt class="font-semibold">Decision reason</dt><dd class="wrap-anywhere">{{ row.data.decisionReason || '—' }}</dd></div>
+            }
+            @if (row.type === 'PERIOD') {
+              <div><dt class="font-semibold">Period</dt><dd>{{ resultText(row) }}</dd></div>
+              @if (row.data.closedAt) { <div><dt class="font-semibold">Closed</dt><dd>{{ row.data.closedAt | date:'medium' }}</dd></div> }
+            }
+          } @else {
+            <div><dt class="font-semibold">Punch</dt><dd>{{ label(row.punchType) }} · {{ row.occurredAt | date:'medium' }} (browser time)</dd></div>
+            <div><dt class="font-semibold">Recorded timestamp / company zone</dt><dd>{{ row.occurredAt }} · {{ row.timezone }}</dd></div>
+            <div><dt class="font-semibold">Device</dt><dd class="break-all">{{ row.deviceId || '—' }}</dd></div>
+            <div><dt class="font-semibold">External reference</dt><dd class="break-all">{{ row.externalReference || '—' }}</dd></div>
+            @if (row.correctionOfId) { <div><dt class="font-semibold">Original punch</dt><dd><a class="text-brand-700 underline dark:text-brand-300" [routerLink]="['/attendance', company, 'records', row.correctionOfId]">View original</a></dd></div> }
+          }
+        </dl>
+        <div class="flex flex-wrap gap-2">
+          @for (action of actions(row); track action.title) {
+            <button type="button" class="action" [disabled]="!!editor()" (click)="begin(action.request)">{{ action.title }}</button>
+          }
+          @if (can('audit:records:read-tenant')) {
+            <a class="action" [routerLink]="['/attendance', company, 'history']" [queryParams]="{resource: row.id}">View audit history</a>
+          }
+        </div>
+        @if (data.rectifications; as rectifications) {
+          <app-component-card title="Post-close rectifications">
+            <ul class="space-y-3 text-sm text-gray-700 dark:text-gray-300">
+              @for (item of rectifications; track item.id) {
+                <li><a class="text-brand-700 underline dark:text-brand-300" [routerLink]="['/attendance', company, 'corrections', item.id]">
+                  {{ employeeName(item.employeeId) }} · {{ item.workDate }} · {{ label(item.status) }}
+                </a></li>
+              } @empty { <li>No rectifications for this period.</li> }
+            </ul>
+          </app-component-card>
+        }
+      </app-component-card>
+      @if (row.employeeId && employeeViews().length) {
+        <app-component-card title="Employee attendance">
+          <div class="flex flex-wrap gap-2">
+            @for (view of employeeViews(); track view.path) {
+              <a class="action" [routerLink]="['/attendance', company, view.path]" [queryParams]="{employee: row.employeeId}">{{ view.title }}</a>
+            }
+          </div>
+        </app-component-card>
+      }
+      @if (isEntity(row) && row.type === 'DAY') {
+        <app-component-card title="Workday calculation">
+          <ul class="space-y-2 text-sm text-gray-700 dark:text-gray-300">
+            @for (item of row.data.occurrences; track item.type) {
+              <li>{{ label(item.type) }} · {{ duration(item.durationMinutes) }}</li>
+            } @empty { <li>No occurrences in this calculation.</li> }
+          </ul>
+          @if (data.punches?.length) {
+            <h4 class="text-sm font-semibold text-gray-800 dark:text-white">Punches included in the calculation</h4>
+            <ul class="space-y-2 text-sm">
+              @for (punch of data.punches; track punch.id) {
+                <li><a class="text-brand-700 underline dark:text-brand-300" [routerLink]="['/attendance', company, 'records', punch.id]">{{ label(punch.punchType) }} · {{ punch.occurredAt | date:'shortTime' }}</a></li>
+              }
+            </ul>
+          }
+        </app-component-card>
+      }
+      @if (isEntity(row) && row.type === 'PERIOD') {
+        <div class="grid gap-4 xl:grid-cols-2">
+          <app-component-card title="Validation checklist">
+            @if (row.data.validation; as validation) {
+              <dl class="grid gap-3 text-sm text-gray-700 sm:grid-cols-2 dark:text-gray-300">
+                <div><dt class="font-semibold">Pending occurrences</dt><dd>{{ validation.pendingByType['OCCURRENCE'] ?? 0 }}</dd></div>
+                <div><dt class="font-semibold">Pending justifications</dt><dd>{{ validation.pendingByType['JUSTIFICATION'] ?? 0 }}</dd></div>
+                <div><dt class="font-semibold">Pending corrections</dt><dd>{{ validation.pendingByType['CORRECTION'] ?? 0 }}</dd></div>
+                <div><dt class="font-semibold">Uncalculated employee-days</dt><dd>{{ validation.uncalculatedDays }}</dd></div>
+                <div><dt class="font-semibold">Stale calculations</dt><dd>{{ validation.staleDays }}</dd></div>
+                <div><dt class="font-semibold">Last validated</dt><dd>{{ validation.validatedAt | date:'medium' }}</dd></div>
+              </dl>
+            } @else { <p class="text-sm text-gray-600 dark:text-gray-400">Run validation to check for blockers.</p> }
+          </app-component-card>
+          <app-component-card title="Payroll snapshot">
+            <ul class="space-y-3 text-sm text-gray-700 dark:text-gray-300">
+              @for (snapshot of data.snapshots; track snapshot.id) {
+                <li class="flex flex-wrap items-center justify-between gap-2">
+                  <span>{{ label(snapshot.status) }} · v{{ snapshot.version }} · {{ snapshot.data.dayCount ?? 0 }} employee-days · {{ snapshot.createdAt | date:'medium' }}</span>
+                  <button class="action" type="button" (click)="exportRows(snapshot.data.days ?? [])">Export snapshot CSV</button>
+                </li>
+              } @empty { <li>No payroll snapshot has been generated.</li> }
+            </ul>
+          </app-component-card>
+        </div>
+      }
+    } @else if (!canReadList) {
+      <p class="feedback" role="alert">Your company permissions do not allow access to this record.</p>
+    }
+  } @else if (mode === 'map') {
+    @let grid = calendar(data.rows);
+    <app-component-card title="Attendance map">
+      <div class="overflow-x-auto rounded-xl border border-gray-200 dark:border-gray-800">
+        <table class="w-full text-start text-sm text-gray-700 dark:text-gray-300">
+          <thead class="table-heading"><tr><th scope="col">Employee</th>
+            @for (date of grid.dates; track date) { <th scope="col" class="whitespace-nowrap">{{ date | date:'EEE d':'UTC' }}</th> }
+          </tr></thead>
+          <tbody class="divide-y divide-gray-100 dark:divide-gray-800">
+            @for (worker of grid.workers; track worker[0]) {
+              <tr>
+                <th scope="row" class="table-cell text-start">{{ employeeName(worker[0]) }}</th>
+                @for (date of grid.dates; track date) {
+                  <td class="table-cell min-w-24">
+                    @if (worker[1].get(date); as day) {
+                      <a [routerLink]="['/attendance', company, 'daily', day.id]" class="text-brand-700 underline dark:text-brand-300">{{ label(day.status) }}</a>
+                    } @else { <span aria-label="No calculation">—</span> }
+                  </td>
+                }
+              </tr>
+            } @empty { <tr><td class="table-cell" [attr.colspan]="grid.dates.length + 1">No calculated workdays in this selection.</td></tr> }
+          </tbody>
+        </table>
+      </div>
+      <button type="button" class="action" [disabled]="!data.rows.length" (click)="exportRows(data.rows)">Export CSV</button>
+    </app-component-card>
+  } @else {
+    @if (data.summary; as summary) {
+      <app-component-card title="Company attendance summary">
+        <dl class="grid gap-3 text-sm text-gray-700 sm:grid-cols-3 dark:text-gray-300">
+          <div><dt class="font-semibold">Employee-days</dt><dd>{{ summary.dayCount }}</dd></div>
+          <div><dt class="font-semibold">Worked</dt><dd>{{ duration(summary.workedMinutes) }}</dd></div>
+          <div><dt class="font-semibold">Expected</dt><dd>{{ duration(summary.expectedMinutes) }}</dd></div>
+        </dl>
+        <button class="action" type="button" (click)="exportSummary(summary)">Export summary CSV</button>
+      </app-component-card>
+    }
+    @if (canReadList) {
+      <app-component-card [title]="mode === 'reports' ? 'Report results' : section.title">
+        <div class="overflow-x-auto rounded-lg border border-gray-200 dark:border-gray-800">
+          <table class="w-full min-w-[42rem] text-start text-sm text-gray-700 dark:text-gray-300">
+            <thead class="table-heading">
+              <tr><th scope="col">Employee</th><th scope="col">Date</th><th scope="col">{{ resource === 'punches' ? 'Source' : 'Status' }}</th>
+                <th scope="col">{{ resource === 'days' ? 'Worked / expected' : 'Details' }}</th><th scope="col"><span class="sr-only">Actions</span></th></tr>
+            </thead>
+            <tbody class="divide-y divide-gray-100 dark:divide-gray-800">
+              @for (item of displayedRows(data); track item.id) {
+                <tr>
+                  <td class="table-cell">
+                    <p class="wrap-anywhere">{{ employeeName(item.employeeId) }}</p>
+                    @if (departmentName(item) !== '—') { <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">{{ departmentName(item) }}</p> }
+                  </td>
+                  <td class="table-cell whitespace-nowrap">{{ item.workDate || (item.createdAt | date:'mediumDate') }}
+                    @if (!isEntity(item)) { <p>{{ item.occurredAt | date:'mediumTime' }}</p> }
+                  </td>
+                  <td class="table-cell"><span class="rounded-full bg-gray-100 px-2 py-1 text-xs font-medium dark:bg-gray-800">{{ statusText(item) }}</span></td>
+                  <td class="table-cell max-w-80 wrap-anywhere">{{ resultText(item) }}
+                    @if (!isEntity(item) && item.deviceId) { <p class="text-xs text-gray-500 dark:text-gray-400">{{ item.deviceId }}</p> }
+                  </td>
+                  <td class="table-cell">
+                    <a [routerLink]="['/attendance', company, rowPath, item.id]" class="text-brand-700 underline dark:text-brand-300" [attr.aria-label]="'View details for ' + employeeName(item.employeeId) + ' ' + (item.workDate ?? '')">View details</a>
+                  </td>
+                </tr>
+              } @empty { <tr><td class="table-cell" colspan="5">No records match this selection.</td></tr> }
+            </tbody>
+          </table>
+        </div>
+        @if (mode === 'reports') {
+          <button class="action" type="button" [disabled]="!data.rows.length" (click)="exportRows(data.rows)">Export report CSV</button>
+        }
+        @if (mode !== 'reports' || data.total > pageSize) {
+          <div class="flex flex-wrap items-center justify-between gap-2">
+            <p class="text-sm text-gray-600 dark:text-gray-400">{{ data.total }} records · Page {{ page }}</p>
+            <div class="flex gap-2">
+              <button class="action" type="button" [disabled]="page === 1" (click)="go(page - 1)">Previous</button>
+              <button class="action" type="button" [disabled]="page * pageSize >= data.total" (click)="go(page + 1)">Next</button>
+            </div>
+          </div>
+        }
+      </app-component-card>
+    }
+  }
+}
+
+<ng-template #breakdownCard let-title="title" let-entries="entries">
+  <app-component-card [title]="title">
+    <div class="overflow-x-auto">
+      <table class="w-full text-start text-sm text-gray-700 dark:text-gray-300">
+        <thead class="table-heading"><tr><th scope="col">{{ title === 'Monthly attendance' ? 'Month' : 'Department' }}</th><th scope="col">Present</th><th scope="col">Absent</th><th scope="col">Other</th></tr></thead>
+        <tbody class="divide-y divide-gray-100 dark:divide-gray-800">
+          @for (entry of entries; track entry.title) {
+            <tr><th scope="row" class="table-cell text-start">{{ entry.title }}</th><td class="table-cell">{{ entry.present }}</td><td class="table-cell">{{ entry.absent }}</td><td class="table-cell">{{ entry.other }}</td></tr>
+          } @empty { <tr><td class="table-cell" colspan="4">No calculated workdays.</td></tr> }
+        </tbody>
+      </table>
+    </div>
+  </app-component-card>
+</ng-template>

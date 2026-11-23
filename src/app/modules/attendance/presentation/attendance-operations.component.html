@@ -1,0 +1,118 @@
+@if (error()) { <p class="feedback" role="alert">{{ error() }}</p> }
+@if (notice()) { <p class="notice" role="status">{{ notice() }}</p> }
+
+@switch (section) {
+  @case ('imports') {
+    <app-component-card title="Import time records" desc="Upload up to 5,000 punches as CSV. Use employee UUIDs or employee numbers and include a time zone in each timestamp.">
+      <label class="field max-w-xl">CSV file
+        <input type="file" class="control" accept=".csv,text/csv" [disabled]="busy()" (change)="openFile($event)" />
+      </label>
+      @if (sheet(); as file) {
+        <form class="space-y-4" (ngSubmit)="validateCsv()">
+          <fieldset class="grid gap-3 sm:grid-cols-2 xl:grid-cols-3" [disabled]="busy()">
+            @for (field of importFields; track field.key) {
+              <label class="field">{{ field.title }}{{ field.required ? '' : ' (optional)' }}
+                <select class="control" [name]="field.key" [ngModel]="mapping[field.key]"
+                  (ngModelChange)="mapping[field.key] = $event; preview.set(null)">
+                  <option [ngValue]="-1">{{ field.required ? 'Select a column' : 'Skip this field' }}</option>
+                  @for (column of file.columns; track $index) { <option [ngValue]="$index">{{ column || 'Unnamed column' }} ({{ $index + 1 }})</option> }
+                </select>
+              </label>
+            }
+          </fieldset>
+          <button type="submit" class="action" [disabled]="busy()">Validate {{ file.rows.length }} rows</button>
+        </form>
+      }
+      @if (preview(); as check) {
+        <div class="space-y-3">
+          <p class="text-sm text-gray-700 dark:text-gray-300" role="status">{{ check.rows.length }} ready · {{ check.duplicates }} duplicate rows skipped · {{ check.errors.length }} validation errors</p>
+          @if (check.errors.length) {
+            <ul class="max-h-64 overflow-auto rounded-lg bg-error-50 p-3 text-sm text-error-800 dark:bg-error-500/10 dark:text-error-300">
+              @for (item of check.errors; track item.row) { <li class="py-1">Data row {{ item.row }} · {{ item.message }}</li> }
+            </ul>
+          }
+          <button type="button" class="action action-primary" [disabled]="busy() || !!check.errors.length || !check.rows.length || !!imported()" (click)="importRecords()">
+            {{ busy() ? 'Importing…' : 'Import validated records' }}
+          </button>
+        </div>
+      }
+    </app-component-card>
+    @if (imported(); as result) {
+      <app-component-card title="Import results">
+        <p class="text-sm text-gray-700 dark:text-gray-300" role="status">
+          {{ label(result.batch.status) }} · {{ result.batch.data.totalRows }} submitted · {{ result.batch.data.importedRows }} imported · {{ result.batch.data.errorRows }} errors
+        </p>
+        <p class="break-all text-xs text-gray-600 dark:text-gray-400">Batch {{ result.batch.id }}</p>
+        <div class="max-h-96 overflow-auto rounded-lg border border-gray-200 dark:border-gray-800">
+          <table class="w-full min-w-96 text-start text-sm text-gray-700 dark:text-gray-300">
+            <thead class="table-heading"><tr><th scope="col">Batch row</th><th scope="col">Status</th><th scope="col">Result</th></tr></thead>
+            <tbody class="divide-y divide-gray-100 dark:divide-gray-800">
+              @for (item of result.items; track item.id) {
+                <tr><td class="table-cell">{{ item.data.row }}</td><td class="table-cell">{{ label(item.status) }}</td><td class="table-cell">
+                  @if (item.data.punchId && context.permissions.includes('attendance.punches.read')) {
+                    <a class="text-brand-700 underline dark:text-brand-300" [routerLink]="['/attendance', company, 'records', item.data.punchId]">View punch</a>
+                  } @else { {{ item.data.error || '—' }} }
+                </td></tr>
+              }
+            </tbody>
+          </table>
+        </div>
+        <button class="action" type="button" (click)="exportImport(result)">Export batch results</button>
+      </app-component-card>
+    }
+    @if (context.permissions.includes('audit:records:read-tenant')) {
+      <a class="action" [routerLink]="['/attendance', company, 'history']"
+        [queryParams]="{resource: imported()?.batch?.id, action: 'attendance.import.completed'}">View import activity in audit history</a>
+    }
+  }
+  @case ('settings') {
+    <app-component-card title="Publish attendance policy" desc="Saving publishes a new policy version for the selected company.">
+      <form #form="ngForm" (ngSubmit)="savePolicy(form)" class="space-y-4">
+        <fieldset class="grid gap-4 sm:grid-cols-2" [disabled]="busy()">
+          <label class="field">Late arrival tolerance (minutes)
+            <input type="number" class="control" name="late" min="0" max="1440" step="1" [(ngModel)]="policy.lateToleranceMinutes" required />
+          </label>
+          <label class="field">Early departure tolerance (minutes)
+            <input type="number" class="control" name="early" min="0" max="1440" step="1" [(ngModel)]="policy.earlyDepartureToleranceMinutes" required />
+          </label>
+          <label class="flex items-start gap-2 text-sm text-gray-700 dark:text-gray-300 sm:col-span-2">
+            <input type="checkbox" name="separation" class="mt-1" [(ngModel)]="policy.separationOfDuties" />
+            Separate submission and approval responsibilities
+          </label>
+        </fieldset>
+        <button class="action action-primary" type="submit" [disabled]="form.invalid || busy()">{{ busy() ? 'Publishing…' : 'Publish policy' }}</button>
+      </form>
+    </app-component-card>
+  }
+  @case ('history') {
+    <app-component-card title="Attendance audit trail">
+      <form class="flex flex-wrap items-end gap-3" (ngSubmit)="loadAudit(true)">
+        <label class="field min-w-48 flex-1">Reason for access
+          <input class="control" name="purpose" [(ngModel)]="purpose" maxlength="500" required [disabled]="busy()" />
+        </label>
+        <label class="field min-w-48 flex-1">Action (optional)
+          <input class="control" name="action" [(ngModel)]="auditAction" maxlength="150" placeholder="attendance.import.completed" [disabled]="busy()" />
+        </label>
+        <label class="field min-w-48 flex-1">Resource ID (optional)
+          <input class="control" name="resourceId" [(ngModel)]="resourceId" maxlength="150" [disabled]="busy()" />
+        </label>
+        <button type="submit" class="action action-primary" [disabled]="busy() || !purpose.trim()">View audit</button>
+      </form>
+      @if (busy()) { <p class="text-sm text-gray-600 dark:text-gray-400" role="status">Loading audit records…</p> }
+      @if (auditEvents(); as events) {
+        <div class="overflow-x-auto rounded-lg border border-gray-200 dark:border-gray-800">
+          <table class="w-full min-w-[36rem] text-start text-sm text-gray-700 dark:text-gray-300">
+            <thead class="table-heading"><tr><th scope="col">When</th><th scope="col">Action</th><th scope="col">Actor</th><th scope="col">Resource</th><th scope="col">Outcome</th></tr></thead>
+            <tbody class="divide-y divide-gray-100 dark:divide-gray-800">
+              @for (event of events; track event.id) {
+                <tr><td class="table-cell">{{ event.occurredAt | date:'medium' }}</td><td class="table-cell">{{ event.action }}</td>
+                  <td class="table-cell">{{ event.actorId || '—' }}</td><td class="table-cell">{{ event.resourceId || '—' }}</td><td class="table-cell">{{ event.outcome }}</td></tr>
+              } @empty { <tr><td colspan="5" class="table-cell">No audit records found.</td></tr> }
+            </tbody>
+          </table>
+        </div>
+        @if (nextCursor() !== null) { <button type="button" class="action" [disabled]="busy()" (click)="loadAudit(false)">Load more</button> }
+      }
+    </app-component-card>
+  }
+}

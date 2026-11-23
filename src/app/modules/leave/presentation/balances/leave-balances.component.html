@@ -1,0 +1,134 @@
+<div class="space-y-5">
+  @if (error()) { <p role="alert" class="feedback">{{ error() }}</p> }
+  @if (notice()) { <p role="status" class="notice">{{ notice() }}</p> }
+  @if (!id) {
+    <app-component-card title="Leave balances and entitlements">
+      <div class="space-y-4">
+        <form (ngSubmit)="list(1)" class="flex flex-wrap items-end gap-2">
+          @if (directory.employees().length) {
+            <label class="field flex-1">Employee<select class="control" name="employee" [(ngModel)]="employee">
+              <option value="">All employees</option>
+              @for (worker of directory.employees(); track worker.id) { <option [value]="worker.id">{{ directory.name(worker.id) }}</option> }
+            </select></label>
+            <button type="submit" class="action" [disabled]="loading()">Filter</button>
+          } @else { <button type="submit" class="action" [disabled]="loading()">Refresh accounts</button> }
+          @if (has('leave.accounts.manage') && has('employees.read')) {
+            <button type="button" class="action action-primary" (click)="create.set(!create())">New leave account</button>
+          }
+        </form>
+        @if (create()) {
+          <form (ngSubmit)="createAccount()" class="flex flex-wrap items-end gap-2 rounded-lg border border-gray-200 p-3 dark:border-gray-800">
+            <label class="field flex-1">Employee<select class="control" name="newEmployee" [(ngModel)]="newEmployee" required [disabled]="saving()">
+              <option value="">Select employee</option>
+              @for (worker of directory.employees(); track worker.id) { <option [value]="worker.id">{{ directory.name(worker.id) }} · {{ worker.employeeNumber }}</option> }
+            </select></label>
+            <button class="action action-primary" type="submit" [disabled]="saving() || !newEmployee">Create account</button>
+          </form>
+        }
+        @if (loading()) { <p role="status" class="text-sm text-gray-600 dark:text-gray-400">Loading balances…</p> }
+        @else if (rows(); as page) {
+          <div class="overflow-x-auto rounded-lg border border-gray-200 dark:border-gray-800">
+            <table class="w-full min-w-[38rem] text-start text-sm text-gray-700 dark:text-gray-300">
+              <thead class="table-heading"><tr><th scope="col">Employee</th><th scope="col">Entitled</th><th scope="col">Used</th><th scope="col">Reserved</th><th scope="col">Adjustments</th><th scope="col">Available</th></tr></thead>
+              <tbody class="divide-y divide-gray-200 dark:divide-gray-800">
+                @for (row of page.data; track row.id) {
+                  @let item = balances().get(row.id);
+                  <tr>
+                    <td class="table-cell"><a class="font-semibold text-brand-700 dark:text-brand-300" [routerLink]="['/leave', context.company.id, 'balances', row.id]">{{ directory.name(row.employeeId) }}</a><span class="block text-xs">{{ row.status }}</span></td>
+                    <td class="table-cell">{{ item?.entitled ?? '—' }}</td><td class="table-cell">{{ item?.used ?? '—' }}</td>
+                    <td class="table-cell">{{ item?.reserved ?? '—' }}</td><td class="table-cell">{{ item?.adjusted ?? '—' }}</td><td class="table-cell font-semibold">{{ item?.available ?? '—' }}</td>
+                  </tr>
+                } @empty { <tr><td class="table-cell text-center" colspan="6">No leave accounts found.</td></tr> }
+              </tbody>
+            </table>
+          </div>
+          <div class="flex flex-wrap justify-between gap-2">
+            <p class="text-sm text-gray-600 dark:text-gray-400">{{ page.pagination.total }} accounts</p>
+            <div class="flex gap-2">
+              <button class="action" type="button" [disabled]="page.pagination.page <= 1" (click)="list(page.pagination.page - 1)">Previous</button>
+              <button class="action" type="button" [disabled]="page.pagination.page >= page.pagination.totalPages" (click)="list(page.pagination.page + 1)">Next</button>
+            </div>
+          </div>
+        }
+      </div>
+    </app-component-card>
+  } @else {
+    <a class="action" [routerLink]="['/leave', context.company.id, 'balances']">Back to balances</a>
+    @if (loading()) { <p role="status" class="text-sm text-gray-600 dark:text-gray-400">Loading leave account…</p> }
+    @else if (account(); as row) {
+      <app-component-card [title]="directory.name(row.employeeId)" [desc]="'Leave account · ' + row.status">
+        @if (balance(); as item) {
+          <dl class="grid grid-cols-2 gap-3 text-sm text-gray-700 dark:text-gray-300 md:grid-cols-5">
+            <div><dt>Entitled</dt><dd class="text-lg font-semibold">{{ item.entitled }}</dd></div>
+            <div><dt>Used</dt><dd class="text-lg font-semibold">{{ item.used }}</dd></div>
+            <div><dt>Reserved</dt><dd class="text-lg font-semibold">{{ item.reserved }}</dd></div>
+            <div><dt>Adjustments</dt><dd class="text-lg font-semibold">{{ item.adjusted }}</dd></div>
+            <div><dt>Available</dt><dd class="text-lg font-semibold">{{ item.available }}</dd></div>
+          </dl>
+        }
+        <div class="flex flex-wrap gap-2">
+          <button type="button" class="action" (click)="detail()" [disabled]="saving()">Refresh account</button>
+          @if (row.status === 'ACTIVE') {
+            @if (has('leave.entitlements.manage')) {
+              <button class="action" type="button" [disabled]="saving()" (click)="open('accrue')">Record entitlement</button>
+              <button class="action" type="button" [disabled]="saving()" (click)="open('recalculate')">Recalculate entitlement</button>
+            }
+            @if (has('leave.balance.adjust')) { <button class="action" type="button" [disabled]="saving()" (click)="open('adjust')">Record adjustment</button> }
+          }
+        </div>
+        @if (operation(); as op) {
+          <form (ngSubmit)="save()" class="rounded-lg border border-brand-200 p-3 dark:border-brand-800">
+            <fieldset class="grid gap-3 sm:grid-cols-2" [disabled]="saving()">
+              <legend class="mb-3 font-semibold text-gray-900 dark:text-gray-100">{{ op === 'adjust' ? 'Record adjustment' : op === 'recalculate' ? 'Recalculate entitlement' : 'Record entitlement' }}</legend>
+              <label class="field">Days<input class="control" type="number" name="days" [(ngModel)]="days" step="1" required /></label>
+              @if (op === 'adjust') {
+                <label class="field">Related record UUID<input class="control" name="reference" [(ngModel)]="reference" maxlength="36" /></label>
+                <label class="field sm:col-span-2">Reason<textarea class="control" name="reason" [(ngModel)]="reason" maxlength="500" required></textarea></label>
+              } @else {
+                <label class="field">Legal rule version ID<input class="control" name="legalVersion" [(ngModel)]="legalVersion" maxlength="120" /></label>
+                <label class="field">Accrual period start<input class="control" type="date" name="from" [(ngModel)]="from" required /></label>
+                <label class="field">Accrual period end<input class="control" type="date" name="to" [(ngModel)]="to" [attr.min]="from" required /></label>
+              }
+              <div class="flex gap-2"><button class="action action-primary" type="submit">{{ saving() ? 'Saving…' : 'Confirm' }}</button>
+                <button class="action" type="button" (click)="operation.set(null)">Cancel</button></div>
+            </fieldset>
+          </form>
+        }
+      </app-component-card>
+      <app-component-card title="Entitlements by accrual period">
+        <ul class="divide-y divide-gray-200 dark:divide-gray-800">
+          @for (entry of entitlements(); track entry.id) {
+            <li class="flex flex-wrap justify-between gap-2 py-2 text-sm text-gray-700 dark:text-gray-300">
+              <span>{{ entry.accrualPeriodStart | date:'mediumDate':'UTC' }} – {{ entry.accrualPeriodEnd | date:'mediumDate':'UTC' }}
+                @if (entry.legalRuleVersionId) { · Rule {{ entry.legalRuleVersionId }} }</span><strong>{{ entry.days }} days</strong>
+            </li>
+          } @empty { <li class="text-sm text-gray-600 dark:text-gray-400">No entitlements recorded.</li> }
+        </ul>
+      </app-component-card>
+      <app-component-card title="Balance movements">
+        <label class="field">Movement type<select class="control" [ngModel]="movementType" (ngModelChange)="movementType = $event; loadMovements(1)" [disabled]="movementLoading()">
+          <option value="">All movements</option>
+          @for (kind of movementTypes; track kind) { <option [ngValue]="kind">{{ kind }}</option> }
+        </select></label>
+        @if (movementError()) { <p role="alert" class="feedback">{{ movementError() }}</p> }
+        @if (movementLoading()) { <p role="status" class="text-sm text-gray-600 dark:text-gray-400">Loading movements…</p> }
+        @else if (movements(); as page) {
+          <ul class="divide-y divide-gray-200 dark:divide-gray-800">
+            @for (entry of page.data; track entry.id) {
+              <li class="flex flex-wrap justify-between gap-2 py-2 text-sm text-gray-700 dark:text-gray-300">
+                <div><p>{{ entry.movementType }} · {{ entry.createdAt | date:'medium' }}</p>
+                  @if (entry.reason) { <p>{{ entry.reason }}</p> }
+                  @if (entry.referenceId) { <p class="break-all text-xs">Reference {{ entry.referenceId }}</p> }
+                </div><strong>{{ entry.days > 0 ? '+' : '' }}{{ entry.days }} days</strong>
+              </li>
+            } @empty { <li class="text-sm text-gray-600 dark:text-gray-400">No movements found.</li> }
+          </ul>
+          <div class="flex gap-2">
+            <button class="action" type="button" [disabled]="page.pagination.page <= 1" (click)="loadMovements(page.pagination.page - 1)">Previous</button>
+            <button class="action" type="button" [disabled]="page.pagination.page >= page.pagination.totalPages" (click)="loadMovements(page.pagination.page + 1)">Next</button>
+          </div>
+        }
+      </app-component-card>
+    } @else if (error()) { <button class="action" type="button" (click)="detail()">Try again</button> }
+  }
+</div>

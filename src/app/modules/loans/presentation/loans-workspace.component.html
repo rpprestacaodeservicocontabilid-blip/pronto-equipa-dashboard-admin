@@ -1,0 +1,47 @@
+<div class="workspace-ui space-y-5">
+  <app-page-breadcrumb [pageTitle]="section.title" homeLink="/loans" />
+  @if (view(); as state) {
+    @if ('error' in state.access) {
+      <p class="feedback" role="alert">{{ state.access.error }}</p>
+      <a class="action" routerLink="/loans">Select a company</a>
+    } @else {
+      @let context = state.access.context;
+      @let available = sections(context.permissions);
+      <div class="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-gray-200 bg-white px-5 py-4 dark:border-gray-800 dark:bg-white/[0.03]">
+        <div>
+          <p class="text-sm text-gray-500 dark:text-gray-400">Loans and advances</p>
+          <h2 class="text-lg font-semibold text-gray-900 dark:text-white">{{ context.company.name }}</h2>
+        </div>
+        <a class="action" routerLink="/loans">Change company</a>
+      </div>
+      @if (available.includes(section)) {
+        @for (key of [context.company.id + ':' + state.id + ':' + state.queryKey]; track key) {
+          @let query = state.query;
+          @switch (section.page) {
+            @case ('overview') { <app-loan-dashboard [context]="context" /> }
+            @case ('register') {
+              @if (state.id && section.detail === 'application') { <app-loan-application [context]="context" [id]="state.id" /> }
+              @else if (state.id) { <app-loan-details [context]="context" [id]="state.id" [mode]="section.path" /> }
+              @else {
+                <app-loan-register [context]="context" [mode]="section.path" [title]="section.title"
+                  [initialEmployee]="query.get('employee') ?? ''" [applicationFilter]="query.get('application') ?? ''"
+                  [initialStatus]="query.get('status') ?? ''" [initialRenegotiation]="query.get('request') ?? ''" />
+              }
+            }
+            @case ('collections') {
+              <app-loan-collections [context]="context" [mode]="collectionMode()" [initialLoan]="query.get('loan') ?? ''"
+                [initialFrom]="query.get('from') ?? ''" [initialTo]="query.get('to') ?? ''" [initialReport]="query.get('report') ?? ''"
+                [confirmedOnly]="query.get('confirmed') === 'true'" />
+            }
+            @case ('policies') { <app-loan-policies [context]="context" /> }
+            @case ('audit') { <app-loan-audit [context]="context" [resourceFilter]="query.get('resource') ?? ''" /> }
+          }
+        }
+      } @else if (section.path === 'overview' && available.length) {
+        <a class="action action-primary" [routerLink]="['/loans', context.company.id, available[0].path]">Open {{ available[0].title }}</a>
+      } @else {
+        <p role="alert" class="feedback">Your company permissions do not include access to this section.</p>
+      }
+    }
+  }
+</div>

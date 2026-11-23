@@ -1,0 +1,51 @@
+<app-page-breadcrumb pageTitle="Account security" />
+<div class="space-y-6 text-gray-700 dark:text-gray-300">
+  @if (error()) { <p role="alert" class="rounded-lg bg-error-50 p-4 text-error-700 dark:bg-error-500/10 dark:text-error-400">{{ error() }}</p> }
+  @if (notice()) { <p role="status" class="rounded-lg bg-success-50 p-4 text-success-700 dark:bg-success-500/10 dark:text-success-400">{{ notice() }}</p> }
+  @if (busy()) { <p role="status" class="text-sm text-gray-500 dark:text-gray-400">Please wait…</p> }
+  @if (pending(); as action) {
+    <section aria-label="Confirm security action" class="rounded-lg border border-warning-500 bg-warning-50 p-4 dark:bg-warning-500/10">
+      <p>{{ action === 'unlink' ? 'Disconnect your Google account?' : action === 'other' ? 'Revoke all other sessions? This session will stay active.' : 'Revoke the selected session? That session will be signed out.' }}</p>
+      <div class="mt-3 flex gap-4"><button type="button" [disabled]="busy()" (click)="confirmAction()" class="text-brand-600 disabled:opacity-50 dark:text-brand-400">Confirm</button><button type="button" [disabled]="busy()" (click)="pending.set(null)" class="text-gray-600 dark:text-gray-400">Cancel</button></div>
+    </section>
+  }
+  <app-component-card id="password" class="block scroll-mt-24" title="Password">
+    <p class="mb-5 text-sm text-gray-500 dark:text-gray-400">Changing your password signs out all sessions, including this one.</p>
+    <form #passwordForm="ngForm" (ngSubmit)="passwordForm.valid && changePassword()" class="max-w-lg space-y-4">
+      <label class="block text-sm" for="current-password">Current password<input appAuthInput id="current-password" name="current" type="password" [(ngModel)]="currentPassword" required autocomplete="current-password" /></label>
+      <label class="block text-sm" for="new-password">New password<input appAuthInput id="new-password" name="new" type="password" [(ngModel)]="newPassword" required minlength="8" autocomplete="new-password" /></label>
+      <label class="block text-sm" for="confirm-password">Confirm new password<input appAuthInput id="confirm-password" name="confirm" type="password" [(ngModel)]="confirmPassword" required autocomplete="new-password" /></label>
+      <button [disabled]="busy() || passwordForm.invalid" class="rounded-lg bg-brand-500 px-5 py-3 text-sm font-medium text-white hover:bg-brand-600 disabled:opacity-50 dark:bg-brand-500 dark:hover:bg-brand-600">Change password and sign out</button>
+    </form>
+  </app-component-card>
+  <app-component-card id="sessions" class="block scroll-mt-24" title="Sessions">
+    @if (session(); as session) {
+      <dl class="mb-5 grid gap-3 text-sm sm:grid-cols-2">
+        <div><dt class="text-gray-500 dark:text-gray-400">Current session</dt><dd>{{ session.sessionId }}</dd></div>
+        <div><dt class="text-gray-500 dark:text-gray-400">Status</dt><dd>{{ session.status }}</dd></div>
+        <div><dt class="text-gray-500 dark:text-gray-400">Created</dt><dd>{{ session.createdAt | date:'medium' }}</dd></div>
+        <div><dt class="text-gray-500 dark:text-gray-400">Expires</dt><dd>{{ session.expiresAt | date:'medium' }}</dd></div>
+      </dl>
+    }
+    <div class="flex flex-wrap gap-4 text-sm text-brand-600 dark:text-brand-400">
+      <button type="button" [disabled]="busy()" (click)="load()" class="disabled:opacity-50">Refresh session</button>
+      <button type="button" [disabled]="busy() || !session()" (click)="pending.set('current')" class="disabled:opacity-50">Revoke current session</button>
+      <button type="button" [disabled]="busy()" (click)="pending.set('other')" class="disabled:opacity-50">Sign out all other sessions</button>
+    </div>
+  </app-component-card>
+  <app-component-card id="google" class="block scroll-mt-24" title="Connected account">
+    <p class="mb-4 text-sm text-gray-500 dark:text-gray-400">Connect or disconnect Google sign-in for your account.</p>
+    @if (google.enabled) {
+      <button type="button" [disabled]="busy()" (click)="linkGoogle()" class="me-5 text-sm text-brand-600 disabled:opacity-50 dark:text-brand-400">Connect Google</button>
+    } @else { <p class="mb-3 text-sm text-gray-500 dark:text-gray-400">Google sign-in is not configured.</p> }
+    <button type="button" [disabled]="busy()" (click)="pending.set('unlink')" class="text-sm text-brand-600 disabled:opacity-50 dark:text-brand-400">Disconnect Google</button>
+  </app-component-card>
+  <app-component-card id="permissions" class="block scroll-mt-24" title="Access permissions">
+    <p class="mb-4 text-sm text-gray-500 dark:text-gray-400">Platform roles: {{ auth.claims()?.roles?.join(', ') || 'None' }}</p>
+    <form #permissionForm="ngForm" (ngSubmit)="permissionForm.valid && checkPermission()" class="max-w-lg space-y-3">
+      <label class="block text-sm" for="permission-name">Permission name<input appAuthInput id="permission-name" name="permission" [(ngModel)]="permission" required /></label>
+      <button [disabled]="busy() || permissionForm.invalid" class="text-sm text-brand-600 disabled:opacity-50 dark:text-brand-400">Check my permission</button>
+    </form>
+    @if (permissionResult()) { <p role="status" class="mt-4 text-sm">{{ permissionResult() }}</p> }
+  </app-component-card>
+</div>

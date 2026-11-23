@@ -1,193 +1,191 @@
-import { CommonModule } from '@angular/common';
-import { ChangeDetectorRef, Component, ElementRef, QueryList, ViewChildren } from '@angular/core';
-import { NavigationEnd, Router, RouterModule } from '@angular/router';
-import { combineLatest, Subscription } from 'rxjs';
-import { SafeHtmlPipe } from '../../../shared/pipe/safe-html.pipe';
+import { CdkDrag, CdkDragDrop, CdkDragHandle, CdkDropList } from '@angular/cdk/drag-drop';
+import { CdkScrollable } from '@angular/cdk/scrolling';
+import { DOCUMENT, NgClass, NgTemplateOutlet } from '@angular/common';
+import { Component, computed, effect, inject, signal } from '@angular/core';
+import { toSignal } from '@angular/core/rxjs-interop';
+import { ActivatedRouteSnapshot, NavigationEnd, Router, RouterLink } from '@angular/router';
+import { combineLatest, filter, map, startWith } from 'rxjs';
+import { CompanyWorkspace } from '../../../core/api/company-workspace-api';
+import { AuthService } from '../../../core/auth/auth.service';
 import { SidebarService } from '../../../core/services/sidebar.service';
+import { SafeHtmlPipe } from '../../../shared/pipe/safe-html.pipe';
+import { SIDEBAR_MODULES, SidebarLink, SidebarModule } from '../../../navigation/sidebar-navigation';
+import { moveVisible, ordered } from './sidebar-order';
 
-import { ButtonComponent } from '../../../shared/components/ui/button/button.component';
+type Preferences = Record<string, string[]>;
+interface SidebarLocation { segments: string[]; fragment: string | null; context?: CompanyWorkspace }
+interface MenuGroup { title: string; key: string; links: SidebarLink[] }
+const MODULE_ORDER = 'modules';
 
-type NavItem = {
-  name: string;
-  icon: string;
-  path?: string;
-  new?: boolean;
-  subItems?: { name: string; path: string; pro?: boolean; new?: boolean }[];
-};
+function activeLocation(root: ActivatedRouteSnapshot): SidebarLocation {
+  const segments: string[] = [];
+  let context: CompanyWorkspace | undefined;
+  for (let route: ActivatedRouteSnapshot | null = root; route; route = route.firstChild) {
+    segments.push(...route.url.map(segment => segment.path));
+    const company = route.data['access']?.context as CompanyWorkspace | undefined;
+    if (company?.company.status === 'ACTIVE') context = company;
+  }
+  return { segments, context, fragment: root.fragment };
+}
 
 @Component({
   selector: 'app-sidebar',
-  imports: [ButtonComponent, 
-    CommonModule,
-    RouterModule,
-    SafeHtmlPipe,
-
-  ],
+  standalone: true,
+  imports: [NgClass, NgTemplateOutlet, RouterLink, SafeHtmlPipe, CdkDropList, CdkDrag, CdkDragHandle, CdkScrollable],
   templateUrl: './app-sidebar.component.html',
+  styleUrl: './app-sidebar.component.css',
 })
 export class AppSidebarComponent {
+  protected readonly sidebar = inject(SidebarService);
+  protected readonly auth = inject(AuthService);
+  private readonly router = inject(Router);
+  private readonly document = inject(DOCUMENT);
+  private readonly location = toSignal(this.router.events.pipe(
+    filter(event => event instanceof NavigationEnd),
+    startWith(null),
+    map(() => activeLocation(this.router.routerState.snapshot.root)),
+  ), { requireSync: true });
+  protected readonly width = toSignal(combineLatest([this.sidebar.isExpanded$, this.sidebar.isMobileOpen$, this.sidebar.isHovered$]).pipe(
+    map(([expanded, mobile, hovered]) => ({ expanded, mobile, wide: expanded || mobile || hovered })),
+  ), { requireSync: true });
+  protected readonly company = computed(() => this.location().context?.company);
+  protected readonly current = computed(() => this.location().segments[0]);
+  protected readonly unfolded = signal<string | undefined>(undefined);
+  protected readonly announcement = signal('');
+  protected readonly dragDelay = { mouse: 0, touch: 180 };
 
-  navItems: NavItem[] = [
-    {
-      name: 'Client companies', path: '/companies',
-      icon: '<svg class="size-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M3 21V3h12v18M15 9h6v12M7 7h4M7 11h4M7 15h4M1 21h22"/></svg>',
-    },
-  ];
-  othersItems: NavItem[] = [];
-  openSubmenu: string | null | number = null;
-  subMenuHeights: { [key: string]: number } = {};
-  @ViewChildren('subMenu') subMenuRefs!: QueryList<ElementRef>;
-
-  readonly isExpanded$;
-  readonly isMobileOpen$;
-  readonly isHovered$;
-
-  private subscription: Subscription = new Subscription();
-
-  constructor(
-    public sidebarService: SidebarService,
-    private router: Router,
-    private cdr: ChangeDetectorRef
-  ) {
-    this.isExpanded$ = this.sidebarService.isExpanded$;
-    this.isMobileOpen$ = this.sidebarService.isMobileOpen$;
-    this.isHovered$ = this.sidebarService.isHovered$;
-  }
-
-  ngOnInit() {
-    // Subscribe to router events
-    this.subscription.add(
-      this.router.events.subscribe(event => {
-        if (event instanceof NavigationEnd) {
-          this.setActiveMenuFromRoute(this.router.url);
-        }
-      })
-    );
-
-    // Subscribe to combined observables to close submenus when all are false
-    this.subscription.add(
-      combineLatest([this.isExpanded$, this.isMobileOpen$, this.isHovered$]).subscribe(
-        ([isExpanded, isMobileOpen, isHovered]) => {
-          if (!isExpanded && !isMobileOpen && !isHovered) {
-            // this.openSubmenu = null;
-            // this.savedSubMenuHeights = { ...this.subMenuHeights };
-            // this.subMenuHeights = {};
-            this.cdr.detectChanges();
-          } else {
-            // Restore saved heights when reopening
-            // this.subMenuHeights = { ...this.savedSubMenuHeights };
-            // this.cdr.detectChanges();
-          }
-        }
-      )
-    );
-
-    // Initial load
-    this.setActiveMenuFromRoute(this.router.url);
-  }
-
-  ngOnDestroy() {
-    // Clean up subscriptions
-    this.subscription.unsubscribe();
-  }
-
-  isActive(path: string): boolean {
-    return (
-      this.router.url === path ||
-      (path === '/ai-settings' && this.router.url.startsWith('/ai-settings'))
-    );
-  }
-
-  isItemActive(nav: NavItem, section: string, index: number): boolean {
-    if (nav.subItems?.length) {
-      return (
-        this.openSubmenu === `${section}-${index}` ||
-        nav.subItems.some((sub) => this.isActive(sub.path))
-      );
+  private readonly changes = signal<{ key: string; value: Preferences } | null>(null);
+  private readonly preferenceKey = computed(() => {
+    const user = this.auth.claims()?.sub;
+    return user ? 'prontoequipas.sidebar.' + user : undefined;
+  });
+  private readonly preferences = computed(() => {
+    const key = this.preferenceKey();
+    const change = this.changes();
+    return key && change?.key === key ? change.value : key ? this.loadOrder(key) : {};
+  });
+  private readonly sortedModules = computed(() => ordered(SIDEBAR_MODULES, this.preferences()[MODULE_ORDER], item => item.id));
+  protected readonly modules = computed(() => this.sortedModules().filter(item =>
+    (!item.platformOnly || this.auth.isPlatformAdmin()) &&
+    (!item.platformPermission || this.auth.claims()?.permissions.includes(item.platformPermission)) &&
+    (!item.visibleTo || item.visibleTo(this.auth.claims()?.permissions ?? []))));
+  protected readonly groups = computed(() => {
+    const nav = SIDEBAR_MODULES.find(item => item.id === this.unfolded());
+    if (!nav) return [];
+    const groups = new Map<string, SidebarLink[]>();
+    for (const link of nav.links) {
+      const group = link.group ?? '';
+      const items = groups.get(group) ?? [];
+      items.push(link);
+      groups.set(group, items);
     }
-    return nav.path ? this.isActive(nav.path) : false;
+    const permissions = nav.tenant ? this.location().context?.permissions : this.auth.claims()?.permissions;
+    return [...groups].map(([title, links]): MenuGroup => {
+      const key = nav.id + '/' + title;
+      return { title, key, links: ordered(links, this.preferences()[key], item => this.linkId(item))
+        .filter(link => !permissions || !link.requires || link.requires(permissions)) };
+    }).filter(group => group.links.length);
+  });
+
+  constructor() {
+    effect(() => this.unfolded.set(this.location().segments[0]));
   }
 
-  toggleSubmenu(section: string, index: number) {
-    const key = `${section}-${index}`;
-
-    if (this.openSubmenu === key) {
-      this.openSubmenu = null;
-      this.subMenuHeights[key] = 0;
-    } else {
-      this.openSubmenu = key;
-
-      setTimeout(() => {
-        const el = document.getElementById(key);
-        if (el) {
-          this.subMenuHeights[key] = el.scrollHeight;
-          this.cdr.detectChanges(); // Ensure UI updates
-        }
-      });
+  protected toggle(id: string) {
+    if (!this.width().wide) {
+      this.sidebar.setExpanded(true);
+      this.unfolded.set(id);
+      return;
     }
+    this.unfolded.update(open => open === id ? undefined : id);
   }
 
-  onSidebarMouseEnter() {
-    this.isExpanded$.subscribe(expanded => {
-      if (!expanded) {
-        this.sidebarService.setHovered(true);
-      }
-    }).unsubscribe();
+  protected hover() {
+    if (!this.width().expanded) this.sidebar.setHovered(true);
   }
 
-  private setActiveMenuFromRoute(currentUrl: string) {
-    const menuGroups = [
-      { items: this.navItems, prefix: 'main' },
-      { items: this.othersItems, prefix: 'others' },
-    ];
-
-    menuGroups.forEach(group => {
-      group.items.forEach((nav, i) => {
-        if (nav.subItems) {
-          nav.subItems.forEach(subItem => {
-            if (
-              currentUrl === subItem.path ||
-              (subItem.path === '/ai-settings' && currentUrl.startsWith('/ai-settings'))
-            ) {
-              const key = `${group.prefix}-${i}`;
-              this.openSubmenu = key;
-
-              setTimeout(() => {
-                const el = document.getElementById(key);
-                if (el) {
-                  this.subMenuHeights[key] = el.scrollHeight;
-                  this.cdr.detectChanges(); // Ensure UI updates
-                }
-              });
-            }
-          });
-        }
-      });
-    });
+  protected closeMobile() {
+    if (this.width().mobile) this.sidebar.setMobileOpen(false);
   }
 
-  onSubmenuClick() {
-    this.isMobileOpen$.subscribe(isMobile => {
-      if (isMobile) {
-        this.sidebarService.setMobileOpen(false);
-      }
-    }).unsubscribe();
-  }  
+  protected linkId(link: SidebarLink) { return link.id + (link.fragment ? '#' + link.fragment : ''); }
 
-
-  onSingleMenuClick() {
-    // Close any open submenu
-    this.openSubmenu = null;
-    this.subMenuHeights = {};
-  
-    // Also close sidebar if mobile
-    this.isMobileOpen$.subscribe(isMobile => {
-      if (isMobile) {
-        this.sidebarService.setMobileOpen(false);
-      }
-    }).unsubscribe();
+  protected destination(nav: SidebarModule, link: SidebarLink) {
+    const path: (string | number)[] = ['/' + nav.id];
+    const company = this.company();
+    if (nav.tenant && !company) return path;
+    if (nav.tenant && company) path.push(company.id);
+    if (link.id) path.push(link.id);
+    return path;
   }
-  
-  
+
+  protected query(nav: SidebarModule, link: SidebarLink) {
+    return nav.tenant && !this.company() && link.id ? { section: link.id } : undefined;
+  }
+
+  protected active(nav: SidebarModule, link: SidebarLink) {
+    const { segments, fragment } = this.location();
+    if (segments[0] !== nav.id) return false;
+    if (!nav.tenant) return (segments[1] ?? '') === link.id && (!link.fragment ? !fragment : link.fragment === fragment);
+    if (!segments[1]) return false;
+    let section = segments[2] ?? '';
+    if (nav.id === 'contracts' && section === 'details') section = 'all';
+    if (nav.id === 'contracts' && section === 'dashboard') section = '';
+    if ((nav.id === 'organization' || nav.id === 'leave') && section === 'overview') section = '';
+    return section === link.id;
+  }
+
+  protected dropModules(event: CdkDragDrop<SidebarModule[]>) {
+    if (event.isPointerOverContainer) this.moveModule(event.previousIndex, event.currentIndex);
+  }
+
+  protected dropLinks(event: CdkDragDrop<SidebarLink[]>, nav: SidebarModule, group: MenuGroup) {
+    if (event.isPointerOverContainer) this.moveLink(nav, group, event.previousIndex, event.currentIndex);
+  }
+
+  protected keyModule(event: Event, index: number, delta: number) {
+    event.preventDefault();
+    this.moveModule(index, index + delta);
+    this.keepFocus(event);
+  }
+
+  protected keyLink(event: Event, nav: SidebarModule, group: MenuGroup, index: number, delta: number) {
+    event.preventDefault();
+    this.moveLink(nav, group, index, index + delta);
+    this.keepFocus(event);
+  }
+
+  private keepFocus(event: Event) {
+    const handle = event.currentTarget as HTMLElement | null;
+    this.document.defaultView?.requestAnimationFrame(() => handle?.focus({ preventScroll: true }));
+  }
+
+  private moveModule(from: number, to: number) {
+    const visible = this.modules();
+    this.reorder(MODULE_ORDER, this.sortedModules().map(item => item.id), visible.map(item => item.id), from, to, visible[from]?.title);
+  }
+
+  private moveLink(nav: SidebarModule, group: MenuGroup, from: number, to: number) {
+    const complete = ordered(nav.links.filter(link => (link.group ?? '') === group.title), this.preferences()[group.key], item => this.linkId(item));
+    this.reorder(group.key, complete.map(item => this.linkId(item)), group.links.map(item => this.linkId(item)), from, to, group.links[from]?.title);
+  }
+
+  private reorder(key: string, complete: string[], visible: string[], from: number, to: number, title?: string) {
+    const userKey = this.preferenceKey();
+    const updated = moveVisible(complete, visible, from, to);
+    if (!userKey || updated === complete) return;
+    const value = { ...this.preferences(), [key]: updated };
+    this.changes.set({ key: userKey, value });
+    this.announcement.set(title + ' moved to position ' + (to + 1) + ' of ' + visible.length + '.');
+    try { this.document.defaultView?.localStorage.setItem(userKey, JSON.stringify(value)); } catch { /* session order remains available */ }
+  }
+
+  private loadOrder(key: string): Preferences {
+    try {
+      const parsed: unknown = JSON.parse(this.document.defaultView?.localStorage.getItem(key) ?? '{}');
+      if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) return {};
+      return Object.fromEntries(Object.entries(parsed).filter(([, value]) =>
+        Array.isArray(value) && value.every((entry: unknown) => typeof entry === 'string')));
+    } catch { return {}; }
+  }
 }
-

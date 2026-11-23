@@ -1,0 +1,117 @@
+@let input = draft.input;
+@let rule = input.rules;
+<fieldset class="space-y-4" [disabled]="!editable">
+  @switch (category) {
+    @case ('general') {
+      <div class="grid gap-4 md:grid-cols-2"><label class="field">Rule set identifier <input class="control" type="text" maxlength="100" [disabled]="!creating" [(ngModel)]="input.ruleSetId" /></label>
+<label class="field">Version <input class="control" type="text" maxlength="50" [disabled]="!creating" [(ngModel)]="input.version" /></label>
+<label class="field">Company ID · blank for global scope <input class="control" type="number" maxlength="1000" min="1" step="1" [disabled]="!creating" [(ngModel)]="input.companyId" /></label>
+<label class="field">Effective from <input class="control" type="date" maxlength="1000"  [(ngModel)]="input.effectiveFrom" /></label>
+<label class="field">Effective until <input class="control" type="date" maxlength="1000"  [(ngModel)]="input.effectiveTo" /></label>
+<label class="field">Rounding policy<select class="control" [(ngModel)]="rule.roundingPolicy.mode">@for (mode of modes; track mode.id) { <option [value]="mode.id">{{ mode.label }}</option> }</select></label>
+<label class="field">Official source reference <input class="control" type="text" maxlength="500"  [(ngModel)]="input.sourceReference" /></label>
+<label class="field">Legal review evidence <input class="control" type="text" maxlength="1000"  [(ngModel)]="input.evidenceReference" /></label>
+<label class="field">Supported engine versions · comma-separated <input class="control" type="text" maxlength="1000"  [(ngModel)]="draft.engineVersions" /></label></div>
+    }
+    @case ('income-tax') {
+      @let tax = rule.incomeTaxRules;
+      <p class="text-sm text-gray-600 dark:text-gray-400">Enter rates as decimal factors from 0 to 1. The table must start at zero and cover all higher amounts.</p>
+      <div class="grid gap-4 md:grid-cols-2"><label class="field">Tax calculation method<select class="control" [(ngModel)]="tax.calculation"><option value="PROGRESSIVE">Progressive</option><option value="MARGINAL">Marginal</option></select></label>
+<label class="field">Tax exemption amount (Kz) <input class="control" type="text" maxlength="1000" inputmode="decimal" [(ngModel)]="tax.exemptionAmount" /></label>
+<label class="field">Included pay item codes · comma-separated <input class="control" type="text" maxlength="1000"  [(ngModel)]="draft.taxIncluded" /></label>
+<label class="field">Excluded pay item codes · comma-separated <input class="control" type="text" maxlength="1000"  [(ngModel)]="draft.taxExcluded" /></label></div>
+      <label class="flex items-center gap-2 text-sm text-gray-700 dark:text-gray-300"><input type="checkbox" class="size-4 accent-brand-600" [(ngModel)]="tax.socialSecurityDeductible" /> Deduct employee INSS from the taxable base</label>
+      <div class="overflow-x-auto">
+        <table class="w-full text-start text-sm text-gray-700 dark:text-gray-300">
+          <thead class="table-heading"><tr><th>Lower bound</th><th>Upper bound</th><th>Rate factor</th><th>Deduction</th>@if (editable) { <th scope="col">Actions</th> }</tr></thead>
+          <tbody class="divide-y divide-gray-200 dark:divide-gray-800">
+            @for (row of tax.brackets; track row; let index = $index) {
+              <tr>
+                <td class="table-cell"><input class="control min-w-24" inputmode="decimal"  [attr.aria-label]="'Lower bound ' + (index + 1)" [(ngModel)]="row.from" /></td>
+<td class="table-cell"><input class="control min-w-24" inputmode="decimal" placeholder="Unbounded" [attr.aria-label]="'Upper bound ' + (index + 1)" [(ngModel)]="row.to" /></td>
+<td class="table-cell"><input class="control min-w-24" inputmode="decimal"  [attr.aria-label]="'Rate factor ' + (index + 1)" [(ngModel)]="row.rate" /></td>
+<td class="table-cell"><input class="control min-w-24" inputmode="decimal"  [attr.aria-label]="'Deduction ' + (index + 1)" [(ngModel)]="row.deduction" /></td>
+                @if (editable) { <td class="table-cell"><button class="action" type="button" [attr.aria-label]="'Remove bracket ' + (index + 1)" (click)="tax.brackets.splice(index, 1)">Remove</button></td> }
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+      @if (editable) {
+        <div class="flex flex-wrap items-center gap-3">
+          <button class="action" type="button" (click)="tax.brackets.push({from: tax.brackets.at(-1)?.to || (tax.brackets.length ? '' : '0'), to: null, rate: ''})">Add bracket</button>
+          @if (taxError(tax.brackets); as error) { <p class="text-sm text-warning-700 dark:text-warning-300">{{ error }}</p> }
+          @else { <p class="text-sm text-success-700 dark:text-success-300">The bracket ranges are contiguous.</p> }
+        </div>
+      }
+    }
+    @case ('social-security') {
+      @let social = rule.socialSecurityRules;
+      <p class="text-sm text-gray-600 dark:text-gray-400">Record the worker and employer rates separately as decimal factors from 0 to 1.</p>
+      <div class="grid gap-4 md:grid-cols-2"><label class="field">Worker rate factor <input class="control" type="text" maxlength="1000" inputmode="decimal" [(ngModel)]="social.employeeRate" /></label>
+<label class="field">Employer rate factor <input class="control" type="text" maxlength="1000" inputmode="decimal" [(ngModel)]="social.employerRate" /></label>
+<label class="field">Minimum contribution base (Kz) <input class="control" type="text" maxlength="1000" inputmode="decimal" [(ngModel)]="social.minimumBase" /></label>
+<label class="field">Maximum contribution base (Kz) <input class="control" type="text" maxlength="1000" inputmode="decimal" [(ngModel)]="social.maximumBase" /></label>
+<label class="field">Included pay item codes · comma-separated <input class="control" type="text" maxlength="1000"  [(ngModel)]="draft.contributionIncluded" /></label>
+<label class="field">Excluded pay item codes · comma-separated <input class="control" type="text" maxlength="1000"  [(ngModel)]="draft.contributionExcluded" /></label></div>
+    }
+    @case ('working-time') {
+      <div class="grid gap-4 md:grid-cols-2"><label class="field">Proration basis<select class="control" [(ngModel)]="rule.laborRules.prorationBasis"><option value="CALENDAR_DAYS">Calendar days</option><option value="FIXED_PERIOD_DAYS">Fixed period days</option></select></label>
+<label class="field">Fixed period days <input class="control" type="number" maxlength="1000" min="1" [disabled]="rule.laborRules.prorationBasis !== 'FIXED_PERIOD_DAYS'" [(ngModel)]="rule.laborRules.fixedPeriodDays" /></label>
+<label class="field">Maximum daily overtime hours <input class="control" type="text" maxlength="1000" inputmode="decimal" [(ngModel)]="rule.laborRules.maximumDailyOvertimeHours" /></label></div>
+      <ng-container [ngTemplateOutlet]="factors" [ngTemplateOutletContext]="{ $implicit: draft.overtime, title: 'Overtime factors' }" />
+    }
+    @case ('night-holidays') {
+      <ng-container [ngTemplateOutlet]="factors" [ngTemplateOutletContext]="{ $implicit: draft.nightWork, title: 'Night work factors' }" />
+      <p class="text-sm text-gray-600 dark:text-gray-400">Holiday policy details are recorded for legal review.</p>
+      <div class="grid gap-4 md:grid-cols-2"><label class="field">Holiday work conditions <textarea class="control" rows="3" maxlength="1000" [(ngModel)]="draft.policy.holidays.conditions"></textarea></label>
+<label class="field">Holiday work multiplier <input class="control" type="text" maxlength="1000" inputmode="decimal" [(ngModel)]="draft.policy.holidays.multiplier" /></label></div>
+    }
+    @case ('minimum-wage') {
+      <p class="text-sm text-gray-600 dark:text-gray-400">Record the minimum wage provision for legal review.</p>
+      <div class="grid gap-4 md:grid-cols-2"><label class="field">Minimum wage amount (Kz) <input class="control" type="text" maxlength="1000" inputmode="decimal" [(ngModel)]="draft.policy.minimumWage.amount" /></label>
+<label class="field">Sector <input class="control" type="text" maxlength="1000"  [(ngModel)]="draft.policy.minimumWage.sector" /></label>
+<label class="field">Regime <input class="control" type="text" maxlength="1000"  [(ngModel)]="draft.policy.minimumWage.regime" /></label></div>
+    }
+    @case ('leave-allowances') {
+      <p class="text-sm text-gray-600 dark:text-gray-400">Record the leave and allowance provisions for legal review.</p>
+      <div class="grid gap-4 md:grid-cols-2"><label class="field">Annual leave entitlement (days) <input class="control" type="number" maxlength="1000" min="0" max="366" [(ngModel)]="draft.policy.leave.annualDays" /></label>
+<label class="field">Acquisition and proportionality <textarea class="control" rows="3" maxlength="1000" [(ngModel)]="draft.policy.leave.acquisition"></textarea></label>
+<label class="field">Allowance eligibility and calculation basis <textarea class="control" rows="3" maxlength="1000" [(ngModel)]="draft.policy.leave.allowanceBasis"></textarea></label></div>
+    }
+    @case ('absences') {
+      <p class="text-sm text-gray-600 dark:text-gray-400">Record the absence provisions for legal review.</p>
+      <div class="grid gap-4 md:grid-cols-2"><label class="field">Absence classification <textarea class="control" rows="3" maxlength="1000" [(ngModel)]="draft.policy.absences.classification"></textarea></label>
+<label class="field">Pay treatment <textarea class="control" rows="3" maxlength="1000" [(ngModel)]="draft.policy.absences.payTreatment"></textarea></label></div>
+    }
+    @case ('termination') {
+      <p class="text-sm text-gray-600 dark:text-gray-400">Record the termination provisions for legal review.</p>
+      <div class="grid gap-4 md:grid-cols-2"><label class="field">Termination conditions <textarea class="control" rows="3" maxlength="1000" [(ngModel)]="draft.policy.termination.conditions"></textarea></label>
+<label class="field">Compensation basis and proportionality <textarea class="control" rows="3" maxlength="1000" [(ngModel)]="draft.policy.termination.compensationBasis"></textarea></label></div>
+    }
+    @case ('deductions') {
+      <div class="grid gap-4 md:grid-cols-2"><label class="field">Maximum deduction factor of gross pay <input class="control" type="text" maxlength="1000" inputmode="decimal" [(ngModel)]="rule.deductionRules.maxPercentageOfGross" /></label>
+<label class="field">Protected net pay (Kz) <input class="control" type="text" maxlength="1000" inputmode="decimal" [(ngModel)]="rule.deductionRules.protectedNetAmount" /></label>
+<label class="field">Allowed categories · comma-separated <input class="control" type="text" maxlength="1000"  [(ngModel)]="draft.categories" /></label></div>
+      <label class="field max-w-xs">Partial deductions
+        <select class="control" [(ngModel)]="rule.deductionRules.allowPartial">
+          <option [ngValue]="undefined">Engine default</option><option [ngValue]="true">Allowed</option><option [ngValue]="false">Disallowed</option>
+        </select>
+      </label>
+    }
+  }
+</fieldset>
+
+<ng-template #factors let-rows let-title="title">
+  <div class="space-y-2">
+    <h3 class="text-sm font-semibold text-gray-800 dark:text-gray-200">{{ title }}</h3>
+    @for (row of rows; track row; let index = $index) {
+      <div class="flex flex-wrap items-end gap-2">
+        <label class="field flex-1">Category code <input class="control" [(ngModel)]="row.code" maxlength="64" /></label>
+        <label class="field flex-1">Multiplier <input class="control" inputmode="decimal" [(ngModel)]="row.value" /></label>
+        @if (editable) { <button class="action" type="button" (click)="rows.splice(index, 1)">Remove</button> }
+      </div>
+    } @empty { <p class="text-sm text-gray-600 dark:text-gray-400">No factors are listed.</p> }
+    @if (editable) { <button class="action" type="button" (click)="rows.push({code: '', value: ''})">Add factor</button> }
+  </div>
+</ng-template>

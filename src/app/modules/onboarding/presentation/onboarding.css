@@ -1,0 +1,53 @@
+@reference "../../../../styles.css";
+
+.ob-input {
+  @apply mt-1 block min-h-10 w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 shadow-theme-xs outline-none focus:border-brand-500 focus:ring-2 focus:ring-brand-500/20 dark:border-gray-700 dark:bg-gray-900 dark:text-white;
+}
+.ob-label {
+  @apply block text-sm font-medium text-gray-700 dark:text-gray-300;
+}
+.ob-button {
+  @apply inline-flex min-h-10 items-center justify-center gap-2 rounded-lg bg-brand-500 px-4 py-2 text-sm font-medium text-white hover:bg-brand-600 focus-visible:ring-2 focus-visible:ring-brand-500/40 disabled:opacity-50;
+}
+.ob-secondary {
+  @apply inline-flex min-h-10 items-center justify-center gap-2 rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:border-brand-300 hover:text-brand-600 focus-visible:ring-2 focus-visible:ring-brand-500/40 disabled:opacity-50 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-200 dark:hover:text-brand-400;
+}
+.ob-link {
+  @apply font-medium text-brand-600 hover:underline dark:text-brand-400;
+}
+.ob-muted {
+  @apply text-sm text-gray-600 dark:text-gray-400;
+}
+.ob-alert {
+  @apply rounded-lg border border-error-200 bg-error-50 p-3 text-sm text-error-700 dark:border-error-500/30 dark:bg-error-500/10 dark:text-error-300;
+}
+.ob-badge {
+  @apply inline-flex whitespace-nowrap rounded-full bg-gray-100 px-2.5 py-1 text-xs font-medium text-gray-700 dark:bg-white/10 dark:text-gray-200;
+}
+.ob-badge[data-state="COMPLETED"], .ob-badge[data-state="APPROVED"], .ob-badge[data-state="ACCEPTED"], .ob-badge[data-state="VALIDATED"], .ob-badge[data-state="SENT"] {
+  @apply bg-success-50 text-success-700 dark:bg-success-500/15 dark:text-success-300;
+}
+.ob-badge[data-state="FAILED"], .ob-badge[data-state="REJECTED"], .ob-badge[data-state="QUARANTINED"] {
+  @apply bg-error-50 text-error-700 dark:bg-error-500/15 dark:text-error-300;
+}
+.ob-badge[data-state="PENDING_REVIEW"], .ob-badge[data-state="CLEAN"], .ob-badge[data-state="ADDITIONAL_INFO"], .ob-badge[data-state="AWAITING_PAYMENT"], .ob-badge[data-state="PARTIALLY_COMPLETED"] {
+  @apply bg-warning-50 text-warning-700 dark:bg-warning-500/15 dark:text-warning-300;
+}
+.ob-stat {
+  @apply min-w-0 rounded-xl border border-gray-200 bg-white p-4 dark:border-gray-800 dark:bg-gray-900;
+}
+.ob-stat dd {
+  @apply mt-2 break-words text-2xl font-semibold tracking-tight text-gray-900 dark:text-white;
+}
+.ob-table th {
+  @apply whitespace-nowrap bg-gray-50 px-4 py-3 text-start text-xs font-semibold text-gray-600 dark:bg-white/5 dark:text-gray-300;
+}
+.ob-table td {
+  @apply border-t border-gray-100 px-4 py-3 text-sm text-gray-700 dark:border-gray-800 dark:text-gray-300;
+}
+.ob-facts dt {
+  @apply text-xs font-medium text-gray-500 dark:text-gray-400;
+}
+.ob-facts dd {
+  @apply mt-1 break-words text-sm font-medium text-gray-900 dark:text-gray-100;
+}

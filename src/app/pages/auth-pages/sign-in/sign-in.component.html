@@ -1,28 +1,22 @@
-<main class="flex min-h-screen items-center justify-center bg-gray-50 p-6 text-gray-800 dark:bg-gray-950 dark:text-white/90">
-  <section class="w-full max-w-md rounded-2xl border border-gray-200 bg-white p-8 shadow-theme-sm dark:border-gray-800 dark:bg-gray-900">
-    <p class="mb-2 text-sm font-semibold text-brand-500 dark:text-brand-400">PRONTOEQUIPAS</p>
-    <h1 class="mb-2 text-title-sm font-semibold">Platform administration</h1>
-    <p class="mb-6 text-sm text-gray-500 dark:text-gray-400">Manage client companies and platform access.</p>
-    @if (error()) { <p role="alert" class="mb-4 text-error-700 dark:text-error-400">{{ error() }}</p> }
-    <form #form="ngForm" (ngSubmit)="form.valid && submit()" class="space-y-5">
-      @if (challenge(); as challenge) {
-        <p class="text-sm text-gray-600 dark:text-gray-400">Enter the code sent to {{ challenge.destination }}.</p>
-        <label class="block text-sm">Verification code
-          <input name="code" [(ngModel)]="code" required pattern="[0-9]{6}" inputmode="numeric" autocomplete="one-time-code" maxlength="6" class="mt-2 h-11 w-full rounded-lg border border-gray-300 bg-transparent px-4 dark:border-gray-700" />
-        </label>
-        <div class="flex justify-between text-sm text-brand-600 dark:text-brand-400">
-          <button type="button" [disabled]="busy()" (click)="resend()">Resend code</button>
-          <button type="button" [disabled]="busy()" (click)="restart()">Use another account</button>
+<app-auth-page-layout>
+  <app-sign-in-content [showForm]="!challenge()" [isSubmitting]="busy()" [googleEnabled]="google.enabled" (googleSelect)="googleSignIn()" (formSubmit)="onCredentials($event)">
+    @if (notice) { <p role="status" class="mb-4 text-sm text-success-700 dark:text-success-400">{{ notice }}</p> }
+    @if (error()) {
+      <p role="alert" class="mb-4 rounded-lg border border-error-200 bg-error-50 p-3 text-sm text-error-700 dark:border-error-500/20 dark:bg-error-500/10 dark:text-error-400">{{ error() }}</p>
+    }
+    @if (challenge(); as challenge) {
+      <form #otpForm="ngForm" (ngSubmit)="otpForm.valid && submit()" class="space-y-5">
+        <p class="text-sm text-gray-500 dark:text-gray-400">Enter the verification code sent to {{ challenge.destination }}.</p>
+        <div>
+          <label for="login-otp" class="mb-1.5 block text-sm font-medium text-gray-700 dark:text-gray-400">Verification code</label>
+          <input id="login-otp" name="code" [(ngModel)]="code" required pattern="[0-9]{6}" inputmode="numeric" autocomplete="one-time-code" maxlength="6" class="h-11 w-full rounded-lg border border-gray-300 bg-transparent px-4 text-gray-800 shadow-theme-xs outline-hidden focus:border-brand-300 focus:ring-3 focus:ring-brand-500/20 dark:border-gray-700 dark:text-white/90 dark:focus:border-brand-500" />
         </div>
-      } @else {
-        <label class="block text-sm">Email or phone
-          <input name="identifier" [(ngModel)]="identifier" required autocomplete="username" class="mt-2 h-11 w-full rounded-lg border border-gray-300 bg-transparent px-4 dark:border-gray-700" />
-        </label>
-        <label class="block text-sm">Password
-          <input name="password" [(ngModel)]="password" type="password" required autocomplete="current-password" class="mt-2 h-11 w-full rounded-lg border border-gray-300 bg-transparent px-4 dark:border-gray-700" />
-        </label>
-      }
-      <button type="submit" [disabled]="busy() || form.invalid" class="h-11 w-full rounded-lg bg-brand-500 text-white hover:bg-brand-600 disabled:opacity-50 dark:bg-brand-500 dark:hover:bg-brand-600">{{ busy() ? 'Please wait…' : challenge() ? 'Verify and sign in' : 'Continue' }}</button>
-    </form>
-  </section>
-</main>
+        <div class="flex justify-between gap-3 text-sm text-brand-500 dark:text-brand-400">
+          <button type="button" [disabled]="busy()" (click)="resend()" class="disabled:opacity-50">Resend code</button>
+          <button type="button" [disabled]="busy()" (click)="restart()" class="disabled:opacity-50">Use another account</button>
+        </div>
+        <button type="submit" [disabled]="busy() || otpForm.invalid" class="h-11 w-full rounded-lg bg-brand-500 px-5 text-sm font-medium text-white shadow-theme-xs hover:bg-brand-600 disabled:cursor-not-allowed disabled:opacity-50 dark:bg-brand-500 dark:hover:bg-brand-600">{{ busy() ? 'Verifying...' : 'Verify and sign in' }}</button>
+      </form>
+    }
+  </app-sign-in-content>
+</app-auth-page-layout>

@@ -1,0 +1,82 @@
+<app-component-card [title]="application ? 'Edit application' : 'New application'">
+  <ol aria-label="Application steps" class="grid gap-2 sm:grid-cols-4">
+    @for (title of steps; track title; let index = $index) {
+      <li [attr.aria-current]="step() === index + 1 ? 'step' : null"
+        class="rounded-lg bg-gray-50 px-3 py-2 text-sm text-gray-600 aria-[current=step]:bg-brand-50 aria-[current=step]:font-semibold aria-[current=step]:text-brand-700 dark:bg-gray-900 dark:text-gray-400 dark:aria-[current=step]:bg-brand-500/15 dark:aria-[current=step]:text-brand-300">
+        {{ index + 1 }}. {{ title }}
+      </li>
+    }
+  </ol>
+
+  @switch (step()) {
+    @case (1) {
+      <div class="space-y-4">
+        <app-loan-employee-picker [company]="company" [canSearch]="canSearch" [value]="input.employeeId" (employeeChange)="input.employeeId = $event" />
+        @if (employeeValid) { <app-loan-eligibility [context]="context" [employeeId]="input.employeeId" /> }
+      </div>
+    }
+    @case (2) {
+      <div class="grid gap-4 sm:grid-cols-2">
+        <label class="field">Loan type
+          <select class="control" [ngModel]="input.loanType" (ngModelChange)="chooseType($event)">
+            @for (type of loanTypes; track type) { <option [ngValue]="type">{{ label(type) }}</option> }
+          </select>
+        </label>
+        <label class="field">Requested amount (Kz)
+          <input class="control" inputmode="decimal" maxlength="16" [(ngModel)]="input.requestedAmount" placeholder="0,00" required />
+        </label>
+        <label class="field">Installments
+          <input class="control" type="number" min="1" max="120" step="1" [(ngModel)]="input.installmentCount" required />
+        </label>
+        <label class="field">Repayment frequency
+          <select class="control" [(ngModel)]="input.frequency">
+            @for (frequency of frequencies; track frequency) { <option [ngValue]="frequency">{{ label(frequency) }}</option> }
+          </select>
+        </label>
+        <label class="field">First due date<input class="control" type="date" [(ngModel)]="input.firstDueDate" required /></label>
+        @if (policy?.interestAllowed || input.annualInterestBps > 0) {
+          <label class="field">Annual interest in basis points (100 = 1%)
+            <input class="control" type="number" min="0" [max]="policy?.maxAnnualInterestBps ?? 100000" step="1" [(ngModel)]="input.annualInterestBps" required />
+          </label>
+        }
+        <label class="field sm:col-span-2">Reason<textarea class="control" rows="3" maxlength="2000" [(ngModel)]="input.reason" required></textarea></label>
+      </div>
+      @if (policy; as rule) {
+        <p class="text-sm text-gray-600 dark:text-gray-400">
+          Applicable policy {{ rule.code }} · v{{ rule.version }} · Up to {{ money(rule.maxAmount) }} and {{ rule.maxInstallments }} installments.
+          @if (rule.deductionAuthorizationRequired) { Payroll deduction authorization is required. }
+        </p>
+      } @else if (policyRows()) {
+        <p class="text-sm text-gray-600 dark:text-gray-400">No effective lending policy found for this loan type.</p>
+      }
+    }
+    @case (3) {
+      @if (canSimulate) {
+        <button class="action" type="button" [disabled]="busy()" (click)="preview()">{{ busy() ? 'Simulating…' : 'Run repayment simulation' }}</button>
+        @if (simulation(); as result) { <app-loan-simulation [simulation]="result" /> }
+      } @else { <p class="text-sm text-gray-600 dark:text-gray-400">Your role does not include repayment simulations.</p> }
+    }
+    @case (4) {
+      <dl class="grid gap-3 text-sm text-gray-700 sm:grid-cols-2 dark:text-gray-300">
+        <div class="min-w-0"><dt class="font-semibold">Employee ID</dt><dd class="break-all">{{ input.employeeId }}</dd></div>
+        <div><dt class="font-semibold">Type and amount</dt><dd>{{ label(input.loanType) }} · {{ money(input.requestedAmount) }}</dd></div>
+        <div><dt class="font-semibold">Schedule</dt><dd>{{ input.installmentCount }} · {{ label(input.frequency) }} · From {{ input.firstDueDate }}</dd></div>
+        <div><dt class="font-semibold">Annual interest</dt><dd>{{ input.annualInterestBps / 100 }}%</dd></div>
+        <div class="sm:col-span-2"><dt class="font-semibold">Reason</dt><dd class="whitespace-pre-wrap wrap-anywhere">{{ input.reason }}</dd></div>
+      </dl>
+      @if (simulation(); as result) { <app-loan-simulation [simulation]="result" /> }
+      <p class="text-sm text-gray-600 dark:text-gray-400">Save the draft to review it before submitting it for approval.</p>
+    }
+  }
+
+  @if (error()) { <p class="feedback" role="alert">{{ error() }}</p> }
+  <div class="flex flex-wrap gap-2">
+    @if (step() > 1) { <button class="action" type="button" [disabled]="busy()" (click)="back()">Back</button> }
+    @if (step() < 4) {
+      <button class="action action-primary" type="button" [disabled]="busy()" (click)="next()">Continue</button>
+    } @else {
+      <button class="action action-primary" type="button" [disabled]="busy()" (click)="save()">{{ busy() ? 'Saving…' : 'Save draft' }}</button>
+    }
+    <button class="action" type="button" [disabled]="busy()" (click)="cancelled.emit()">Cancel</button>
+  </div>
+</app-component-card>

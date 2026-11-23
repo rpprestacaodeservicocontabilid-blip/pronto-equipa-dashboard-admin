@@ -1,4 +1,5 @@
 export interface SignUpFormData {
+  phone: string;
   fname: string;
   lname: string;
   email: string;

@@ -1,0 +1,95 @@
+@if (failure()) { <p class="feedback" role="alert">{{ failure() }}</p> }
+@if (notice()) { <p class="notice" role="status">{{ notice() }}</p> }
+
+@if (creating()) {
+  <a class="action" [routerLink]="root()">All payroll periods</a>
+  @if (allowed('create')) {
+    <app-component-card title="New payroll period"><ng-container [ngTemplateOutlet]="periodForm" /></app-component-card>
+  } @else {
+    <p class="feedback" role="alert">Your company role cannot create payroll periods.</p>
+  }
+} @else {
+  @let response = state();
+  @if (!response) {
+    <p role="status" class="text-sm text-gray-600 dark:text-gray-400">Loading payroll periods…</p>
+  } @else if ('error' in response) {
+    <p class="feedback" role="alert">{{ response.error }}</p>
+    <button type="button" class="action" (click)="refresh()">Try again</button>
+  } @else if (response && 'data' in response && response.data.period; as period) {
+    <a class="action" [routerLink]="root()">All payroll periods</a>
+    <app-component-card title="Payroll period">
+      <dl class="grid gap-4 text-sm text-gray-700 sm:grid-cols-2 lg:grid-cols-4 dark:text-gray-300">
+        <div><dt class="font-medium">Start date</dt><dd>{{ date(period.startDate) }}</dd></div>
+        <div><dt class="font-medium">End date</dt><dd>{{ date(period.endDate) }}</dd></div>
+        <div><dt class="font-medium">Planned payment date</dt><dd>{{ date(period.paymentDate) }}</dd></div>
+        <div><dt class="font-medium">Status</dt><dd>{{ label(period.status) }} · Version {{ period.version }}</dd></div>
+      </dl>
+      <div class="mt-5 flex flex-wrap gap-2">
+        @if (period.status === 'DRAFT' && allowed('update') && !editing()) {
+          <button class="action" type="button" [disabled]="busy()" (click)="edit(period)">Edit dates</button>
+        }
+        @if (period.status === 'DRAFT' && allowed('open') && !editing()) {
+          <button class="action action-primary" type="button" [disabled]="busy()" (click)="transition(period, 'open')">Open period</button>
+        }
+        @if (period.status === 'OPEN' && allowed('close') && !confirming()) {
+          <button class="action" type="button" [disabled]="busy()" (click)="confirming.set(true)">Close period</button>
+        }
+        <a class="action" [routerLink]="['/payroll', context().company.id, 'monthly']" [queryParams]="{ period: period.id }">View monthly runs</a>
+      </div>
+      @if (confirming()) {
+        <div class="mt-4 space-y-3 rounded-xl border border-warning-200 p-4 dark:border-warning-500/30">
+          <p class="text-sm text-gray-700 dark:text-gray-300">Close the period after all its payroll runs have been closed or cancelled.</p>
+          <div class="flex flex-wrap gap-2">
+            <button class="action action-primary" type="button" [disabled]="busy()" (click)="transition(period, 'close')">Confirm period closing</button>
+            <button class="action" type="button" [disabled]="busy()" (click)="confirming.set(false)">Back</button>
+          </div>
+        </div>
+      }
+      @if (editing()) {
+        <div class="mt-5 border-t border-gray-200 pt-5 dark:border-gray-800"><ng-container [ngTemplateOutlet]="periodForm" /></div>
+      }
+    </app-component-card>
+  } @else if (response && 'data' in response && response.data.page; as result) {
+    <div class="flex justify-end">
+      @if (allowed('create')) { <a class="action action-primary" [routerLink]="[...root(), 'new']">New payroll period</a> }
+    </div>
+    <app-component-card title="Payroll periods">
+      <div class="overflow-x-auto">
+        <table class="w-full text-start text-sm text-gray-700 dark:text-gray-300">
+          <thead class="table-heading"><tr><th scope="col">Period</th><th scope="col">Planned payment</th><th scope="col">Status</th><th scope="col">Version</th></tr></thead>
+          <tbody class="divide-y divide-gray-200 dark:divide-gray-800">
+            @for (period of result.data; track period.id) {
+              <tr>
+                <td class="table-cell"><a class="font-medium text-brand-700 hover:underline dark:text-brand-300" [routerLink]="[...root(), period.id]">{{ date(period.startDate) }} – {{ date(period.endDate) }}</a></td>
+                <td class="table-cell">{{ date(period.paymentDate) }}</td><td class="table-cell">{{ label(period.status) }}</td><td class="table-cell">{{ period.version }}</td>
+              </tr>
+            } @empty { <tr><td class="table-cell" colspan="4">No payroll periods have been created.</td></tr> }
+          </tbody>
+        </table>
+      </div>
+      @if (result.total > result.limit) {
+        <div class="mt-4 flex flex-wrap items-center justify-between gap-2 text-sm text-gray-600 dark:text-gray-400">
+          <span>Page {{ result.page }} · {{ result.total }} periods</span>
+          <div class="flex gap-2">
+            <button type="button" class="action" [disabled]="result.page <= 1" (click)="page.set(result.page - 1)">Previous</button>
+            <button type="button" class="action" [disabled]="result.page * result.limit >= result.total" (click)="page.set(result.page + 1)">Next</button>
+          </div>
+        </div>
+      }
+    </app-component-card>
+  }
+}
+
+<ng-template #periodForm>
+  <form #form="ngForm" class="space-y-4" (ngSubmit)="save()">
+    <div class="grid gap-3 sm:grid-cols-3">
+      <label class="field">Start date <input class="control" type="date" name="startDate" required [(ngModel)]="dates.startDate" [disabled]="busy()" /></label>
+      <label class="field">End date <input class="control" type="date" name="endDate" required [(ngModel)]="dates.endDate" [attr.min]="dates.startDate || null" [disabled]="busy()" /></label>
+      <label class="field">Planned payment date <input class="control" type="date" name="paymentDate" required [(ngModel)]="dates.paymentDate" [disabled]="busy()" /></label>
+    </div>
+    <div class="flex flex-wrap gap-2">
+      <button class="action action-primary" type="submit" [disabled]="busy() || form.invalid">Save period</button>
+      @if (editing()) { <button class="action" type="button" [disabled]="busy()" (click)="editing.set(null)">Cancel</button> }
+    </div>
+  </form>
+</ng-template>

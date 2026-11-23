@@ -1,0 +1,120 @@
+<a class="action" [routerLink]="root()">Back to payroll runs</a>
+@if (!choices().length) {
+  <p class="feedback" role="alert">Your company role cannot create this type of payroll run.</p>
+} @else {
+  <app-component-card title="New payroll run">
+    @let response = references();
+    @if (!response) {
+      <p role="status" class="text-sm text-gray-600 dark:text-gray-400">Loading payroll periods…</p>
+    } @else if ('error' in response) {
+      <p class="feedback" role="alert">{{ response.error }}</p>
+      <button type="button" class="action" (click)="refresh()">Try again</button>
+    } @else {
+      <form class="space-y-5" (ngSubmit)="save()">
+        <fieldset [disabled]="busy() || selecting()" class="space-y-5">
+          <div class="grid gap-3 md:grid-cols-3">
+            <label class="field">Open payroll period
+              <select class="control" name="period" required [ngModel]="periodId()" (ngModelChange)="periodId.set($event)">
+                <option value="">Select a period</option>
+                @for (period of response.data.periods; track period.id) {
+                  @if (period.status === 'OPEN') { <option [value]="period.id">{{ date(period.startDate) }} – {{ date(period.endDate) }}</option> }
+                }
+              </select>
+            </label>
+            <label class="field">Run type
+              <select class="control" name="type" [ngModel]="type()" (ngModelChange)="changeType($event)">
+                @for (option of choices(); track option) { <option [value]="option">{{ titles[option] }}</option> }
+              </select>
+            </label>
+            <label class="field">Execution scope
+              <select class="control" name="scope" [disabled]="!!section().scope" [ngModel]="scope()" (ngModelChange)="changeScope($event)">
+                <option value="INDIVIDUAL">Individual</option><option value="COLLECTIVE">Collective</option>
+              </select>
+            </label>
+          </div>
+          @if (isAdjustment()) {
+            <div class="grid gap-3 md:grid-cols-2">
+              <label class="field">Closed original run
+                <select class="control" name="original" required [ngModel]="originalId()" (ngModelChange)="changeOriginal($event)">
+                  <option value="">Select the original run</option>
+                  @for (run of originals(); track run.id) { <option [value]="run.id">{{ titles[run.runType] }} · {{ date(run.createdAt) }} · {{ run.id.slice(0, 8) }}</option> }
+                </select>
+              </label>
+              <label class="field">Reason
+                <textarea class="control" name="reason" [(ngModel)]="reason" required rows="2" maxlength="1000"></textarea>
+              </label>
+            </div>
+          }
+          <div class="space-y-3 rounded-xl border border-gray-200 p-4 dark:border-gray-800">
+            <div class="flex flex-wrap items-center justify-between gap-3">
+              <div>
+                <h3 class="font-medium text-gray-900 dark:text-gray-100">Employees</h3>
+                <p class="text-sm text-gray-600 dark:text-gray-400">{{ selected().size }} selected. Eligibility is checked during pre-processing.</p>
+              </div>
+              @if (selected().size) { <button type="button" class="action" (click)="clearSelection()">Clear selection</button> }
+            </div>
+            @if (original(); as reference) {
+              @if (scope() === 'COLLECTIVE') { <button class="action" type="button" (click)="selectOriginalEmployees()">Select all original employees</button> }
+              <div class="max-h-56 overflow-auto">
+                @for (id of reference.employeeIds; track id) {
+                  <label class="flex items-center gap-2 px-2 py-2 text-sm text-gray-700 dark:text-gray-300">
+                    <input [type]="scope() === 'INDIVIDUAL' ? 'radio' : 'checkbox'" name="originalEmployee" [checked]="selected().has(id)" (change)="toggle(id)" />
+                    <span class="break-all">{{ id }}</span>
+                  </label>
+                }
+              </div>
+            } @else if (canBrowse()) {
+              <div class="flex flex-wrap items-end gap-2">
+                <label class="field grow">Search employees
+                  <input class="control" type="search" name="search" maxlength="100" [(ngModel)]="search" (keydown.enter)="$event.preventDefault(); searchEmployees()" placeholder="Name or employee number" />
+                </label>
+                <button type="button" class="action" (click)="searchEmployees()">Search</button>
+                @if (scope() === 'COLLECTIVE') {
+                  <button type="button" class="action" (click)="selectActiveEmployees()">Select all active employees</button>
+                }
+              </div>
+              @let page = employees();
+              @if (!page) {
+                <p role="status" class="text-sm text-gray-600 dark:text-gray-400">Loading employees…</p>
+              } @else if ('error' in page) {
+                <p class="feedback" role="alert">{{ page.error }}</p>
+              } @else if (page && 'data' in page && page.data; as result) {
+                <div class="max-h-56 overflow-auto">
+                  @for (employee of result.data; track employee.id) {
+                    <label class="flex items-center gap-2 px-2 py-2 text-sm text-gray-700 dark:text-gray-300">
+                      <input [type]="scope() === 'INDIVIDUAL' ? 'radio' : 'checkbox'" name="payrollEmployee" [checked]="selected().has(employee.id)" (change)="toggle(employee.id, employeeName(employee))" />
+                      <span>{{ employeeName(employee) }}</span>
+                    </label>
+                  } @empty { <p class="text-sm text-gray-600 dark:text-gray-400">No employees found.</p> }
+                </div>
+                @if (result.pagination.totalPages > 1) {
+                  <div class="flex flex-wrap items-center gap-2 text-sm text-gray-600 dark:text-gray-400">
+                    <button type="button" class="action" [disabled]="employeePage() <= 1" (click)="changePage(-1)">Previous</button>
+                    <button type="button" class="action" [disabled]="employeePage() >= result.pagination.totalPages" (click)="changePage(1)">Next</button>
+                    <span>Page {{ employeePage() }} of {{ result.pagination.totalPages }}</span>
+                  </div>
+                }
+              }
+            }
+            @if (!isAdjustment()) {
+              <div class="flex flex-wrap items-end gap-2">
+                <label class="field grow">Employee IDs <textarea class="control" name="employeeIds" [(ngModel)]="ids" rows="2" placeholder="Paste employee UUIDs separated by spaces or commas"></textarea></label>
+                <button type="button" class="action" [disabled]="!ids.trim()" (click)="addIds()">Add IDs</button>
+              </div>
+            }
+            @if (selectionPreview().length) {
+              <ul class="flex flex-wrap gap-2">
+                @for (item of selectionPreview(); track item[0]) {
+                  <li><button type="button" class="action max-w-full break-all" [attr.aria-label]="'Remove ' + item[1]" (click)="toggle(item[0])">{{ item[1] }} <span aria-hidden="true">×</span></button></li>
+                }
+              </ul>
+            }
+          </div>
+        </fieldset>
+        @if (failure()) { <p class="feedback" role="alert">{{ failure() }}</p> }
+        @if (selecting()) { <p role="status" class="text-sm text-gray-600 dark:text-gray-400">Selecting active employees…</p> }
+        <button class="action action-primary" type="submit" [disabled]="busy() || selecting() || !selected().size">{{ busy() ? 'Creating…' : 'Create payroll run' }}</button>
+      </form>
+    }
+  </app-component-card>
+}

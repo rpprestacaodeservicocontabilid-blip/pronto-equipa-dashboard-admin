@@ -44,10 +44,11 @@ export class SignUpFormFieldsComponent {
 
   showPassword = false;
   showConfirmPassword = false;
-  isSubmitting = false;
+  @Input() isSubmitting: boolean = false;
 
   signUpForm = new FormGroup(
     {
+      phone: new FormControl('', { nonNullable: true, validators: [Validators.required, Validators.pattern(/^\+?[1-9]\d{7,14}$/)] }),
       fname: new FormControl('', {
         nonNullable: true,
         validators: [Validators.required],
@@ -134,18 +135,12 @@ export class SignUpFormFieldsComponent {
   }
 
   onSubmit() {
+    if (this.isSubmitting) return;
     if (this.signUpForm.invalid) {
       this.signUpForm.markAllAsTouched();
       return;
     }
 
-    this.isSubmitting = true;
-    const data: SignUpFormData = this.signUpForm.getRawValue();
-    this.formSubmit.emit(data);
-
-    // Simulate completion
-    setTimeout(() => {
-      this.isSubmitting = false;
-    }, 500);
+    this.formSubmit.emit(this.signUpForm.getRawValue());
   }
 }

@@ -4,6 +4,11 @@
   [class]="'space-y-5 ' + className"
   noValidate
 >
+  <div>
+    <label for="signup-phone" class="mb-1.5 block text-sm font-medium text-gray-700 dark:text-gray-400">Phone</label>
+    <input id="signup-phone" formControlName="phone" type="tel" autocomplete="tel" placeholder="+244923456789" class="h-11 w-full rounded-lg border border-gray-300 bg-transparent px-4 text-sm text-gray-800 dark:border-gray-700 dark:text-white/90" />
+    @if (isFieldInvalid('phone')) { <p role="alert" class="mt-1 text-sm text-error-600 dark:text-error-400">Enter a valid international phone number.</p> }
+  </div>
   <div class="grid grid-cols-1 gap-5 sm:grid-cols-2">
     <div
       role="group"

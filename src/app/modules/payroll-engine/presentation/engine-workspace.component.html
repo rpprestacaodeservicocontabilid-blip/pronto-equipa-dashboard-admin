@@ -1,0 +1,20 @@
+<div class="workspace-ui space-y-5">
+  <app-page-breadcrumb [pageTitle]="section()?.title ?? 'Payroll engine'" homeLink="/payroll-engine" />
+  @let view = state();
+  @if ('error' in view) {
+    <p class="feedback" role="alert">{{ view.error }}</p>
+    <a class="action" routerLink="/payroll-engine">Select a company</a>
+  } @else {
+    <div class="flex flex-wrap items-center justify-between gap-3">
+      <h2 class="text-lg font-semibold text-gray-900 dark:text-gray-100">{{ view.context.company.name }}</h2>
+      <a class="action" routerLink="/payroll-engine">Switch company</a>
+    </div>
+    @for (scope of [view]; track scope.context.company.id + '/' + scope.section.id) {
+      @if (scope.section.id === simulationId) {
+        <app-engine-simulation [companyId]="scope.context.company.id" />
+      } @else {
+        <app-engine-traces [companyId]="scope.context.company.id" />
+      }
+    }
+  }
+</div>

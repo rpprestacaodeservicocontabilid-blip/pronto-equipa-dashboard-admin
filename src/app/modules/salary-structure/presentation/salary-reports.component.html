@@ -1,0 +1,70 @@
+<app-component-card title="Report filters">
+  <form (ngSubmit)="apply()" class="space-y-3">
+    <fieldset class="grid gap-4 sm:grid-cols-2 xl:grid-cols-3" [disabled]="exporting()">
+      <label class="field">Report<select class="control" name="report" [ngModel]="report" (ngModelChange)="choose($event)">
+        @for (option of options; track option.key) { <option [ngValue]="option.key">{{ option.title }}</option> }
+      </select></label>
+      @if (report === 'components') { <label class="field">Exact component code<input class="control" name="code" maxlength="50" [(ngModel)]="filter.code" /></label> }
+      @if (employeeReport) { <label class="field">Employee ID<input class="control" name="employee" maxlength="36" [(ngModel)]="filter.employeeId" /></label> }
+      <label class="field">Status<select class="control" name="status" [(ngModel)]="filter.status">
+        <option value="">All statuses</option>
+        @for (status of report === 'revisions' ? ['DRAFT', 'PENDING_APPROVAL', 'APPROVED', 'APPLIED', 'REJECTED'] : ['ACTIVE', 'INACTIVE']; track status) {
+          <option [value]="status">{{ human(status) }}</option>
+        }
+      </select></label>
+      <label class="field">{{ employeeReport ? 'Effective from' : 'Created from' }}<input class="control" type="date" name="from" [(ngModel)]="filter.from" /></label>
+      <label class="field">Through<input class="control" type="date" name="to" [(ngModel)]="filter.to" /></label>
+    </fieldset>
+    <button type="submit" class="action action-primary" [disabled]="busy() || exporting()">Apply filters</button>
+    @if (inputError()) { <p class="feedback" role="alert">{{ inputError() }}</p> }
+  </form>
+</app-component-card>
+@if (busy() || exporting()) { <p class="text-sm text-gray-600 dark:text-gray-400" role="status">{{ busy() ? 'Loading report…' : 'Preparing export…' }}</p> }
+@if (notice()) { <p class="notice" role="status">{{ notice() }}</p> }
+@if (error()) { <p class="feedback" role="alert">{{ error() }}</p><button type="button" class="action" (click)="retry()">Try again</button> }
+@if (view(); as data) {
+  <app-component-card [title]="title">
+    <div class="overflow-x-auto rounded-lg border border-gray-200 dark:border-gray-800">
+      <table class="w-full min-w-[38rem] text-start text-sm text-gray-700 dark:text-gray-300">
+        <thead class="table-heading"><tr><th scope="col">Reference</th><th scope="col">{{ employeeReport ? 'Employee ID' : 'Name' }}</th>
+          <th scope="col">{{ report === 'assignments' ? 'Validity' : 'Status' }}</th>
+          <th scope="col">{{ report === 'revisions' ? 'Proposed base salary' : report === 'assignments' ? 'Base salary' : 'Version' }}</th>
+          <th scope="col"><span class="sr-only">Details</span></th></tr></thead>
+        <tbody class="divide-y divide-gray-100 dark:divide-gray-800">
+          @for (row of visible(data); track row.id) {
+            <tr>
+              @if (isAssignment(row)) {
+                <td class="table-cell max-w-48 wrap-anywhere">{{ row.id }}</td><td class="table-cell max-w-48 wrap-anywhere">{{ row.employeeId }}</td>
+                <td class="table-cell whitespace-nowrap">{{ row.effectiveFrom }} – {{ row.effectiveTo || 'Open' }}</td>
+                <td class="table-cell whitespace-nowrap">{{ money(row.baseSalary, row.currency) }}</td>
+              } @else if (isRevision(row)) {
+                <td class="table-cell max-w-48 wrap-anywhere">{{ row.id }}</td><td class="table-cell max-w-48 wrap-anywhere">{{ row.employeeId }}</td>
+                <td class="table-cell">{{ human(row.status) }}</td><td class="table-cell">{{ money(row.proposedData.baseSalary, row.proposedData.currency) }}</td>
+              } @else {
+                <td class="table-cell">{{ row.code }}</td><td class="table-cell">{{ row.name }}</td>
+                <td class="table-cell">{{ human(row.status) }}</td><td class="table-cell">{{ row.version }}</td>
+              }
+              <td class="table-cell">@if (employeeReport || can('read')) {
+                <a class="text-brand-700 underline dark:text-brand-300" [routerLink]="['/salary-structure', company, report, row.id]">View details</a>
+              }</td>
+            </tr>
+          } @empty { <tr><td class="table-cell" colspan="5">No records match this report.</td></tr> }
+        </tbody>
+      </table>
+    </div>
+    <div class="flex flex-wrap items-center justify-between gap-3">
+      <p class="text-sm text-gray-600 dark:text-gray-400">{{ data.total }} records · Page {{ page }}</p>
+      <div class="flex gap-2"><button class="action" type="button" [disabled]="page <= 1 || exporting()" (click)="go(page - 1)">Previous</button>
+        <button class="action" type="button" [disabled]="page * 20 >= data.total || exporting()" (click)="go(page + 1)">Next</button></div>
+    </div>
+    @if (can('export') && data.total) {
+      <div class="flex flex-wrap gap-2">
+        <button class="action" type="button" [disabled]="exporting()" (click)="export(data, 'excel')">Export Excel</button>
+        <button class="action" type="button" [disabled]="exporting()" (click)="export(data, 'pdf')">Print / PDF</button>
+        @if (report !== 'assignments') {
+          <button class="action" type="button" [disabled]="exporting()" (click)="csv()">Request CSV</button>
+        }
+      </div>
+    }
+  </app-component-card>
+}

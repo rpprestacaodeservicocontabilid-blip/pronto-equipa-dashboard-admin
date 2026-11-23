@@ -1,0 +1,133 @@
+@if (loading()) {
+  <app-component-card [title]="names[view]"><p role="status" class="text-sm text-gray-600 dark:text-gray-400">Loading contracts…</p></app-component-card>
+} @else if (error()) {
+  <p role="alert" class="feedback">{{ error() }}</p>
+  <button type="button" class="action mt-3" (click)="load()">Try again</button>
+} @else {
+  @if (supplementalError()) { <p role="status" class="mb-4 text-sm text-gray-600 dark:text-gray-400">{{ supplementalError() }}</p> }
+
+  @if (view === 'dashboard') {
+    <div class="mb-5 grid grid-cols-2 gap-3 lg:grid-cols-5">
+      @for (metric of metrics(); track metric.label) {
+        <a [routerLink]="['/contracts', context.company.id, metric.view]" [queryParams]="metric.status ? {status: metric.status} : {}"
+           class="rounded-xl border border-gray-200 bg-white p-4 shadow-theme-xs hover:border-brand-300 dark:border-gray-800 dark:bg-gray-900 dark:hover:border-brand-600">
+          <p class="text-sm font-medium text-gray-600 dark:text-gray-400">{{ metric.label }}</p>
+          <p class="mt-2 text-title-sm font-semibold text-gray-900 dark:text-gray-100">{{ metric.count }}</p>
+        </a>
+      }
+    </div>
+    <div class="mb-5 grid gap-5 xl:grid-cols-2">
+      <app-component-card title="Upcoming expirations" desc="Active contracts ending within 30 days.">
+        <ul class="divide-y divide-gray-200 dark:divide-gray-800">
+          @for (contract of upcoming(); track contract.id) {
+            <li class="flex justify-between gap-3 py-2 text-sm">
+              <a class="text-brand-600 dark:text-brand-400" [routerLink]="['/contracts', context.company.id, 'details', contract.id]">{{ contract.contractNumber }}</a>
+              <span class="text-gray-600 dark:text-gray-400">{{ formatDate(contract.endDate) }}</span>
+            </li>
+          } @empty { <li class="text-sm text-gray-600 dark:text-gray-400">No upcoming expirations.</li> }
+        </ul>
+      </app-component-card>
+      <app-component-card title="Contracts by type">
+        <ul class="space-y-3">
+          @for (entry of distribution(); track entry[0]) {
+            <li>
+              <div class="mb-1 flex justify-between gap-3 text-sm text-gray-700 dark:text-gray-300">
+                <span>{{ typeNames().get(entry[0]) ?? entry[0] }}</span><strong>{{ entry[1] }}</strong>
+              </div>
+              <progress class="h-2 w-full accent-brand-500" [value]="entry[1]" [max]="rows().length" [attr.aria-label]="typeNames().get(entry[0]) ?? entry[0]"></progress>
+            </li>
+          } @empty { <li class="text-sm text-gray-600 dark:text-gray-400">No contracts to group.</li> }
+        </ul>
+      </app-component-card>
+    </div>
+  }
+
+  <app-component-card [title]="view === 'dashboard' ? 'Recent contracts' : names[view]">
+    @if (view !== 'dashboard') {
+      <div class="mb-5 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+        <label class="field">Search<input class="control" type="search" maxlength="100" placeholder="Contract number or employee" [ngModel]="search()" (ngModelChange)="search.set($event); page.set(1)" /></label>
+        <label class="field">Status
+          <select class="control" [ngModel]="status()" (ngModelChange)="status.set($event); page.set(1)">
+            <option value="">All available statuses</option>
+            @for (state of availableStates(); track state) { <option [value]="state">{{ statuses[state] }}</option> }
+          </select>
+        </label>
+        <label class="field">Contract type
+          <select class="control" [ngModel]="type()" (ngModelChange)="type.set($event); page.set(1)">
+            <option value="">All types</option>
+            @for (entry of types(); track entry.id) { <option [value]="entry.code">{{ entry.name }}</option> }
+          </select>
+        </label>
+        @if (departments().length) {
+          <label class="field">Department
+            <select class="control" [ngModel]="department()" (ngModelChange)="department.set($event); page.set(1)">
+              <option value="">All departments</option>
+              @for (entry of departments(); track entry.id) { <option [value]="entry.id">{{ entry.name }}</option> }
+            </select>
+          </label>
+        }
+        <label class="field">Period from<input class="control" type="date" [ngModel]="from()" [attr.max]="to() || null" (ngModelChange)="from.set($event); page.set(1)" /></label>
+        <label class="field">Period to<input class="control" type="date" [ngModel]="to()" [attr.min]="from() || null" (ngModelChange)="to.set($event); page.set(1)" /></label>
+        @if (view === 'expiring') {
+          <label class="field">Ending within
+            <select class="control" [ngModel]="expiryDays()" (ngModelChange)="expiryDays.set($event); page.set(1)">
+              <option [ngValue]="30">30 days</option><option [ngValue]="15">15 days</option><option [ngValue]="7">7 days</option>
+            </select>
+          </label>
+        } @else {
+          <label class="field">Sort by
+            <select class="control" [ngModel]="order()" (ngModelChange)="order.set($event); page.set(1)">
+              <option value="recent">Recently created</option><option value="number">Contract number</option><option value="start">Latest start date</option><option value="end">Nearest end date</option>
+            </select>
+          </label>
+        }
+      </div>
+    }
+    <div class="overflow-x-auto rounded-lg border border-gray-200 dark:border-gray-800">
+      <table class="w-full min-w-[760px] text-start text-sm text-gray-700 dark:text-gray-300">
+        <thead class="table-heading">
+          <tr><th scope="col">Contract</th><th scope="col">Employee</th><th scope="col">Type</th><th scope="col">Start</th><th scope="col">End</th><th scope="col">Compensation</th><th scope="col">Status</th></tr>
+        </thead>
+        <tbody class="divide-y divide-gray-200 dark:divide-gray-800">
+          @for (contract of view === 'dashboard' ? displayRows().slice(0, 6) : pageRows(); track contract.id) {
+            <tr class="hover:bg-gray-50 dark:hover:bg-white/5">
+              <td class="table-cell whitespace-nowrap font-medium">
+                <a class="text-brand-600 hover:underline dark:text-brand-400" [routerLink]="['/contracts', context.company.id, 'details', contract.id]" [queryParams]="{tab: detailTab()}">{{ contract.contractNumber }}</a>
+              </td>
+              <td class="table-cell">{{ name(directory().get(contract.employeeId)) }}</td>
+              <td class="table-cell">{{ typeNames().get(contract.typeCode) ?? contract.typeCode }}</td>
+              <td class="table-cell whitespace-nowrap">{{ formatDate(contract.startDate) }}</td>
+              <td class="table-cell whitespace-nowrap">
+                {{ formatDate(contract.endDate) }}
+                @if (view === 'expiring') {
+                  <span class="block text-xs text-warning-700 dark:text-warning-400">{{ daysToEnd(contract) }} days left</span>
+                }
+              </td>
+              <td class="table-cell whitespace-nowrap">{{ formatAmount(contract.salaryAmount, contract.currency) }}</td>
+              <td class="table-cell">
+                <span class="inline-flex rounded-full bg-gray-100 px-2.5 py-1 text-xs font-medium dark:bg-gray-800"
+                  [class.text-success-700]="contract.status === 'ACTIVE'" [class.dark:text-success-400]="contract.status === 'ACTIVE'"
+                  [class.text-warning-700]="contract.status === 'PENDING_APPROVAL'" [class.dark:text-warning-400]="contract.status === 'PENDING_APPROVAL'">{{ statuses[contract.status] }}</span>
+              </td>
+            </tr>
+          } @empty {
+            <tr><td colspan="7" class="table-cell text-center text-gray-600 dark:text-gray-400">No contracts match this view.</td></tr>
+          }
+        </tbody>
+      </table>
+    </div>
+    @if (view !== 'dashboard') {
+      <div class="mt-4 flex flex-wrap items-center justify-between gap-3">
+        <p class="text-sm text-gray-600 dark:text-gray-400">{{ displayRows().length }} contracts · Page {{ page() }} of {{ totalPages() }}</p>
+        <div class="flex flex-wrap gap-2">
+          @if (context.permissions.includes('contracts.export')) {
+            <button class="action" type="button" [disabled]="exporting() || !displayRows().length" (click)="exportCsv()">{{ exporting() ? 'Exporting…' : 'Export CSV' }}</button>
+          }
+          <button class="action" type="button" [disabled]="page() <= 1" (click)="page.set(page() - 1)">Previous</button>
+          <button class="action" type="button" [disabled]="page() >= totalPages()" (click)="page.set(page() + 1)">Next</button>
+        </div>
+      </div>
+      @if (exportError()) { <p role="alert" class="feedback mt-4">{{ exportError() }}</p> }
+    }
+  </app-component-card>
+}

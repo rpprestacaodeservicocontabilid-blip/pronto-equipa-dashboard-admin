@@ -1,0 +1,67 @@
+@if (notice()) { <p class="notice" role="status">{{ notice() }}</p> }
+@if (form(); as editor) {
+  @for (definition of [editor]; track definition) {
+    <app-salary-form [context]="context" [definition]="definition" (cancelled)="form.set(null)" (completed)="saved($event)" />
+  }
+}
+@if (!id && !form()) {
+  <button class="action action-primary" type="button" (click)="create()">New bulk revision</button>
+  <app-component-card title="Find a bulk revision" desc="Open an existing batch by its reference.">
+    <form class="flex flex-wrap items-end gap-3" (ngSubmit)="open()">
+      <label class="field min-w-56 flex-1">Batch ID<input class="control" name="batch" maxlength="36" [(ngModel)]="reference" required /></label>
+      <button class="action" type="submit">Open batch</button>
+    </form>
+  </app-component-card>
+} @else if (id) {
+  <a class="action" [routerLink]="['/salary-structure', company, 'revision-batches']">Find another batch</a>
+}
+@if (error()) {
+  <p class="feedback" role="alert">{{ error() }}</p>
+  @if (id) { <button class="action" type="button" (click)="load()">Try again</button> }
+}
+@if (loading()) { <p class="text-sm text-gray-600 dark:text-gray-400" role="status">Loading batch…</p> }
+@if (batch(); as current) {
+  <app-component-card [title]="current.code" [desc]="human(current.status) + ' · Effective ' + current.effectiveFrom">
+    <dl class="grid gap-3 text-sm text-gray-700 sm:grid-cols-2 xl:grid-cols-4 dark:text-gray-300">
+      <div class="min-w-0"><dt class="font-semibold">Batch ID</dt><dd class="break-all">{{ current.id }}</dd></div>
+      <div><dt class="font-semibold">Employees</dt><dd>{{ current.items.length }}</dd></div>
+      <div><dt class="font-semibold">Applied</dt><dd>{{ count(current, 'APPLIED') }}</dd></div>
+      <div><dt class="font-semibold">Invalid or failed</dt><dd>{{ count(current, 'INVALID') + count(current, 'FAILED') }}</dd></div>
+      <div><dt class="font-semibold">Requested by</dt><dd>User {{ current.requestedBy }}</dd></div>
+      <div><dt class="font-semibold">Approved by</dt><dd>{{ current.approvedBy ?? '—' }}</dd></div>
+      <div class="sm:col-span-2"><dt class="font-semibold">Reason</dt><dd class="whitespace-pre-wrap wrap-anywhere">{{ current.reason }}</dd></div>
+    </dl>
+    <div class="flex flex-wrap gap-2">
+      @if (current.status === 'DRAFT') {
+        <button class="action" type="button" [disabled]="!!form()" (click)="action('validate')">Validate batch</button>
+      }
+      @if (current.status === 'VALIDATED' && can('revisions:approve') && !count(current, 'INVALID')) {
+        @if (!owns(current)) {
+          <button class="action" type="button" [disabled]="!!form()" (click)="action('approve')">Approve batch</button>
+        } @else { <p class="self-center text-sm text-gray-600 dark:text-gray-400">Another authorized user must approve this batch.</p> }
+      }
+      @if (current.status === 'APPROVED' || current.status === 'APPLYING') {
+        <button class="action" type="button" [disabled]="!!form()" (click)="action('apply')">{{ current.status === 'APPLYING' ? 'Resume application' : 'Apply approved batch' }}</button>
+      }
+      @if (can('audit:records:read-tenant')) { <a class="action" [routerLink]="['/salary-structure', company, 'audit']" [queryParams]="{resource: current.id}">Audit history</a> }
+    </div>
+  </app-component-card>
+  <app-component-card title="Validation and results by employee">
+    <div class="max-h-[32rem] overflow-auto rounded-lg border border-gray-200 dark:border-gray-800">
+      <table class="w-full min-w-[42rem] text-start text-sm text-gray-700 dark:text-gray-300">
+        <thead class="table-heading"><tr><th scope="col">Employee ID</th><th scope="col">Proposed base salary</th><th scope="col">Status</th><th scope="col">Result</th></tr></thead>
+        <tbody class="divide-y divide-gray-100 dark:divide-gray-800">
+          @for (item of current.items; track item.id) {
+            <tr><td class="table-cell max-w-52 wrap-anywhere">{{ item.employeeId }}</td>
+              <td class="table-cell">{{ money(item.proposedData.baseSalary, item.proposedData.currency) }}</td>
+              <td class="table-cell">{{ human(item.status) }}</td><td class="table-cell max-w-72 wrap-anywhere">
+                @if (item.assignmentId && can('assignments:read')) {
+                  <a class="text-brand-700 underline dark:text-brand-300" [routerLink]="['/salary-structure', company, 'assignments', item.assignmentId]">View assignment</a>
+                } @else { {{ item.error || '—' }} }
+              </td></tr>
+          }
+        </tbody>
+      </table>
+    </div>
+  </app-component-card>
+}

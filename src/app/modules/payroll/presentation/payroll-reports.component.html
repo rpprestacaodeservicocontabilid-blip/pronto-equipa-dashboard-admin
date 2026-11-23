@@ -1,0 +1,63 @@
+<app-component-card title="Payroll reports" desc="Reports include closed runs for the selected period.">
+  @let options = periods();
+  @if (!options) {
+    <p role="status" class="text-sm text-gray-600 dark:text-gray-400">Loading payroll periods…</p>
+  } @else if ('error' in options) {
+    <p class="feedback" role="alert">{{ options.error }}</p><button type="button" class="action" (click)="refreshOptions()">Try again</button>
+  } @else if (!options.data.length) {
+    <p class="text-sm text-gray-600 dark:text-gray-400">No payroll periods are available.</p>
+  } @else {
+    <div class="mb-5 grid max-w-xl gap-3 sm:grid-cols-2">
+      <label class="field">Period <select class="control" [ngModel]="period()" (ngModelChange)="period.set($event); page.set(1)">
+        @for (item of options.data; track item.id) { <option [value]="item.id">{{ date(item.startDate) }} – {{ date(item.endDate) }}</option> }
+      </select></label>
+      <label class="field">Report <select class="control" [ngModel]="type()" (ngModelChange)="type.set($event); page.set(1)">
+        <option value="summary">Payroll summary</option>
+        @if (sensitive()) { <option value="deductions">Deductions</option><option value="employer-costs">Employer costs</option> }
+      </select></label>
+    </div>
+    @let response = report();
+    @if (!response) {
+      <p role="status" class="text-sm text-gray-600 dark:text-gray-400">Loading report…</p>
+    } @else if ('error' in response) {
+      <p class="feedback" role="alert">{{ response.error }}</p><button class="action" type="button" (click)="refreshReport()">Try again</button>
+    } @else {
+      <div class="overflow-x-auto">
+        <table class="w-full text-start text-sm text-gray-700 dark:text-gray-300">
+          <thead class="table-heading"><tr>
+            <th scope="col">Run</th>
+            @if (type() === 'summary') {
+              <th scope="col">Employees</th><th scope="col">Gross</th><th scope="col">Deductions</th><th scope="col">Net</th><th scope="col">Employer costs</th>
+            } @else {
+              <th scope="col">Employee</th><th scope="col">Pay item</th><th scope="col">Amount</th><th scope="col">Source</th>
+            }
+          </tr></thead>
+          <tbody class="divide-y divide-gray-200 dark:divide-gray-800">
+            @for (row of visible(); track $index) {
+              <tr>
+                <td class="table-cell"><a class="font-medium text-brand-700 hover:underline dark:text-brand-300" [routerLink]="['/payroll', context().company.id, 'overview', row.runId]">{{ row.runId.slice(0, 8) }}</a></td>
+                @if (summary(row)) {
+                  <td class="table-cell">{{ row.employees }}</td><td class="table-cell whitespace-nowrap">{{ money(row.grossAmount, row.currency) }}</td>
+                  <td class="table-cell whitespace-nowrap">{{ money(row.deductionsAmount, row.currency) }}</td><td class="table-cell whitespace-nowrap">{{ money(row.netAmount, row.currency) }}</td>
+                  <td class="table-cell whitespace-nowrap">{{ money(row.employerCostsAmount, row.currency) }}</td>
+                } @else {
+                  <td class="table-cell">{{ row.employeeId }}</td><td class="table-cell">{{ row.code }}</td>
+                  <td class="table-cell whitespace-nowrap">{{ money(row.amount, row.currency) }}</td><td class="table-cell">{{ row.sourceReference }}</td>
+                }
+              </tr>
+            } @empty { <tr><td class="table-cell" [attr.colspan]="type() === 'summary' ? 6 : 5">There are no closed payroll entries for this report.</td></tr> }
+          </tbody>
+        </table>
+      </div>
+      @if (response.data.length > pageSize) {
+        <div class="mt-4 flex flex-wrap items-center justify-between gap-2 text-sm text-gray-600 dark:text-gray-400">
+          <span>Page {{ page() }} · {{ response.data.length }} entries</span>
+          <div class="flex gap-2">
+            <button type="button" class="action" [disabled]="page() === 1" (click)="changePage(-1)">Previous</button>
+            <button type="button" class="action" [disabled]="page() * pageSize >= response.data.length" (click)="changePage(1)">Next</button>
+          </div>
+        </div>
+      }
+    }
+  }
+</app-component-card>

@@ -1,0 +1,68 @@
+@let action = request.action;
+<app-component-card [title]="titles[action]" [desc]="request.description ?? ''">
+  <form #form="ngForm" (ngSubmit)="run(form)" class="space-y-4">
+    <fieldset class="grid gap-4 sm:grid-cols-2" [disabled]="busy()">
+      @if (action === 'approve' || action === 'reject' || action === 'renegotiate') {
+        <label class="field sm:col-span-2">{{ action === 'approve' ? 'Decision note (optional)' : 'Reason' }}
+          <textarea class="control" rows="3" name="reason" maxlength="2000" [(ngModel)]="reason" [required]="action !== 'approve'"></textarea>
+        </label>
+      }
+      @if (action === 'request-disbursement' || action === 'confirm-disbursement' || action === 'repayment' ||
+           action === 'reverse' || action === 'confirm-deduction' || action === 'decide-renegotiation') {
+        <label class="field">
+          @switch (action) {
+            @case ('request-disbursement') { Payment reference (optional) }
+            @case ('confirm-deduction') { Payroll run reference }
+            @case ('reverse') { Reversal reference }
+            @case ('decide-renegotiation') { Renegotiation ID }
+            @default { Confirmed payment reference }
+          }
+          <input class="control" name="reference" [(ngModel)]="reference" [required]="action !== 'request-disbursement'"
+            [maxlength]="action === 'confirm-deduction' ? 150 : action === 'decide-renegotiation' ? 36 : 200" />
+        </label>
+      }
+      @if (action === 'repayment' || action === 'confirm-deduction') {
+        <label class="field">Confirmed amount (Kz)
+          <input class="control" name="amount" maxlength="16" inputmode="decimal" [(ngModel)]="financialAmount" required />
+          @if (request.maximum) { <span class="text-xs text-gray-600 dark:text-gray-400">Maximum {{ money(request.maximum) }}</span> }
+        </label>
+      }
+      @if (action === 'repayment') {
+        <label class="field">Payment method
+          <select class="control" name="source" [(ngModel)]="source">
+            <option value="BANK_TRANSFER">Bank transfer</option>
+            <option value="CASH">Cash</option>
+            <option value="OTHER">Other</option>
+          </select>
+        </label>
+      }
+      @if (action === 'renegotiate') {
+        <label class="field">Number of installments
+          <input class="control" name="installments" type="number" min="1" max="120" step="1" [(ngModel)]="terms.installmentCount" required />
+        </label>
+        <label class="field">First due date<input class="control" type="date" name="due" [(ngModel)]="terms.firstDueDate" required /></label>
+        <label class="field">Frequency<select class="control" name="frequency" [(ngModel)]="terms.frequency">
+          @for (frequency of frequencies; track frequency) { <option [ngValue]="frequency">{{ label(frequency) }}</option> }
+        </select></label>
+      }
+      @if (action === 'decide-renegotiation') {
+        <label class="field">Decision
+          <select class="control" name="decision" [(ngModel)]="decision" required>
+            <option value="">Choose a decision</option>
+            <option value="APPROVED">Approve proposed plan</option>
+            <option value="REJECTED">Reject proposed plan</option>
+          </select>
+        </label>
+      }
+      <label class="flex items-start gap-2 text-sm text-gray-700 sm:col-span-2 dark:text-gray-300">
+        <input #check type="checkbox" class="mt-1" [checked]="confirmed()" (change)="confirmed.set(check.checked)" />
+        I have reviewed this operation and confirm it for the selected company.
+      </label>
+    </fieldset>
+    @if (error()) { <p class="feedback" role="alert">{{ error() }}</p> }
+    <div class="flex flex-wrap gap-2">
+      <button class="action action-primary" type="submit" [disabled]="busy() || form.invalid || !confirmed()">{{ busy() ? 'Saving…' : titles[action] }}</button>
+      <button class="action" type="button" [disabled]="busy()" (click)="cancelled.emit()">Cancel</button>
+    </div>
+  </form>
+</app-component-card>

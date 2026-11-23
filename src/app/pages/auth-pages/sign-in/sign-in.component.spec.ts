@@ -1,5 +1,6 @@
 import { TestBed } from '@angular/core/testing';
-import { provideRouter } from '@angular/router';
+import { ActivatedRoute, convertToParamMap, provideRouter } from '@angular/router';
+import { GoogleOAuthService } from '../../../modules/auth/infrastructure/google-oauth.service';
 import { of } from 'rxjs';
 import { AuthService, LoginChallenge } from '../../../core/auth/auth.service';
 import { SignInComponent } from './sign-in.component';
@@ -10,7 +11,9 @@ describe('Platform sign in', () => {
       otpRequired: true, challengeId: 42, destination: 'a***@example.com', expiresAt: '',
     };
     const resend = jasmine.createSpy('resend').and.returnValue(of(replacement));
-    TestBed.configureTestingModule({ providers: [provideRouter([]), {
+    TestBed.configureTestingModule({ providers: [provideRouter([]),
+    { provide: ActivatedRoute, useValue: { snapshot: { queryParamMap: convertToParamMap({}) } } },
+    { provide: GoogleOAuthService, useValue: { enabled: false } }, {
       provide: AuthService, useValue: { resend },
     }] });
     const component = TestBed.runInInjectionContext(() => new SignInComponent());

@@ -1,0 +1,146 @@
+<div class="space-y-5">
+  <app-component-card [title]="mode === 'overview' ? 'Leave overview' : mode === 'plans' ? 'Annual leave plan' : 'Leave calendar'">
+    <div class="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
+      @if (mode !== 'calendar') {
+        <label class="field">Year<input class="control" type="number" min="2000" max="2099" [ngModel]="year()" (change)="changeYear(+$any($event.target).value)" [disabled]="loading()" /></label>
+      }
+      @if (directory.departments().length) {
+        <label class="field">Department<select class="control" [ngModel]="department()" (ngModelChange)="department.set($event)">
+          <option value="">All departments</option>@for (entry of directory.departments(); track entry.id) { <option [value]="entry.id">{{ entry.name }}</option> }
+        </select></label>
+      }
+      @if (directory.employees().length) {
+        <label class="field">Employee<select class="control" [ngModel]="employee()" (ngModelChange)="employee.set($event)">
+          <option value="">All employees</option>@for (entry of directory.employees(); track entry.id) { <option [value]="entry.id">{{ directory.name(entry.id) }}</option> }
+        </select></label>
+      }
+      @if (has('leave.requests.read')) {
+        <label class="field">Status<select class="control" [ngModel]="status()" (ngModelChange)="status.set($event)">
+          <option value="">All statuses</option>@for (entry of statuses; track entry[0]) { <option [ngValue]="entry[0]">{{ entry[1] }}</option> }
+        </select></label>
+      }
+      @if (mode === 'calendar') {
+        <label class="field">View<select class="control" [ngModel]="view()" (ngModelChange)="changeView($event)" [disabled]="loading()">
+          <option value="month">Month</option><option value="week">Week</option><option value="list">Chronological list</option>
+        </select></label>
+        @if (directory.sites().length && has('leave.planning.read')) {
+          <label class="field">Work calendar for<select class="control" [ngModel]="site" (ngModelChange)="site = $event; load()" [disabled]="loading()">
+            <option value="">Company calendar</option>@for (entry of directory.sites(); track entry.id) { <option [value]="entry.id">{{ entry.name }}</option> }
+          </select></label>
+        }
+      }
+    </div>
+    @if (error()) { <p role="alert" class="feedback">{{ error() }}</p><button class="action" type="button" (click)="load()" [disabled]="loading()">Try again</button> }
+    @if (loading()) { <p role="status" class="text-sm text-gray-600 dark:text-gray-400">Loading leave data…</p> }
+    @if (mode === 'overview') {
+      <div class="grid grid-cols-2 gap-3 lg:grid-cols-3">
+        @for (metric of metrics(); track metric.label) {
+          <div class="rounded-lg border border-gray-200 p-4 dark:border-gray-800">
+            <p class="text-sm text-gray-600 dark:text-gray-400">{{ metric.label }}</p>
+            <p class="mt-2 text-xl font-semibold text-gray-900 dark:text-gray-100">{{ metric.value ?? '—' }}</p>
+          </div>
+        }
+      </div>
+      <div class="flex flex-wrap gap-2">
+        @if (has('leave.requests.read')) {
+          <a class="action action-primary" [routerLink]="['/leave', context.company.id, 'approvals']">Review pending requests</a>
+          <a class="action" [routerLink]="['/leave', context.company.id, 'plans']">Open annual plan</a>
+        }
+        @if (has('leave.accounts.read')) { <a class="action" [routerLink]="['/leave', context.company.id, 'balances']">Open balances</a> }
+      </div>
+    }
+    @if (mode === 'plans') {
+      <p class="text-sm text-gray-600 dark:text-gray-400">Annual leave drafts and requests form the plan. Completed requests are highlighted separately.</p>
+      @if (has('leave.requests.create') && has('employees.read')) {
+        <a class="action action-primary" [routerLink]="['/leave', context.company.id, 'requests', 'new']" [queryParams]="{plan: year(), employee: employee()}">Add planned period</a>
+      }
+      @if (!loading()) {
+        <div class="overflow-x-auto rounded-lg border border-gray-200 dark:border-gray-800">
+          <table class="w-full min-w-[48rem] text-start text-sm text-gray-700 dark:text-gray-300">
+            <thead class="table-heading"><tr><th scope="col">Employee</th>@for (month of months; track month) { <th scope="col" class="text-center">{{ month }}</th> }</tr></thead>
+            <tbody class="divide-y divide-gray-200 dark:divide-gray-800">
+              @for (row of planRows(); track row.employeeId) {
+                <tr>
+                  <th scope="row" class="table-cell text-start">{{ directory.name(row.employeeId) }}<span class="block text-xs font-normal">{{ directory.department(row.employeeId) }}</span></th>
+                  @for (cell of row.months; track $index) {
+                    <td class="table-cell text-center" [class]="cell.matches.length ? (cell.completed ? 'bg-success-50 dark:bg-success-500/10' : 'bg-brand-50 dark:bg-brand-500/10') : ''">
+                      @for (record of cell.matches; track record.id) {
+                        <a class="block text-xs text-brand-700 hover:underline dark:text-brand-300" [routerLink]="['/leave', context.company.id, 'requests', record.id]"
+                          [attr.title]="record.startDate + ' – ' + record.endDate">{{ labels[record.status] }}</a>
+                      }
+                    </td>
+                  }
+                </tr>
+              } @empty { <tr><td colspan="13" class="table-cell text-center">No matching annual leave periods.</td></tr> }
+            </tbody>
+          </table>
+        </div>
+        @if (directory.employees().length && requests() !== null && !status()) {
+          <details class="text-sm text-gray-700 dark:text-gray-300">
+            <summary class="cursor-pointer font-semibold">{{ unplanned().length }} active employees without a planned period</summary>
+            <ul class="mt-2 space-y-2">
+              @for (entry of unplanned(); track entry.id) {
+                <li class="flex flex-wrap items-center justify-between gap-2">{{ directory.name(entry.id) }}
+                  @if (has('leave.requests.create')) {
+                    <a class="text-brand-700 dark:text-brand-300" [routerLink]="['/leave', context.company.id, 'requests', 'new']" [queryParams]="{plan: year(), employee: entry.id}">Plan leave</a>
+                  }
+                </li>
+              }
+            </ul>
+          </details>
+        }
+      }
+    }
+    @if (mode === 'calendar') {
+      <div class="flex flex-wrap items-center justify-between gap-2">
+        <button type="button" class="action" (click)="move(-1)" [disabled]="loading()">Previous</button>
+        <p class="text-sm font-semibold text-gray-900 dark:text-gray-100" aria-live="polite">{{ range().startDate | date:'mediumDate':'UTC' }} – {{ range().endDate | date:'mediumDate':'UTC' }}</p>
+        <button type="button" class="action" (click)="move(1)" [disabled]="loading()">Next</button>
+      </div>
+      @if (site) { <p class="text-sm text-gray-600 dark:text-gray-400">Establishment changes the workday overlay. Leave requests remain company-wide.</p> }
+      @if (!loading() && view() !== 'list') {
+        <div class="overflow-x-auto">
+          <div class="grid min-w-[34rem] grid-cols-7 gap-1">
+            @for (label of dayLabels; track label) { <p class="p-2 text-sm font-semibold text-gray-700 dark:text-gray-300">{{ label }}</p> }
+            @for (cell of calendarDays(); track $index) {
+              @if (cell) {
+                <button class="min-h-16 rounded-lg border border-gray-200 p-2 text-start text-sm text-gray-800 hover:border-brand-300 dark:border-gray-800 dark:text-gray-200"
+                  [class]="cell.nonWorking ? 'bg-gray-100 dark:bg-gray-800' : ''" type="button" (click)="selectDay(cell.day)"
+                  [attr.aria-pressed]="selectedDay() === cell.day" [attr.aria-label]="cell.day + (cell.nonWorking ? ' non-working day' : '')">
+                  <strong class="block">{{ cell.day | date:'d':'UTC' }}</strong>
+                  @if (cell.count) { <span>{{ cell.count }} scheduled</span> } @else if (cell.nonWorking) { <span class="text-xs">Rest day</span> }
+                </button>
+              } @else { <div></div> }
+            }
+          </div>
+        </div>
+      }
+      @if (!loading() && view() === 'list') {
+        <ul class="divide-y divide-gray-200 dark:divide-gray-800">
+          @for (row of calendarRows(); track row.period.id) {
+            <li class="flex flex-wrap justify-between gap-2 py-2 text-sm text-gray-700 dark:text-gray-300">
+              <a class="text-brand-700 dark:text-brand-300" [routerLink]="['/leave', context.company.id, 'requests', row.request.id]">{{ directory.name(row.request.employeeId) }} · {{ directory.department(row.request.employeeId) }}</a>
+              <span>{{ row.period.startDate | date:'mediumDate':'UTC' }} – {{ row.period.endDate | date:'mediumDate':'UTC' }} · {{ labels[row.request.status] }}</span>
+            </li>
+          } @empty { <li class="text-sm text-gray-600 dark:text-gray-400">{{ has('leave.requests.read') ? 'No matching periods.' : 'Chronological requests require leave request access. Use the monthly or weekly view to inspect a date.' }}</li> }
+        </ul>
+      }
+    }
+  </app-component-card>
+  @if (mode === 'calendar' && selectedDay()) {
+    <app-component-card [title]="'Scheduled leave · ' + selectedDay()">
+      @if (absenceLoading()) { <p role="status" class="text-sm text-gray-600 dark:text-gray-400">Loading scheduled leave…</p> }
+      @if (absenceError()) { <p role="alert" class="feedback">{{ absenceError() }}</p> }
+      <ul class="divide-y divide-gray-200 dark:divide-gray-800">
+        @for (row of dayRows(); track row.requestId + ':' + row.startDate) {
+          <li class="py-2 text-sm text-gray-700 dark:text-gray-300">
+            @if (has('leave.requests.read')) {
+              <a class="text-brand-700 dark:text-brand-300" [routerLink]="['/leave', context.company.id, 'requests', row.requestId]">{{ directory.name(row.employeeId) }}</a>
+            } @else { {{ directory.name(row.employeeId) }} }
+            · {{ directory.department(row.employeeId) }} · {{ labels[row.status] }}
+          </li>
+        } @empty { @if (!absenceLoading() && !absenceError()) { <li class="text-sm text-gray-600 dark:text-gray-400">No matching scheduled leave.</li> } }
+      </ul>
+    </app-component-card>
+  }
+</div>

@@ -1,0 +1,259 @@
+<div class="space-y-5">
+  <app-page-breadcrumb [pageTitle]="section.title" homeLink="/payments" />
+  <div class="flex flex-wrap items-start justify-between gap-3">
+    <p class="max-w-3xl text-sm text-gray-600 dark:text-gray-400">{{ section.description }}</p>
+    @if (view !== 'settings' && (view !== 'audit' || applied().purpose)) {
+      <button class="action" type="button" (click)="refresh()" [disabled]="result().loading">Refresh</button>
+    }
+  </div>
+
+  @if (view !== 'providers' && view !== 'settings') {
+    <app-component-card [title]="view === 'audit' ? 'Audit access and filters' : 'Filters'">
+      <form class="space-y-4" (ngSubmit)="search()" novalidate>
+        <div class="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+          <label class="field-label">Company ID
+            <input class="field" name="companyId" type="number" min="1" max="2147483647" [(ngModel)]="companyId" placeholder="All companies">
+          </label>
+          <label class="field-label">From
+            <input class="field" name="from" type="date" [(ngModel)]="from">
+          </label>
+          <label class="field-label">To
+            <input class="field" name="to" type="date" [(ngModel)]="to">
+          </label>
+          @if (view === 'orders' || view === 'integrations' || view === 'reports') {
+            <label class="field-label">Provider ID
+              <input class="field" name="providerId" maxlength="100" [(ngModel)]="providerId" placeholder="All providers"
+                [disabled]="view === 'reports' && breakdown !== 'provider'">
+            </label>
+          }
+          @if (states.length) {
+            <label class="field-label">Status
+              <select class="field" name="status" [(ngModel)]="status">
+                <option value="">All statuses</option>
+                @for (state of states; track state) {
+                  <option [value]="state">{{ label(state) }}</option>
+                }
+              </select>
+            </label>
+          }
+          @if (view === 'reports') {
+            <label class="field-label">Group by
+              <select class="field" name="breakdown" [(ngModel)]="breakdown">
+                <option value="status">Status</option>
+                <option value="company">Company</option>
+                <option value="provider">Provider</option>
+              </select>
+            </label>
+          }
+          @if (view === 'audit') {
+            <label class="field-label sm:col-span-2 xl:col-span-4">Audit purpose
+              <input class="field" name="purpose" [(ngModel)]="purpose" required minlength="5" maxlength="500"
+                placeholder="Describe why you need to see these records">
+            </label>
+          }
+        </div>
+        @if (filterError()) { <p class="error" role="alert">{{ filterError() }}</p> }
+        <div class="flex flex-wrap items-center gap-3">
+          <button class="action primary" type="submit">{{ view === 'audit' ? 'View financial audit' : 'Apply filters' }}</button>
+          <button class="action" type="button" (click)="clear()">Clear</button>
+          <span class="text-xs text-gray-500 dark:text-gray-400">Dates use Africa/Luanda time.</span>
+        </div>
+      </form>
+    </app-component-card>
+  }
+
+  @if (result().loading) {
+    <p class="panel text-sm text-gray-600 dark:text-gray-400" role="status">Loading payment data…</p>
+  } @else if (result().error; as error) {
+    <p class="panel error" role="alert">{{ error }}</p>
+  }
+
+  @if (view === 'overview' && overview(); as data) {
+      <div class="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+        <article class="panel">
+          <h2 class="metric-label">Registered volume</h2>
+          @for (total of data.totals; track total.currency) {
+            <p class="metric-value break-words">{{ money(total.amount, total.currency) }}</p>
+          } @empty { <p class="metric-value">—</p> }
+          <p class="metric-caption">Excludes cancelled and rejected instructions.</p>
+        </article>
+        <article class="panel">
+          <h2 class="metric-label">Confirmed</h2><p class="metric-value">{{ data.confirmed }}</p>
+          <p class="metric-caption">Settled or reconciled instructions</p>
+        </article>
+        <article class="panel">
+          <h2 class="metric-label">Pending</h2><p class="metric-value">{{ data.pending }}</p>
+          <a class="text-link" routerLink="/payments/pending">Review pending orders</a>
+        </article>
+        <article class="panel">
+          <h2 class="metric-label">Failed or rejected</h2><p class="metric-value">{{ data.failed }}</p>
+          <a class="text-link" routerLink="/payments/failed">Review failed orders</a>
+        </article>
+      </div>
+      <app-component-card title="Operational monitoring">
+        <dl class="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+          <div class="inset"><dt class="metric-label">Companies with instructions</dt><dd class="metric-value">{{ data.companies }}</dd></div>
+          <div class="inset"><dt class="metric-label">Batches in progress</dt><dd class="metric-value">{{ data.batches }}</dd>
+            <a class="text-link" routerLink="/payments/batches">View batches</a></div>
+          <div class="inset"><dt class="metric-label">Open reconciliations</dt><dd class="metric-value">{{ data.reconciliations }}</dd>
+            <a class="text-link" routerLink="/payments/reconciliation">Review reconciliations</a></div>
+          <div class="inset"><dt class="metric-label">Bank returns</dt><dd class="metric-value">{{ data.returns }}</dd>
+            <a class="text-link" routerLink="/payments/returns">View returns</a></div>
+        </dl>
+      </app-component-card>
+  }
+
+  @if (view === 'providers' && providers(); as adapters) {
+    <app-component-card title="Installed providers">
+      <div class="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
+        @for (provider of adapters; track provider.id) {
+          <article class="inset space-y-3">
+            <div><h2 class="font-semibold text-gray-900 dark:text-white">{{ provider.name }}</h2>
+              <p class="metric-caption break-words">{{ label(provider.type) }} · {{ provider.id }}</p></div>
+            <ul class="flex flex-wrap gap-2">
+              @for (capability of provider.capabilities; track $index) {
+                <li class="badge bg-brand-50 text-brand-700 dark:bg-brand-500/15 dark:text-brand-300">{{ label(capability) }}</li>
+              } @empty { <li class="metric-caption">No capabilities declared.</li> }
+            </ul>
+          </article>
+        } @empty { <p class="metric-caption col-span-full py-3">No payment adapters are installed in this environment.</p> }
+      </div>
+    </app-component-card>
+  }
+
+  @if (view === 'settings') {
+    <app-component-card title="Platform payment permissions">
+      <dl class="grid gap-3 sm:grid-cols-2">
+        @for (entry of permissions; track entry[1]) {
+          <div class="inset flex items-center justify-between gap-4">
+            <dt class="text-sm font-medium text-gray-800 dark:text-gray-100">{{ label(entry[0]) }}</dt>
+            <dd class="badge" [class]="statusTone(granted().includes(entry[1]) ? 'ACTIVE' : 'INACTIVE')">
+              {{ granted().includes(entry[1]) ? 'Granted' : 'Unavailable' }}
+            </dd>
+          </div>
+        }
+      </dl>
+      <a class="text-link mt-4" routerLink="/account/security" fragment="permissions">View account permissions</a>
+    </app-component-card>
+  }
+
+  @if (view === 'reports' && report(); as data) {
+    <app-component-card title="Payment volume">
+      <p class="mb-3 text-sm text-gray-500 dark:text-gray-400">{{ applied().breakdown === 'provider' ? 'Payment orders grouped by provider' : 'Payment instructions' }}. Totals are shown per currency.</p>
+      <div class="overflow-x-auto">
+        <table class="payment-table" aria-label="Payment volume">
+          <thead><tr>
+            <th scope="col">{{ label(applied().breakdown) }}</th><th scope="col">Currency</th>
+            <th scope="col">Operations</th><th scope="col">Amount</th>
+          </tr></thead>
+          <tbody>
+            @for (row of data.items; track $index) {
+              <tr><td>{{ row.companyName || (row.companyId ? 'Company #' + row.companyId : row.providerId || label(row.status || '—')) }}</td>
+                <td>{{ row.currency }}</td><td>{{ row.count }}</td><td>{{ money(row.amount, row.currency) }}</td></tr>
+            } @empty { <tr><td colspan="4">No payment volume matches these filters.</td></tr> }
+          </tbody>
+        </table>
+      </div>
+      <ng-container [ngTemplateOutlet]="pagination" [ngTemplateOutletContext]="{ page: data.page, next: data.hasNext }" />
+    </app-component-card>
+  }
+
+  @if (directory) {
+    @if (detail(); as detailState) {
+      <section tabindex="-1" id="payment-record" class="space-y-3" aria-label="Payment record detail">
+        <app-component-card title="Record details">
+          <div class="mb-3 flex justify-end"><button class="action" type="button" (click)="closeDetail()">Close details</button></div>
+          @if (detailState.loading) {
+            <p role="status" class="metric-caption">Loading record…</p>
+          } @else if (detailState.error; as error) {
+            <p class="error" role="alert">{{ error }}</p>
+          } @else if (detailState.data; as data) {
+            <dl class="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+              @for (column of detailColumns; track column.key) {
+                <div class="inset">
+                  <dt class="metric-label">{{ column.label }}</dt>
+                  <dd class="mt-1 break-words text-sm text-gray-900 dark:text-white">
+                    @if (data.record[column.key] != null && linkFor(column.key); as href) {
+                      <a class="text-link [overflow-wrap:anywhere]" [routerLink]="href" [queryParams]="{ record: data.record[column.key] }">{{ display(data.record, column.key) }}</a>
+                    } @else { {{ display(data.record, column.key) }} }
+                  </dd>
+                </div>
+              }
+            </dl>
+            @if (data.progress; as progress) {
+              <h3 class="subheading">Transfer progress</h3>
+              <dl class="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+                @for (item of progress; track item.status) {
+                  <div class="inset"><dt class="metric-label">{{ label(item.status) }}</dt><dd class="metric-value">{{ item.count }}</dd></div>
+                } @empty { <p class="metric-caption">No transfers in this batch.</p> }
+              </dl>
+            }
+            @if (data.history; as events) {
+              <h3 class="subheading">{{ directory === 'instructions' ? 'Instruction history' : 'Submission attempts' }}</h3>
+              @if (directory === 'integrations') {
+                <p class="mb-2 metric-caption">Activity for the latest 50 orders of this company and provider.</p>
+              }
+              @if ((data.historyTotal ?? 0) > events.length) {
+                <p class="mb-2 metric-caption">Showing the latest {{ events.length }} of {{ data.historyTotal }} entries.</p>
+              }
+              <div class="overflow-x-auto">
+                <table class="payment-table" aria-label="Record history">
+                  <thead><tr>@for (column of historyColumns; track column.key) { <th scope="col">{{ column.label }}</th> }</tr></thead>
+                  <tbody>
+                    @for (event of events; track event.id) {
+                      <tr>@for (column of historyColumns; track column.key) { <td>{{ display(event, column.key) }}</td> }</tr>
+                    } @empty { <tr><td [attr.colspan]="historyColumns.length">No events recorded.</td></tr> }
+                  </tbody>
+                </table>
+              </div>
+            }
+          }
+        </app-component-card>
+      </section>
+    }
+    @if (list(); as data) {
+      <app-component-card [title]="section.title">
+        <div class="overflow-x-auto">
+          <table class="payment-table" [attr.aria-label]="section.title">
+            <thead>
+              <tr>
+                @for (column of columns; track column.key) { <th scope="col">{{ column.label }}</th> }
+                <th scope="col"><span class="sr-only">Open</span></th>
+              </tr>
+            </thead>
+            <tbody>
+              @for (row of data.items; track row.id) {
+                <tr>
+                  @for (column of columns; track column.key) {
+                    <td>
+                      @if (column.key === 'status' && row.status) {
+                        <span class="badge" [class]="statusTone(row.status)">{{ display(row, column.key) }}</span>
+                      } @else { {{ display(row, column.key) }} }
+                    </td>
+                  }
+                  <td class="text-end"><button type="button" class="text-link" (click)="openDetail(row)" [attr.aria-label]="'View record ' + row.id">View</button></td>
+                </tr>
+              } @empty { <tr><td [attr.colspan]="columns.length + 1">No records match these filters.</td></tr> }
+            </tbody>
+          </table>
+        </div>
+        <div class="mt-4 flex flex-wrap items-center justify-between gap-3">
+          <p class="metric-caption">{{ data.total }} {{ data.total === 1 ? 'record' : 'records' }}</p>
+          <ng-container [ngTemplateOutlet]="pagination" [ngTemplateOutletContext]="{ page: data.page, next: data.page * data.limit < data.total }" />
+        </div>
+      </app-component-card>
+    } @else if (view === 'audit' && !applied().purpose) {
+      <p class="panel text-sm text-gray-600 dark:text-gray-400">Enter an audit purpose to load financial events.</p>
+    }
+  }
+</div>
+
+<ng-template #pagination let-page="page" let-next="next">
+  @if (page > 1 || next) {
+    <nav aria-label="Payment results pages" class="mt-2 flex flex-wrap items-center gap-2 text-sm text-gray-700 dark:text-gray-300">
+      <button type="button" class="action" (click)="changePage(page - 1)" [disabled]="page <= 1">Previous</button>
+      <span aria-live="polite">Page {{ page }}</span>
+      <button type="button" class="action" (click)="changePage(page + 1)" [disabled]="!next">Next</button>
+    </nav>
+  }
+</ng-template>
