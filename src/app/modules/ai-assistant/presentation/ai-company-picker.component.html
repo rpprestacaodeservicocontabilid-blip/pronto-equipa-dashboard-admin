@@ -1,0 +1,35 @@
+<div class="w-full sm:max-w-md">
+  <p class="ai-label mb-1">Company scope</p>
+  <button type="button" class="ai-secondary w-full justify-between" [attr.aria-expanded]="open()" (click)="toggle()">
+    {{ selection()?.id === companyId ? selection()?.name : companyId ? 'Company #' + companyId : optional ? 'Platform' : 'Select a company' }}
+    <svg aria-hidden="true" class="size-4 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m6 9 6 6 6-6"/></svg>
+  </button>
+  @if (open()) {
+    <div class="mt-2 space-y-3 rounded-xl border border-gray-200 bg-white p-3 dark:border-gray-700 dark:bg-gray-900">
+      <form class="flex flex-wrap items-end gap-2" (ngSubmit)="load(1, true)">
+        <label class="ai-label min-w-40 flex-1">Company name or ID
+          <input class="ai-field" maxlength="100" name="company-search" [(ngModel)]="search">
+        </label>
+        <button class="ai-secondary" type="submit">Search</button>
+      </form>
+      @if (optional) { <button class="ai-secondary w-full justify-start" type="button" (click)="choose(null)">Platform</button> }
+      @if (error()) { <p class="ai-error" role="alert">{{ error() }}</p> }
+      @else if (busy()) { <p class="ai-muted" role="status">Loading companies…</p> }
+      @else if (result(); as items) {
+        <ul class="max-h-48 space-y-1 overflow-auto">
+          @for (company of items.items; track company.id) {
+            <li><button type="button" (click)="choose(company)" class="ai-company-option">
+              {{ company.name }} <span class="ai-muted">#{{ company.id }}</span>
+            </button></li>
+          } @empty { <li class="ai-muted px-2 py-3">No companies found.</li> }
+        </ul>
+        @if (items.total > items.limit) {
+          <div class="flex items-center justify-between gap-2">
+            <button class="ai-secondary" type="button" [disabled]="items.page === 1" (click)="load(items.page - 1)">Previous</button>
+            <button class="ai-secondary" type="button" [disabled]="items.page * items.limit >= items.total" (click)="load(items.page + 1)">Next</button>
+          </div>
+        }
+      }
+    </div>
+  }
+</div>

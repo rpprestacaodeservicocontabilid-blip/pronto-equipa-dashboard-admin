@@ -1,0 +1,142 @@
+<app-page-breadcrumb [pageTitle]="section.title" />
+@if (!section.global) {
+  <app-support-company-picker class="mb-5 block" [company]="company()" [disabled]="writing()" (chosen)="choose($event)" />
+}
+
+@if (section.global || company()) {
+  <div class="mb-4 flex flex-wrap items-end gap-2">
+    @if (section.endpoint === 'knowledge/articles') {
+      <form class="flex flex-wrap items-end gap-2" (ngSubmit)="apply()">
+        <label class="sup-label">Search articles<input class="sup-input" name="query" maxlength="200" [(ngModel)]="search"></label>
+        <button class="sup-secondary" type="submit" [disabled]="busy()">Search</button>
+      </form>
+    }
+    @if (newAction && can(newAction.grant)) {
+      <button class="sup-button" type="button" [disabled]="writing()" (click)="open(newAction)">{{ newAction.title }}</button>
+    }
+    @if (section.path === 'reports' && can('reports:export')) {
+      <button class="sup-secondary" type="button" [disabled]="busy() || writing()" (click)="exportReport()">Export report</button>
+    }
+    <button class="sup-secondary ms-auto" type="button" [disabled]="busy() || writing()" (click)="load()">Refresh</button>
+  </div>
+}
+
+@if (section.endpoint === 'tickets' && company()) {
+  <app-component-card title="Ticket filters" class="mb-5">
+    <form class="flex flex-wrap items-end gap-3" (ngSubmit)="apply()">
+      @if (!section.preset?.status) {
+        <label class="sup-label">Status<select class="sup-input" name="status" [(ngModel)]="filters.status"><option value="">All statuses</option>
+          @for (state of states; track state) { <option [value]="state">{{ label(state) }}</option> }
+        </select></label>
+      }
+      <label class="sup-label">Priority<select class="sup-input" name="priority" [(ngModel)]="filters.priority"><option value="">All priorities</option>
+        @for (priority of priorities; track priority) { <option [value]="priority">{{ label(priority) }}</option> }
+      </select></label>
+      @if (!section.preset?.type) {
+        <label class="sup-label">Type<select class="sup-input" name="type" [(ngModel)]="filters.type"><option value="">All types</option>
+          @for (type of types; track type) { <option [value]="type">{{ label(type) }}</option> }
+        </select></label>
+      }
+      <button class="sup-button" type="submit" [disabled]="busy()">Apply filters</button>
+    </form>
+  </app-component-card>
+}
+
+@if (notice()) { <p class="sup-notice mb-4" role="status">{{ notice() }}</p> }
+@if (error()) { <p class="sup-error mb-4" role="alert">{{ error() }}</p> }
+@if (actionError()) { <p class="sup-error mb-4" role="alert">{{ actionError() }}</p> }
+@for (command of [action()]; track command) {
+  @if (command) { <app-support-action class="mb-5 block" [action]="command" [busy]="writing()" (submitted)="submit($event)" (closed)="action.set(null)" /> }
+}
+
+@if (selected(); as row) {
+  <app-component-card [title]="text(row['title'] ?? row['name'] ?? row['code'] ?? row.id)" class="mb-5">
+    <div class="mb-3 flex flex-wrap items-center gap-2">
+      <span class="sup-badge" [attr.data-state]="row.status">{{ label(row.status) }}</span>
+      <span class="sup-muted">{{ row.id }}</span>
+      <button type="button" class="sup-secondary ms-auto" (click)="selected.set(null)">Close details</button>
+    </div>
+    @for (key of details; track key) {
+      @if (row[key]) {
+        <div class="mb-4 text-sm text-gray-800 dark:text-gray-100"><p class="sup-label mb-1">{{ label(key) }}</p><p class="whitespace-pre-wrap break-words">{{ text(row[key]) }}</p></div>
+      }
+    }
+    <div class="flex flex-wrap gap-2">
+      @for (operation of actions(); track operation.title) { <button class="sup-secondary" type="button" [disabled]="writing()" (click)="open(operation)">{{ operation.title }}</button> }
+      @if (row['ticketId'] && company() && can('tickets:read-team')) {
+        <a class="sup-secondary" [routerLink]="['/support/tickets', row['ticketId']]" [queryParams]="{ companyId: company()?.id }">Open ticket</a>
+      }
+    </div>
+  </app-component-card>
+}
+
+@if (busy()) {
+  <p class="sup-muted py-5" role="status">Loading support data…</p>
+} @else if (dashboard(); as data) {
+  @if (data.sampled) { <p class="sup-muted mb-4">Metrics cover the most recent 2,000 shared tickets.</p> }
+  <div class="mb-5 grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+    @for (metric of metrics(data); track metric[0]) {
+      <article class="rounded-2xl border border-gray-200 bg-white p-5 dark:border-gray-800 dark:bg-gray-900">
+        <p class="sup-muted">{{ metric[0] }}</p><p class="mt-2 text-title-sm font-semibold text-gray-900 dark:text-white">{{ (metric[1] | number) ?? '—' }}</p>
+      </article>
+    }
+  </div>
+  <div class="grid gap-5 lg:grid-cols-2">
+    <app-component-card title="Tickets by status">
+      <dl class="divide-y divide-gray-100 text-sm text-gray-800 dark:divide-gray-800 dark:text-gray-200">
+        @for (item of entries(data.byStatus); track item[0]) { <div class="flex justify-between py-2"><dt>{{ label(item[0]) }}</dt><dd>{{ item[1] | number }}</dd></div> }
+        @empty { <div class="sup-muted">No shared tickets for this company.</div> }
+      </dl>
+    </app-component-card>
+    <app-component-card title="Priority and satisfaction">
+      <dl class="divide-y divide-gray-100 text-sm text-gray-800 dark:divide-gray-800 dark:text-gray-200">
+        @for (item of entries(data.byPriority); track item[0]) { <div class="flex justify-between py-2"><dt>{{ label(item[0]) }}</dt><dd>{{ item[1] | number }}</dd></div> }
+        <div class="flex justify-between py-2"><dt>Average rating</dt><dd>{{ data.satisfaction.responses ? (data.satisfaction.average | number:'1.0-2') + ' / 5' : '—' }}</dd></div>
+      </dl>
+    </app-component-card>
+  </div>
+} @else if (page(); as data) {
+  <app-component-card title="Tickets">
+    <div class="overflow-x-auto">
+      <table class="sup-table"><thead><tr><th scope="col">Ticket</th><th scope="col">Status</th><th scope="col">Priority</th><th scope="col">Agent</th><th scope="col">Created</th></tr></thead>
+        <tbody>
+          @for (row of data.data; track row.id) {
+            <tr><td>
+              @if (can('tickets:read-team')) {
+                <a class="sup-link" [routerLink]="['/support/tickets', row.id]" [queryParams]="{ companyId: company()?.id }">{{ row.ticketNumber }} · {{ row.subject }}</a>
+              } @else { {{ row.ticketNumber }} · {{ row.subject }} }
+              <p class="sup-muted mt-1">{{ label(row.type) }}</p>
+            </td><td><span class="sup-badge" [attr.data-state]="row.status">{{ label(row.status) }}</span></td>
+              <td><span class="sup-badge" [attr.data-state]="row.priority">{{ label(row.priority) }}</span></td>
+              <td>{{ row.agentId ?? 'Unassigned' }}</td><td class="whitespace-nowrap">{{ row.createdAt | date:'medium':'+0100' }}</td></tr>
+          } @empty { <tr><td colspan="5">No shared tickets match this view.</td></tr> }
+        </tbody>
+      </table>
+    </div>
+    @if (data.total > data.limit) {
+      <div class="mt-4 flex flex-wrap items-center justify-between gap-2">
+        <p class="sup-muted">Page {{ data.page }} · {{ data.total | number }} tickets</p>
+        <div class="flex gap-2">
+          <button class="sup-secondary" type="button" [disabled]="data.page === 1" (click)="load(data.page - 1)">Previous</button>
+          <button class="sup-secondary" type="button" [disabled]="data.page * data.limit >= data.total" (click)="load(data.page + 1)">Next</button>
+        </div>
+      </div>
+    }
+  </app-component-card>
+} @else if (rows(); as list) {
+  <app-component-card [title]="section.title">
+    <div class="overflow-x-auto"><table class="sup-table">
+      <thead><tr><th scope="col">Status</th>
+        @for (column of section.columns; track column.key) { <th scope="col">{{ column.label }}</th> }
+        <th scope="col">Updated</th><th scope="col">Details</th></tr></thead>
+      <tbody>
+        @for (row of list; track row.id) {
+          <tr><td><span class="sup-badge" [attr.data-state]="row.status">{{ label(row.status) }}</span></td>
+            @for (column of section.columns; track column.key) { <td class="max-w-sm break-words">{{ text(row[column.key]) }}</td> }
+            <td class="whitespace-nowrap">{{ row.updatedAt | date:'medium':'+0100' }}</td>
+            <td><button type="button" class="sup-secondary" [disabled]="writing()" (click)="selected.set(row); action.set(null)">View</button></td></tr>
+        } @empty { <tr><td [attr.colspan]="(section.columns?.length ?? 0) + 3">No records found.</td></tr> }
+      </tbody>
+    </table></div>
+  </app-component-card>
+}

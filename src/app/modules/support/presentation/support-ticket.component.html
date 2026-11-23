@@ -1,0 +1,111 @@
+<app-page-breadcrumb [pageTitle]="ticket()?.ticketNumber ?? 'Ticket details'" />
+<app-support-company-picker class="mb-5 block" [company]="company()" [disabled]="writing() || secondaryBusy()" (chosen)="choose($event)" />
+<a class="sup-link mb-4 inline-block" routerLink="/support/tickets" [queryParams]="{ companyId: company()?.id }">Back to tickets</a>
+@if (error()) { <p class="sup-error mb-4" role="alert">{{ error() }}</p> }
+@if (actionError()) { <p class="sup-error mb-4" role="alert">{{ actionError() }}</p> }
+@if (notice()) { <p class="sup-notice mb-4" role="status">{{ notice() }}</p> }
+@if (busy()) { <p class="sup-muted mb-4" role="status">Loading ticket…</p> }
+
+@if (ticket(); as row) {
+  <app-component-card [title]="row.subject" class="mb-5">
+    <div class="mb-4 flex flex-wrap items-center gap-2">
+      <span class="sup-badge" [attr.data-state]="row.status">{{ label(row.status) }}</span>
+      <span class="sup-badge" [attr.data-state]="row.priority">{{ label(row.priority) }}</span>
+      <span class="sup-muted">{{ label(row.type) }}</span>
+      <time class="sup-muted ms-auto">{{ row.createdAt | date:'medium':'+0100' }}</time>
+    </div>
+    <p class="mb-4 text-sm whitespace-pre-wrap break-words text-gray-800 dark:text-gray-200">{{ row.description }}</p>
+    <dl class="mb-5 grid gap-3 text-sm text-gray-800 dark:text-gray-200 sm:grid-cols-2 xl:grid-cols-4">
+      <div><dt class="sup-muted">Category</dt><dd>{{ row.categoryCode }}</dd></div>
+      <div><dt class="sup-muted">Requester</dt><dd>#{{ row.requesterId }}</dd></div>
+      <div><dt class="sup-muted">Assigned agent</dt><dd>{{ row.agentId ?? 'Unassigned' }}</dd></div>
+      <div><dt class="sup-muted">Affected module</dt><dd>{{ row.affectedModule ?? '—' }}</dd></div>
+    </dl>
+    @if (row.resolution) {
+      <div class="mb-4 text-sm text-gray-800 dark:text-gray-200"><p class="sup-label mb-1">Resolution</p><p class="whitespace-pre-wrap">{{ row.resolution }}</p></div>
+    }
+    <div class="flex flex-wrap gap-2">
+      @if (editable(row.status)) {
+        @if (can('tickets:update')) {
+          <button class="sup-secondary" type="button" [disabled]="writing()" (click)="edit(row, 'details')">Edit ticket</button>
+          <button class="sup-secondary" type="button" [disabled]="writing()" (click)="edit(row, 'priority')">Change priority</button>
+        }
+        @if (row.status !== 'RESOLVED') {
+          @if (can('tickets:assign')) {
+            @if (can('agents:read') || can('teams:read')) { <button class="sup-secondary" type="button" [disabled]="writing() || secondaryBusy()" (click)="selectOperation('assign')">Assign manually</button> }
+            <button class="sup-secondary" type="button" [disabled]="writing()" (click)="edit(row, 'automatic')">Assign automatically</button>
+          }
+          @if (can('tickets:transfer') && can('teams:read')) { <button class="sup-secondary" type="button" [disabled]="writing() || secondaryBusy()" (click)="selectOperation('transfer')">Transfer</button> }
+          @if (can('escalations:create')) { <button class="sup-secondary" type="button" [disabled]="writing()" (click)="edit(row, 'escalate')">Escalate</button> }
+        }
+        @if (can('incidents:manage') && can('incidents:read')) { <button class="sup-secondary" type="button" [disabled]="writing() || secondaryBusy()" (click)="selectOperation('incidents')">Link incident</button> }
+      }
+      @for (action of transitions(); track action.path) {
+        <button class="sup-secondary" type="button" [disabled]="writing()" (click)="open(action)">{{ action.title }}</button>
+      }
+    </div>
+  </app-component-card>
+
+  @for (action of [command()]; track action) {
+    @if (action) {
+      <app-support-action class="mb-5 block" [action]="action" [templates]="action.title === 'Send public reply' ? macros() : []"
+        [busy]="writing()" (submitted)="submit($event)" (closed)="command.set(null)" />
+    }
+  }
+
+  @if (row.sla; as sla) {
+    @if (can('sla:read')) {
+      <app-component-card title="SLA deadlines (Luanda)" class="mb-5">
+        <dl class="grid gap-3 text-sm text-gray-800 dark:text-gray-200 sm:grid-cols-3">
+          <div><dt class="sup-muted">First response</dt><dd>{{ (sla.firstResponseDeadline | date:'medium':'+0100') || '—' }}</dd>
+            @if (sla.firstResponseBreachedAt) { <dd class="sup-badge" data-state="HIGH">Breached</dd> }
+          </div>
+          <div><dt class="sup-muted">Resolution</dt><dd>{{ (sla.resolutionDeadline | date:'medium':'+0100') || '—' }}</dd>
+            @if (sla.resolutionBreachedAt) { <dd class="sup-badge" data-state="HIGH">Breached</dd> }
+          </div>
+          <div><dt class="sup-muted">Policy</dt><dd>{{ sla.policyCode ?? '—' }} @if (sla.policyVersion) { · v{{ sla.policyVersion }} }</dd></div>
+        </dl>
+      </app-component-card>
+    }
+  }
+
+  <app-component-card title="Public conversation" class="mb-5">
+    <ul class="mb-4 space-y-3">
+      @for (message of row.messages ?? []; track message.id) {
+        <li class="rounded-xl bg-gray-50 p-4 text-sm text-gray-800 dark:bg-gray-900 dark:text-gray-200">
+          <p class="sup-muted mb-2">#{{ message.authorId }} · {{ message.createdAt | date:'medium':'+0100' }}</p>
+          <p class="whitespace-pre-wrap break-words">{{ message.body }}</p>
+        </li>
+      } @empty { <li class="sup-muted">No public replies yet.</li> }
+    </ul>
+    @if (editable(row.status) && can('messages:create')) { <button class="sup-button" type="button" [disabled]="writing()" (click)="reply(false)">Reply</button> }
+  </app-component-card>
+  @if (can('internal-notes:read') || can('internal-notes:create')) {
+    <app-component-card title="Internal notes" class="mb-5">
+      @if (notes(); as items) {
+        <ul class="mb-4 space-y-3">
+          @for (note of items; track note.id) {
+            <li class="rounded-xl bg-gray-50 p-4 text-sm text-gray-800 dark:bg-gray-900 dark:text-gray-200">
+              <p class="sup-muted mb-2">#{{ note.authorId }} · {{ note.createdAt | date:'medium':'+0100' }}</p>
+              <p class="whitespace-pre-wrap break-words">{{ note.body }}</p>
+            </li>
+          } @empty { <li class="sup-muted">No internal notes.</li> }
+        </ul>
+      }
+      <div class="flex flex-wrap gap-2">
+        @if (can('internal-notes:read')) { <button class="sup-secondary" type="button" [disabled]="secondaryBusy() || writing()" (click)="supplement('notes')">{{ notes() ? 'Refresh notes' : 'Load notes' }}</button> }
+        @if (editable(row.status) && can('internal-notes:create')) { <button class="sup-secondary" type="button" [disabled]="writing()" (click)="reply(true)">Add internal note</button> }
+      </div>
+    </app-component-card>
+  }
+  <app-component-card title="Ticket history">
+    <button class="sup-secondary mb-3" type="button" [disabled]="secondaryBusy() || writing()" (click)="supplement('history')">{{ history() ? 'Refresh history' : 'Load history' }}</button>
+    @if (history(); as items) {
+      <ul class="space-y-2 text-sm text-gray-800 dark:text-gray-200">
+        @for (entry of items; track entry.id) {
+          <li>{{ entry['action'] }} · #{{ entry['actorId'] }} <span class="sup-muted">{{ entry.createdAt | date:'medium':'+0100' }}</span></li>
+        } @empty { <li class="sup-muted">No history available.</li> }
+      </ul>
+    }
+  </app-component-card>
+}

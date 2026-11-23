@@ -36,6 +36,18 @@ const messages = {
     title: 'Platform reports access required',
     description: 'Managing platform reports requires the SUPER_ADMIN role.',
   },
+  'ai-assistant': {
+    title: 'AI assistant access required',
+    description: 'Managing the platform assistant requires the SUPER_ADMIN role.',
+  },
+  audit: {
+    title: 'Audit access required',
+    description: 'You need the platform audit permission for this section.',
+  },
+  support: {
+    title: 'Support access required',
+    description: 'You need the platform support permission for this section.',
+  },
 };
 
 @Component({

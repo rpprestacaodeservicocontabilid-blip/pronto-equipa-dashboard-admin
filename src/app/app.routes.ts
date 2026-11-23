@@ -9,6 +9,9 @@ import { billingAccessGuard } from './modules/platform-billing/platform-billing.
 import { onboardingGuard } from './modules/onboarding/onboarding.guard';
 import { payslipsGuard } from './modules/payslips/payslips.guard';
 import { reportsGuard } from './modules/reports/reports.routes';
+import { aiAssistantGuard } from './modules/ai-assistant/ai-assistant.routes';
+import { auditGuard } from './modules/audit/audit.routes';
+import { supportGuard } from './modules/support/support.routes';
 export const routes: Routes = [
   { path: '', pathMatch: 'full', redirectTo: 'signin' },
   { path: '', loadChildren: () => import('./modules/auth/auth.routes').then(m => m.AUTH_ROUTES) },
@@ -63,6 +66,18 @@ export const routes: Routes = [
   {
     path: 'reports', component: AppLayoutComponent, canActivate: [reportsGuard], canActivateChild: [reportsGuard],
     loadChildren: () => import('./modules/reports/reports.routes').then(module => module.PLATFORM_REPORT_ROUTES),
+  },
+  {
+    path: 'ai-assistant', component: AppLayoutComponent, canActivate: [aiAssistantGuard], canActivateChild: [aiAssistantGuard],
+    loadChildren: () => import('./modules/ai-assistant/ai-assistant.routes').then(module => module.AI_ASSISTANT_ROUTES),
+  },
+  {
+    path: 'audit', component: AppLayoutComponent, canActivate: [auditGuard], canActivateChild: [auditGuard],
+    loadChildren: () => import('./modules/audit/audit.routes').then(module => module.AUDIT_ROUTES),
+  },
+  {
+    path: 'support', component: AppLayoutComponent, canActivate: [supportGuard], canActivateChild: [supportGuard],
+    loadChildren: () => import('./modules/support/support.routes').then(module => module.SUPPORT_ROUTES),
   },
   {
     path: 'salary-structure', component: AppLayoutComponent, canActivate: [authenticatedGuard],

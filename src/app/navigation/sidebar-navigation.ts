@@ -9,6 +9,9 @@ import { BILLING_SECTIONS } from '../modules/platform-billing/domain/billing-nav
 import { ONBOARDING_SECTIONS } from '../modules/onboarding/domain/onboarding.navigation';
 import { PAYSLIP_SECTIONS } from '../modules/payslips/domain/payslip-supervision.navigation';
 import { REPORT_SECTIONS } from '../modules/reports/domain/platform-reports.navigation';
+import { AI_SECTIONS } from '../modules/ai-assistant/domain/ai-assistant.navigation';
+import { AUDIT_SECTIONS, canOpenAudit } from '../modules/audit/domain/audit.navigation';
+import { SUPPORT_ACCESS, SUPPORT_SECTIONS, supportGrant } from '../modules/support/domain/support.navigation';
 import { canOpenEngineSection, ENGINE_SECTIONS } from '../modules/payroll-engine/domain/engine-access';
 import { canOpenPayrollSection, PAYROLL_SECTIONS } from '../modules/payroll/domain/payroll-sections';
 import { SECTIONS as SALARY_SECTIONS, can as canViewSalary } from '../modules/salary-structure/domain/salary-sections';
@@ -152,5 +155,25 @@ export const SIDEBAR_MODULES: SidebarModule[] = [
     id: 'reports', title: 'Reports', tenant: false, platformOnly: true,
     icon: icons('<path d="M4 3v17h17M8 16v-4m4 4V8m4 8v-6m4 6V5"/>'),
     links: REPORT_SECTIONS.map(section => ({ id: section.path, title: section.title, group: section.group })),
+  },
+  {
+    id: 'ai-assistant', title: 'AI assistant', tenant: false, platformOnly: true,
+    icon: icons('<path d="M12 2v3m0 14v3M2 12h3m14 0h3M6 6l2 2m8 8 2 2M18 6l-2 2M8 16l-2 2"/><circle cx="12" cy="12" r="4"/>'),
+    links: AI_SECTIONS.map(section => ({ id: section.path, title: section.title, group: section.group })),
+  },
+  {
+    id: 'audit', title: 'Audit', tenant: false, visibleTo: canOpenAudit,
+    icon: icons('<path d="M12 3 4 6v6c0 4 3 7 8 9 5-2 8-5 8-9V6l-8-3Z"/><path d="m8.5 12 2.5 2.5 4.5-5"/>'),
+    links: AUDIT_SECTIONS.map(section => ({
+      id: section.path, title: section.title, group: section.group, requires: grants => grants.includes(section.permission),
+    })),
+  },
+  {
+    id: 'support', title: 'Support', tenant: false, platformPermission: SUPPORT_ACCESS,
+    visibleTo: grants => SUPPORT_SECTIONS.some(section => grants.includes(supportGrant(section.permission))),
+    icon: icons('<path d="M4 14v-2a8 8 0 1 1 16 0v2M4 12h3v6H4a2 2 0 0 1-2-2v-2a2 2 0 0 1 2-2Zm16 0h-3v6h3a2 2 0 0 0 2-2v-2a2 2 0 0 0-2-2Zm0 6c0 2-2 3-5 3h-2"/>'),
+    links: SUPPORT_SECTIONS.map(section => ({
+      id: section.path, title: section.title, group: section.group, requires: grants => grants.includes(supportGrant(section.permission)),
+    })),
   },
 ];

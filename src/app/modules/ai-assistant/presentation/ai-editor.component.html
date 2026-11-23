@@ -1,0 +1,92 @@
+<app-component-card [title]="title">
+  @if (error()) { <p class="ai-error mb-3" role="alert">{{ error() }}</p> }
+  <form #editorForm="ngForm" class="space-y-4" (ngSubmit)="editorForm.valid && submit()">
+    @switch (kind) {
+      @case ('provider') {
+        <div class="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
+          <label class="ai-label">Provider code<input class="ai-field" name="code" required minlength="2" maxlength="40" pattern="[A-Za-z][A-Za-z0-9_\-]*" [disabled]="!!row" [(ngModel)]="provider.code"></label>
+          <label class="ai-label">Name<input class="ai-field" name="name" required minlength="2" maxlength="120" [(ngModel)]="provider.name"></label>
+          <label class="ai-label">Status<select class="ai-field" name="status" [(ngModel)]="provider.status"><option value="ACTIVE">Active</option><option value="DISABLED">Disabled</option></select></label>
+          <label class="ai-label">Timeout (ms)<input class="ai-field" name="timeout" type="number" min="1000" max="120000" required [(ngModel)]="provider.timeoutMs"></label>
+          <label class="ai-label">Priority<input class="ai-field" name="priority" type="number" min="0" max="1000" required [(ngModel)]="provider.priority"></label>
+        </div>
+        <p class="ai-muted">Provider URLs and credentials are configured on the server.</p>
+      }
+      @case ('model') {
+        @if (!providers().length && !row) {
+          <p class="ai-muted">{{ busy() ? 'Loading providers…' : 'Add a provider before configuring a model.' }}</p>
+        } @else {
+          <div class="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
+            <label class="ai-label">Provider<select class="ai-field" name="provider" required [disabled]="!!row" [(ngModel)]="model.providerId">
+              <option value="">Select provider</option>
+              @for (providerRow of providers(); track providerRow.id) {
+                <option [value]="providerRow.id" [disabled]="providerRow['status'] !== 'ACTIVE' && providerRow.id !== model.providerId">{{ providerRow['name'] }}</option>
+              }
+              @if (row && !providerAvailable) { <option [value]="model.providerId">{{ model.providerId }}</option> }
+            </select></label>
+            <label class="ai-label">Model code<input class="ai-field" name="modelCode" required maxlength="80" [disabled]="!!row" [(ngModel)]="model.modelCode"></label>
+            <label class="ai-label">Display name<input class="ai-field" name="name" required minlength="2" maxlength="120" [(ngModel)]="model.displayName"></label>
+            <label class="ai-label">Status<select class="ai-field" name="status" [(ngModel)]="model.status" (ngModelChange)="model.isDefault = model.status === 'ACTIVE' && model.isDefault">
+              <option value="ACTIVE">Active</option><option value="DISABLED">Disabled</option><option value="FALLBACK">Fallback</option>
+            </select></label>
+            <label class="ai-label">Temperature<input class="ai-field" name="temperature" type="number" min="0" max="2" step="0.01" [(ngModel)]="model.temperature"></label>
+            <label class="ai-label">Output token limit<input class="ai-field" name="maxTokens" type="number" min="1" max="1000000" [(ngModel)]="model.maxOutputTokens"></label>
+            <label class="ai-label">Currency<input class="ai-field uppercase" name="currency" required pattern="[A-Za-z]{3}" maxlength="3" [(ngModel)]="model.currency"></label>
+            <label class="ai-label">Input cost per million tokens<input class="ai-field" name="inputPrice" type="number" min="0" max="1000000" step="any" required [(ngModel)]="model.inputPricePerMillion"></label>
+            <label class="ai-label">Output cost per million tokens<input class="ai-field" name="outputPrice" type="number" min="0" max="1000000" step="any" required [(ngModel)]="model.outputPricePerMillion"></label>
+          </div>
+          <label class="ai-label flex items-center gap-2"><input name="default" type="checkbox" [disabled]="model.status !== 'ACTIVE'" [(ngModel)]="model.isDefault"> Use as platform default</label>
+        }
+      }
+      @case ('prompt') {
+        @if (!row) {
+          <label class="ai-label">Template code<input class="ai-field uppercase" name="template" required minlength="2" maxlength="60" pattern="[A-Za-z][A-Za-z0-9_\-]*" [(ngModel)]="draft.templateCode"></label>
+          <label class="ai-label">Prompt content<textarea class="ai-field font-mono" name="content" rows="8" minlength="10" maxlength="32000" required [(ngModel)]="draft.content"></textarea></label>
+        } @else if (preview(); as prompt) {
+          <p class="ai-muted">{{ prompt.templateCode }} · Version {{ prompt.version }} · {{ prompt.status }}</p>
+          <pre class="max-h-80 overflow-auto rounded-xl bg-gray-50 p-4 text-sm whitespace-pre-wrap text-gray-800 dark:bg-gray-900 dark:text-gray-200">{{ prompt.content }}</pre>
+          @if (canPublish) {
+            <label class="ai-label flex items-start gap-2"><input type="checkbox" name="confirmation" [(ngModel)]="confirmed"> I have reviewed this version and want to make it the published version.</label>
+          }
+        } @else if (busy()) { <p class="ai-muted" role="status">Loading prompt version…</p> }
+      }
+      @case ('sync') { <p class="ai-muted">Register missing tools from the server catalogue. Existing tool states are preserved.</p> }
+      @case ('disable') {
+        <p class="ai-muted">This tool will be unavailable for new executions.</p>
+        <label class="ai-label">Reason<textarea class="ai-field" name="reason" rows="3" required minlength="5" maxlength="300" [(ngModel)]="reason"></textarea></label>
+      }
+      @case ('evaluation') {
+        <label class="ai-label">Evaluation code<input class="ai-field uppercase" name="evaluationCode" required minlength="2" maxlength="60" pattern="[A-Za-z][A-Za-z0-9_\-]*" [(ngModel)]="evaluation.code"></label>
+        @for (testCase of evaluation.cases; track testCase; let index = $index) {
+          <fieldset class="space-y-2 rounded-xl border border-gray-200 p-3 dark:border-gray-700">
+            <legend class="ai-label px-2">Case {{ index + 1 }}</legend>
+            <label class="ai-label">Name<input class="ai-field" [name]="'caseName' + index" required minlength="2" maxlength="200" [(ngModel)]="testCase.name"></label>
+            <label class="ai-label">Expected behaviour<textarea class="ai-field" [name]="'behaviour' + index" rows="3" required minlength="5" maxlength="1000" [(ngModel)]="testCase.expectedBehaviour"></textarea></label>
+            @if (evaluation.cases.length > 1) { <button type="button" class="ai-secondary" (click)="evaluation.cases.splice(index, 1)">Remove case</button> }
+          </fieldset>
+        }
+        <button class="ai-secondary" type="button" [disabled]="evaluation.cases.length >= 50" (click)="evaluation.cases.push({ name: '', expectedBehaviour: '' })">Add case</button>
+      }
+      @case ('incident') {
+        <p class="ai-muted">Incident {{ row?.id }} · Company #{{ companyId }}</p>
+        <label class="ai-label">Status<select class="ai-field" name="incidentStatus" [(ngModel)]="incidentStatus">
+          @if (row?.['status'] === 'OPEN') { <option value="ACKNOWLEDGED">Acknowledged</option> }
+          @else { <option value="RESOLVED">Resolved</option> }
+          <option value="DISMISSED">Dismissed</option>
+        </select></label>
+        <label class="ai-label">Reason<textarea class="ai-field" name="reason" rows="3" required minlength="5" maxlength="300" [(ngModel)]="reason"></textarea></label>
+      }
+    }
+    <div class="flex flex-wrap gap-2">
+      @if (kind === 'prompt' && row) {
+        @if (canPublish) { <button type="submit" class="ai-button" [disabled]="busy() || !confirmed">Publish version</button> }
+        @else if (error() && !preview()) { <button type="button" class="ai-secondary" [disabled]="busy()" (click)="load()">Retry</button> }
+      } @else {
+        <button type="submit" class="ai-button" [disabled]="busy() || editorForm.invalid || (kind === 'model' && !row && !providers().length)">
+          {{ kind === 'disable' ? 'Disable tool' : kind === 'sync' ? 'Sync catalogue' : kind === 'prompt' ? 'Save draft' : 'Save' }}
+        </button>
+      }
+      <button type="button" class="ai-secondary" [disabled]="busy()" (click)="closed.emit()">Close</button>
+    </div>
+  </form>
+</app-component-card>

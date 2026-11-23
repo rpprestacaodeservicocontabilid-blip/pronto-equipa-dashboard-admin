@@ -26,6 +26,36 @@ describe('Sidebar module navigation', () => {
     expect(moveVisible(['a', 'hidden', 'b', 'c'], ['a', 'b', 'c'], 2, 0)).toEqual(['c', 'hidden', 'a', 'b']);
   });
 
+  it('protects the AI assistant and opens the scoped submenu for platform administrators', async () => {
+    const harness = await RouterTestingHarness.create();
+    const http = TestBed.inject(HttpTestingController);
+    const router = TestBed.inject(Router);
+    await harness.navigateByUrl('/ai-assistant/conversations');
+    expect(router.url).toContain('/access-denied?area=ai-assistant');
+    http.expectNone(request => request.url.includes('/ai-assistant/admin/'));
+
+    const platformClaims = btoa(JSON.stringify({
+      sub: '92081', sessionId: '3', roles: ['SUPER_ADMIN'], permissions: [], exp: 4102444800, type: 'access',
+    }));
+    TestBed.inject(AuthSessionStore).accept({ accessToken: 'header.' + platformClaims + '.signature', refreshToken: 'refresh' });
+    await harness.navigateByUrl('/ai-assistant/conversations');
+    expect(harness.routeNativeElement?.textContent).toContain('Select a company to view its records.');
+    http.expectNone(request => request.url.endsWith('/admin/conversations'));
+
+    await harness.navigateByUrl('/ai-assistant/conversations?companyId=18');
+    const pending = http.expectOne(request => request.url.endsWith('/admin/conversations') && request.params.get('companyId') === '18');
+    await harness.navigateByUrl('/ai-assistant/conversations?companyId=19');
+    expect(pending.cancelled).toBeTrue();
+    http.expectOne(request => request.url.endsWith('/admin/conversations') && request.params.get('companyId') === '19')
+      .flush({ data: { items: [{ id: 'conversation-19', status: 'ACTIVE' }], page: 1, limit: 25, total: 1 } });
+    harness.detectChanges();
+    const nav = harness.routeNativeElement?.querySelector('nav[aria-label="Main navigation"]');
+    expect(nav?.querySelector('button[aria-label="AI assistant"]')?.getAttribute('aria-expanded')).toBe('true');
+    expect(nav?.querySelector('button[aria-label="Reorder Conversations"]')).not.toBeNull();
+    expect(harness.routeNativeElement?.textContent).toContain('conversation-19');
+    http.verify();
+  });
+
   it('carries a subsection through company selection and saves keyboard reordering', async () => {
     const harness = await RouterTestingHarness.create();
     const http = TestBed.inject(HttpTestingController);

@@ -1,0 +1,101 @@
+<app-page-breadcrumb [pageTitle]="'Audit / ' + section.title" />
+<app-audit-purpose class="mb-5 block" (applied)="purposeChanged()" />
+
+@if (purpose.value()) {
+  <div class="mb-4 flex flex-wrap gap-2">
+    @if (newCommand && can(newCommand.grant)) {
+      <button type="button" class="aud-button" [disabled]="writing() || loading()" (click)="open(newCommand)">{{ newCommand.title }}</button>
+    }
+    @if (section.path === 'exports' && canFindRecords()) { <a class="aud-secondary" routerLink="/audit/records">Find records to export</a> }
+    <button type="button" class="aud-secondary ms-auto" [disabled]="writing() || loading()" (click)="load()">Refresh</button>
+  </div>
+}
+
+@if (notice()) { <p class="aud-notice mb-5" role="status">{{ notice() }}</p> }
+@if (actionError()) { <p class="aud-error mb-5" role="alert">{{ actionError() }}</p> }
+@if (error()) { <p class="aud-error mb-5" role="alert">{{ error() }}</p> }
+
+@for (action of [command()]; track action) {
+  @if (action) {
+    <app-audit-command class="mb-5 block" [command]="action" [recordId]="evidenceRecordId" [busy]="writing()" (submitted)="submit($event)" (closed)="command.set(null)" />
+  }
+}
+
+@if (selected(); as row) {
+  <app-component-card title="Record details" class="mb-5">
+    <div class="mb-4 flex flex-wrap items-center gap-2">
+      <span class="aud-badge" [attr.data-state]="row.status">{{ label(row.status) }}</span>
+      <span class="aud-muted break-all">{{ row.id }}</span>
+      <button type="button" class="aud-secondary ms-auto" [disabled]="writing()" (click)="close()">Close details</button>
+    </div>
+    <dl class="grid gap-3 sm:grid-cols-2">
+      @for (item of currentDetails(); track item.key) {
+        <div class="min-w-0">
+          <dt class="aud-label">{{ item.key }}</dt><dd><pre class="aud-data mt-1 break-all">{{ item.value | json }}</pre></dd>
+        </div>
+      }
+    </dl>
+    @if (actions().length || canDownload(row)) {
+      <div class="mt-4 flex flex-wrap gap-2">
+        @for (action of actions(); track action.path) {
+          <button type="button" class="aud-secondary" [disabled]="writing() || loading()" (click)="open(action)">{{ action.title }}</button>
+        }
+        @if (canDownload(row)) {
+          <button type="button" class="aud-button" [disabled]="writing()" (click)="download(row)">Download signed JSON</button>
+        }
+      </div>
+    }
+  </app-component-card>
+}
+
+@if (loading()) {
+  <p class="aud-muted py-5" role="status">Loading audit data…</p>
+} @else if (metrics(); as result) {
+  <div class="mb-5 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+    @for (metric of exposedMetrics; track metric[0]) {
+      <article class="rounded-2xl border border-gray-200 bg-white p-4 dark:border-gray-800 dark:bg-gray-900">
+        <p class="aud-muted">{{ metric[1] }}</p>
+        <p class="mt-2 text-title-sm font-semibold tabular-nums text-gray-900 dark:text-white">{{ result[metric[0]] | number }}</p>
+      </article>
+    }
+  </div>
+  <app-component-card title="Operational status">
+    <dl class="space-y-3 text-sm text-gray-800 dark:text-gray-200">
+      <div><dt class="aud-muted">Last signed checkpoint</dt><dd>{{ (result.lastCheckpointAt | date:'medium':'+0100') || '—' }}</dd></div>
+      <div><dt class="aud-muted">Storage usage</dt><dd><pre class="aud-data mt-1">{{ result.storage | json }}</pre></dd></div>
+    </dl>
+  </app-component-card>
+} @else if (page(); as result) {
+  <app-component-card [title]="section.title">
+    <div class="overflow-x-auto">
+      <table class="aud-table">
+        <caption class="sr-only">{{ section.title }}</caption>
+        <thead><tr>
+          <th scope="col">Reference</th><th scope="col">Status</th>
+          @for (column of section.columns; track column.key) { <th scope="col">{{ column.label }}</th> }
+          <th scope="col">Created (Luanda)</th><th scope="col">Details</th>
+        </tr></thead>
+        <tbody>
+          @for (row of result.items; track row.id) {
+            <tr>
+              <td class="font-mono text-xs break-all">{{ row.id }}</td>
+              <td><span class="aud-badge" [attr.data-state]="row.status">{{ label(row.status) }}</span></td>
+              @for (column of section.columns; track column.key) { <td class="break-all">{{ value(row, column.key) }}</td> }
+              <td class="whitespace-nowrap">{{ row.createdAt | date:'medium':'+0100' }}</td>
+              <td><button type="button" class="aud-secondary" [disabled]="writing()" [attr.aria-label]="'View ' + row.id" (click)="show(row)">View</button></td>
+            </tr>
+          } @empty { <tr><td [attr.colspan]="(section.columns?.length ?? 0) + 4">No records found.</td></tr> }
+        </tbody>
+      </table>
+    </div>
+    @if (result.total > pageSize) {
+      <div class="mt-4 flex flex-wrap items-center justify-between gap-2">
+        <p class="aud-muted">{{ result.total | number }} records · Page {{ offset() / pageSize + 1 }}</p>
+        <div class="flex gap-2">
+          <button type="button" class="aud-secondary" [disabled]="offset() === 0 || writing()" (click)="load(offset() - pageSize)">Previous</button>
+          <button type="button" class="aud-secondary" [disabled]="offset() + pageSize >= result.total || writing()" (click)="load(offset() + pageSize)">Next</button>
+        </div>
+      </div>
+    }
+  </app-component-card>
+}

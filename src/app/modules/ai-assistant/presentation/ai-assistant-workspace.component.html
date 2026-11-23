@@ -1,0 +1,129 @@
+<app-page-breadcrumb [pageTitle]="'AI assistant / ' + section.title" />
+
+<app-component-card title="Scope and controls" class="mb-5 block">
+  <div class="flex flex-wrap items-end gap-3">
+    @if (section.scope) {
+      <app-ai-company-picker class="min-w-56 flex-1" [companyId]="scope().companyId" [optional]="section.scope === 'optional'" (companyIdChange)="chooseCompany($event)" />
+    }
+    @if (section.month && scope().companyId) {
+      <label class="ai-label">Month
+        <input class="ai-field" type="month" required [ngModel]="scope().period" (ngModelChange)="choosePeriod($event)">
+      </label>
+    }
+    @switch (section.path) {
+      @case ('providers') { <button type="button" class="ai-button" (click)="open('provider')">Add provider</button> }
+      @case ('models') { <button type="button" class="ai-button" (click)="open('model')">Configure model</button> }
+      @case ('prompts') { <button type="button" class="ai-button" (click)="open('prompt')">New prompt draft</button> }
+      @case ('tools') { <button type="button" class="ai-button" (click)="open('sync')">Sync tool catalogue</button> }
+      @case ('evaluations') { <button type="button" class="ai-button" (click)="open('evaluation')">New evaluation version</button> }
+    }
+    <button type="button" class="ai-secondary ms-auto" [disabled]="busy() || (section.scope === 'company' && !scope().companyId)" (click)="reload(page()?.page ?? 1)">Refresh</button>
+  </div>
+  @if (section.path === 'conversations' || section.path === 'sessions') {
+    <p class="ai-muted mt-3">This view shows operational metadata. Message content is excluded.</p>
+  }
+</app-component-card>
+
+@for (current of [editor()]; track current) {
+  @if (current) {
+    <app-ai-editor class="mb-5 block" [kind]="current.kind" [row]="current.row" [companyId]="scope().companyId" (saved)="saved($event)" (closed)="editor.set(null)" />
+  }
+}
+@if (notice()) { <p class="ai-notice mb-5" role="status">{{ notice() }}</p> }
+@if (error()) {
+  <p class="ai-error" role="alert">{{ error() }}</p>
+} @else if (busy()) {
+  <p class="ai-muted px-3 py-4" role="status">Loading {{ section.title.toLowerCase() }}…</p>
+} @else if (section.scope === 'company' && !scope().companyId) {
+  <app-component-card title="Company required">
+    <p class="ai-muted">Select a company to view its records.</p>
+  </app-component-card>
+} @else if (section.path === 'overview') {
+  <div class="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+    @for (metric of metrics; track metric[0]) {
+      @if (dashboard()[metric[0]] !== undefined) {
+        <article class="rounded-2xl border border-gray-200 bg-white p-5 dark:border-gray-800 dark:bg-gray-900">
+          <p class="ai-muted">{{ metric[1] }}</p>
+          <p class="mt-2 text-title-sm font-semibold tabular-nums text-gray-900 dark:text-white">
+            {{ (dashboard()[metric[0]] | number) ?? '—' }}
+          </p>
+        </article>
+      }
+    }
+  </div>
+  <app-component-card title="Assistant administration" class="mt-5 block">
+    <div class="flex flex-wrap gap-2">
+      <a class="ai-secondary" routerLink="/ai-assistant/models">Model configurations</a>
+      <a class="ai-secondary" routerLink="/ai-assistant/prompts">Prompt versions</a>
+      <a class="ai-secondary" routerLink="/ai-assistant/tools">Tool catalogue</a>
+      <a class="ai-secondary" routerLink="/ai-assistant/usage" queryParamsHandling="preserve">Usage and quotas</a>
+      <a class="ai-secondary" routerLink="/ai-assistant/incidents" queryParamsHandling="preserve">Safety incidents</a>
+    </div>
+  </app-component-card>
+} @else if (page(); as result) {
+  <app-component-card [title]="section.group">
+    @if (!result.items.length) {
+      <p class="ai-muted py-5" role="status">No records found for this scope.</p>
+    } @else {
+      <div class="overflow-x-auto">
+        <table class="w-full text-start text-sm text-gray-700 dark:text-gray-300">
+          <caption class="sr-only">{{ section.title }}</caption>
+          <thead class="border-b border-gray-200 bg-gray-50 text-gray-600 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-200">
+            <tr>
+              @for (column of section.columns; track column.key) {
+                <th class="px-3 py-3 text-start font-medium" scope="col">{{ column.title }}</th>
+              }
+              @if (['providers', 'models', 'prompts', 'tools', 'incidents'].includes(section.path)) {
+                <th class="px-3 py-3 text-end font-medium" scope="col">Actions</th>
+              }
+            </tr>
+          </thead>
+          <tbody class="divide-y divide-gray-100 dark:divide-gray-800">
+            @for (row of result.items; track row.id) {
+              <tr>
+                @for (column of section.columns; track column.key) {
+                  <td class="px-3 py-3">
+                    @switch (column.format) {
+                      @case ('date') { <span class="whitespace-nowrap">{{ ('' + (row[column.key] ?? '') | date:'medium':'+0100') || '—' }}</span> }
+                      @case ('status') { <span class="ai-status" [attr.data-state]="row[column.key]">{{ status(row[column.key]) }}</span> }
+                      @case ('boolean') { {{ row[column.key] == null ? '—' : row[column.key] ? 'Yes' : 'No' }} }
+                      @case ('number') { {{ row[column.key] == null ? '—' : (text(row[column.key]) | number:'1.0-6') }} }
+                      @case ('reference') { <span class="font-mono text-theme-xs break-all">{{ text(row[column.key]) }}</span> }
+                      @default { {{ text(row[column.key]) }} }
+                    }
+                  </td>
+                }
+                @switch (section.path) {
+                  @case ('providers') { <td class="px-3 py-3 text-end"><button class="ai-secondary" type="button" (click)="open('provider', row)" [attr.aria-label]="'Edit provider ' + row['name']">Edit</button></td> }
+                  @case ('models') { <td class="px-3 py-3 text-end"><button class="ai-secondary" type="button" (click)="open('model', row)" [attr.aria-label]="'Edit model ' + row['displayName']">Edit</button></td> }
+                  @case ('prompts') { <td class="px-3 py-3 text-end"><button class="ai-secondary" type="button" (click)="open('prompt', row)" [attr.aria-label]="'Review ' + row['templateCode'] + ' version ' + row['version']">Review</button></td> }
+                  @case ('tools') {
+                    <td class="px-3 py-3 text-end">
+                      @if (row['status'] === 'ACTIVE') { <button class="ai-secondary" type="button" (click)="open('disable', row)" [attr.aria-label]="'Disable tool ' + row['name']">Disable</button> }
+                    </td>
+                  }
+                  @case ('incidents') {
+                    <td class="px-3 py-3 text-end">
+                      @if (row['status'] === 'OPEN' || row['status'] === 'ACKNOWLEDGED') {
+                        <button class="ai-secondary" type="button" (click)="open('incident', row)" [attr.aria-label]="'Update incident ' + row.id">Update status</button>
+                      }
+                    </td>
+                  }
+                }
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+    }
+    @if (result.total > result.limit) {
+      <div class="mt-4 flex flex-wrap items-center justify-between gap-2">
+        <p class="ai-muted">Page {{ result.page }} · {{ result.total | number }} records</p>
+        <div class="flex gap-2">
+          <button type="button" class="ai-secondary" [disabled]="result.page === 1" (click)="reload(result.page - 1)">Previous</button>
+          <button type="button" class="ai-secondary" [disabled]="result.page * result.limit >= result.total" (click)="reload(result.page + 1)">Next</button>
+        </div>
+      </div>
+    }
+  </app-component-card>
+}

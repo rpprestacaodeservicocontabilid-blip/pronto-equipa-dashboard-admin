@@ -1,0 +1,49 @@
+<app-component-card [title]="command.title">
+  @if (command.explanation) { <p class="aud-muted mb-4">{{ command.explanation }}</p> }
+  @if (error()) { <p class="aud-error mb-4" role="alert">{{ error() }}</p> }
+  <form class="space-y-4" (ngSubmit)="submit()">
+    <div class="grid gap-3 md:grid-cols-2">
+      @for (field of command.fields; track field.name) {
+        @switch (field.kind) {
+          @case ('check') {
+            <label class="aud-label flex items-center gap-2 md:col-span-2">
+              <input type="checkbox" [name]="field.name" [(ngModel)]="values[field.name]">{{ field.label }}
+            </label>
+          }
+          @case ('choice') {
+            <label class="aud-label">{{ field.label }}
+              <select class="aud-control" [name]="field.name" [required]="!!field.required" [(ngModel)]="values[field.name]">
+                <option [ngValue]="null">{{ field.required ? 'Choose an option' : 'Any' }}</option>
+                @for (option of field.options; track option) { <option [ngValue]="option">{{ label(option) }}</option> }
+              </select>
+            </label>
+          }
+          @case ('ids') {
+            <label class="aud-label md:col-span-2">{{ field.label }}
+              <textarea class="aud-control font-mono" rows="3" [name]="field.name" maxlength="40000" [required]="!!field.required" [(ngModel)]="values[field.name]"></textarea>
+            </label>
+          }
+          @case ('reason') {
+            <label class="aud-label md:col-span-2">{{ field.label }}
+              <textarea class="aud-control" rows="3" [name]="field.name" [maxlength]="field.max ?? 2000" [required]="!!field.required" [(ngModel)]="values[field.name]"></textarea>
+            </label>
+          }
+          @case ('number') {
+            <label class="aud-label">{{ field.label }}
+              <input class="aud-control" type="number" [name]="field.name" min="1" [max]="field.max ?? 1000" [required]="!!field.required" [(ngModel)]="values[field.name]">
+            </label>
+          }
+          @default {
+            <label class="aud-label">{{ field.label }}
+              <input class="aud-control" [name]="field.name" [maxlength]="field.max ?? 200" [required]="!!field.required" [(ngModel)]="values[field.name]">
+            </label>
+          }
+        }
+      }
+    </div>
+    <div class="flex flex-wrap gap-2">
+      <button type="submit" class="aud-button" [disabled]="busy">{{ busy ? 'Submitting…' : command.title }}</button>
+      <button type="button" class="aud-secondary" [disabled]="busy" (click)="closed.emit()">Cancel</button>
+    </div>
+  </form>
+</app-component-card>

@@ -1,0 +1,207 @@
+<app-page-breadcrumb [pageTitle]="'Audit / ' + section.title" />
+<app-audit-purpose class="mb-5 block" (applied)="purposeChanged()" />
+
+@if (section.company) {
+  <app-component-card title="Company scope" class="mb-5">
+    @if (loadingCompanies()) {
+      <p class="aud-muted" role="status">Loading your companies…</p>
+    } @else if (companyError()) {
+      <p class="aud-error mb-3" role="alert">{{ companyError() }}</p>
+      <button type="button" class="aud-secondary" (click)="loadCompanies()">Retry</button>
+    } @else if (companies().length) {
+      <label class="aud-label max-w-lg">Company
+        <select class="aud-control" name="company" [ngModel]="companyId" (ngModelChange)="chooseCompany($event)">
+          <option [ngValue]="null">Select a company</option>
+          @for (company of companies(); track company.id) {
+            <option [ngValue]="company.id">{{ company.name }} (#{{ company.id }})</option>
+          }
+        </select>
+      </label>
+      <p class="aud-muted mt-3">The API also checks your audit permission within the selected company.</p>
+    } @else {
+      <p class="aud-muted">Your account has no active company memberships.</p>
+    }
+  </app-component-card>
+}
+
+@if (purpose.value() && (!section.company || companyId)) {
+  <app-component-card title="Filters" class="mb-5">
+    <form class="space-y-4" (ngSubmit)="search()">
+      <div class="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+        <label class="aud-label">From<input class="aud-control" type="date" name="from" [(ngModel)]="fromDate"></label>
+        <label class="aud-label">Through<input class="aud-control" type="date" name="to" [(ngModel)]="toDate"></label>
+        @if (section.lookup === 'actor') {
+          <label class="aud-label">Actor ID<input class="aud-control" name="actor" required maxlength="200" [(ngModel)]="filters.actorId"></label>
+        } @else if (section.lookup === 'resource') {
+          <label class="aud-label">Resource type<input class="aud-control" name="resourceType" required maxlength="200" [(ngModel)]="filters.resourceType"></label>
+          <label class="aud-label">Resource ID<input class="aud-control" name="resourceId" required maxlength="200" [(ngModel)]="filters.resourceId"></label>
+        } @else if (section.lookup === 'correlation') {
+          <label class="aud-label">Correlation ID<input class="aud-control" name="correlation" required maxlength="200" [(ngModel)]="filters.correlationId"></label>
+        } @else {
+          <label class="aud-label">Module<input class="aud-control" name="module" maxlength="200" [(ngModel)]="filters.module"></label>
+          <label class="aud-label">Event type<input class="aud-control" name="event" maxlength="200" [(ngModel)]="filters.eventType"></label>
+        }
+        @if (!section.preset?.category && !section.endpoint.startsWith('reports/')) {
+          <label class="aud-label">Category
+            <select class="aud-control" name="category" [(ngModel)]="filters.category">
+              <option [ngValue]="undefined">All categories</option>
+              @for (item of categories; track item) { <option [ngValue]="item">{{ label(item) }}</option> }
+            </select>
+          </label>
+        }
+        @if (!section.preset?.severity) {
+          <label class="aud-label">Severity
+            <select class="aud-control" name="severity" [(ngModel)]="filters.severity">
+              <option [ngValue]="undefined">All severities</option>
+              @for (item of severities; track item) { <option [ngValue]="item">{{ label(item) }}</option> }
+            </select>
+          </label>
+        }
+        @if (!section.preset?.outcome) {
+          <label class="aud-label">Outcome
+            <select class="aud-control" name="outcome" [(ngModel)]="filters.outcome">
+              <option [ngValue]="undefined">All outcomes</option>
+              @for (item of outcomes; track item) { <option [ngValue]="item">{{ label(item) }}</option> }
+            </select>
+          </label>
+        }
+        @if (!section.lookup && section.view === 'records') {
+          <label class="aud-label">Actor ID<input class="aud-control" name="actorId" maxlength="200" [(ngModel)]="filters.actorId"></label>
+          <label class="aud-label">Action<input class="aud-control" name="action" maxlength="200" [(ngModel)]="filters.action"></label>
+          <label class="aud-label">Resource type<input class="aud-control" name="resourceType" maxlength="200" [(ngModel)]="filters.resourceType"></label>
+          <label class="aud-label">Resource ID<input class="aud-control" name="resourceId" maxlength="200" [(ngModel)]="filters.resourceId"></label>
+          <label class="aud-label">Correlation ID<input class="aud-control" name="correlationId" maxlength="200" [(ngModel)]="filters.correlationId"></label>
+        }
+      </div>
+      <div class="flex flex-wrap items-center gap-2">
+        <button type="submit" class="aud-button" [disabled]="!canSearch || busy()">Apply filters</button>
+        @if (canExport) {
+          <button type="button" class="aud-secondary" [disabled]="busy() || exportBusy()" (click)="reviewExport.set(true)">Request export of these results</button>
+        }
+      </div>
+    </form>
+  </app-component-card>
+}
+
+@if (reviewExport()) {
+  <app-component-card title="Request a signed export" class="mb-5">
+    <p class="aud-muted mb-3">The request uses the last applied filters and the displayed snapshot. Another administrator must approve it before the file can be generated.</p>
+    <div class="flex gap-2">
+      <button type="button" class="aud-button" [disabled]="exportBusy() || busy()" (click)="requestExport()">Submit request</button>
+      <button type="button" class="aud-secondary" [disabled]="exportBusy()" (click)="reviewExport.set(false)">Cancel</button>
+    </div>
+  </app-component-card>
+}
+@if (exportId()) {
+  <p class="aud-notice mb-5" role="status">Export requested. Reference {{ exportId() }}.
+    @if (can('exports:read')) { <a class="aud-link ms-2" routerLink="/audit/exports">Open export requests</a> }
+  </p>
+}
+@if (exportError()) { <p class="aud-error mb-5" role="alert">{{ exportError() }}</p> }
+@if (error()) { <p class="aud-error mb-5" role="alert">{{ error() }}</p> }
+@if (detailError()) { <p class="aud-error mb-5" role="alert">{{ detailError() }}</p> }
+@if (detailsBusy()) { <p class="aud-muted mb-5" role="status">Loading record details…</p> }
+
+@if (openRecord(); as record) {
+  <app-component-card [title]="'Record #' + record.sequence + ' · ' + record.eventType" class="mb-5">
+    <div class="mb-4 flex flex-wrap items-center gap-2">
+      <span class="aud-badge" [attr.data-state]="record.severity">{{ label(record.severity) }}</span>
+      <span class="aud-badge" [attr.data-state]="record.outcome">{{ label(record.outcome) }}</span>
+      <button type="button" class="aud-secondary ms-auto" (click)="closeDetail()">Close details</button>
+    </div>
+    <dl class="mb-4 grid gap-3 text-sm break-all text-gray-800 sm:grid-cols-2 xl:grid-cols-3 dark:text-gray-200">
+      <div><dt class="aud-muted">Reference</dt><dd>{{ record.id }}</dd></div>
+      <div><dt class="aud-muted">Actor</dt><dd>{{ record.payload.actor.actorType }} · {{ record.actorId ?? '—' }}</dd></div>
+      <div><dt class="aud-muted">Resource</dt><dd>{{ record.resourceType }} / {{ record.resourceId }}</dd></div>
+      <div><dt class="aud-muted">Correlation</dt><dd>{{ record.correlationId ?? '—' }}</dd></div>
+      <div><dt class="aud-muted">Received</dt><dd>{{ record.receivedAt | date:'medium':'+0100' }}</dd></div>
+      <div><dt class="aud-muted">Policy version</dt><dd>{{ record.policyVersion }}</dd></div>
+      <div><dt class="aud-muted">Record hash</dt><dd class="font-mono text-xs">{{ record.recordHash }}</dd></div>
+      <div><dt class="aud-muted">Previous hash</dt><dd class="font-mono text-xs">{{ record.previousHash }}</dd></div>
+      <div><dt class="aud-muted">Payload hash</dt><dd class="font-mono text-xs">{{ record.payloadHash }}</dd></div>
+    </dl>
+    @if (!section.company) {
+      <div class="mb-3 flex flex-wrap gap-3">
+        @if (record.actorId && can('actors:activity')) { <a class="aud-link" routerLink="/audit/actors" [queryParams]="{ actorId: record.actorId }">Actor activity</a> }
+        @if (can('resources:history')) { <a class="aud-link" routerLink="/audit/resources" [queryParams]="{ resourceType: record.resourceType, resourceId: record.resourceId }">Resource history</a> }
+        @if (record.correlationId && can('correlations:read')) { <a class="aud-link" routerLink="/audit/correlations" [queryParams]="{ correlationId: record.correlationId }">Correlation trail</a> }
+        @if (can('evidence:create') && can('evidence:read')) { <a class="aud-link" routerLink="/audit/evidence" [queryParams]="{ recordId: record.id }">Create evidence package</a> }
+      </div>
+    }
+    @if (record.payload.reason) { <p class="aud-muted mb-3 break-words">{{ record.payload.reason }}</p> }
+    @if (record.payload.changes?.length) {
+      <details class="mb-3"><summary class="aud-label cursor-pointer">Field changes</summary>
+        <div class="overflow-x-auto"><table class="aud-table">
+          <thead><tr><th scope="col">Field</th><th scope="col">Before</th><th scope="col">After</th></tr></thead>
+          <tbody>
+            @for (change of record.payload.changes; track $index) {
+              <tr><td>{{ change.field }}</td><td class="break-all">{{ change.before | json }}</td><td class="break-all">{{ change.after | json }}</td></tr>
+            }
+          </tbody>
+        </table></div>
+      </details>
+    }
+    @if (record.payload.metadata) {
+      <details><summary class="aud-label cursor-pointer">Metadata</summary><pre class="aud-data mt-2">{{ record.payload.metadata | json }}</pre></details>
+    }
+  </app-component-card>
+}
+
+@if (busy()) {
+  <p class="aud-muted px-3 py-4" role="status">Loading audit data…</p>
+} @else if (dashboard(); as result) {
+  <div class="mb-5 grid gap-3 sm:grid-cols-2 xl:grid-cols-5">
+    @for (metric of recordMetrics; track metric[0]) {
+      <article class="rounded-2xl border border-gray-200 bg-white p-4 dark:border-gray-800 dark:bg-gray-900">
+        <p class="aud-muted">{{ metric[1] }}</p>
+        <p class="mt-2 text-title-sm font-semibold tabular-nums text-gray-900 dark:text-white">{{ result[metric[0]] | number }}</p>
+      </article>
+    }
+  </div>
+  @if (result.daily?.length) {
+    <app-component-card title="Daily activity (Luanda)" class="mb-5">
+      <ol class="space-y-2">
+        @for (day of result.daily; track day.date) {
+          <li class="grid grid-cols-[6rem_minmax(0,1fr)_4rem] items-center gap-3 text-sm text-gray-700 dark:text-gray-200">
+            <time [attr.datetime]="day.date">{{ day.date | date:'d MMM y':'+0100' }}</time>
+            <meter class="h-4 w-full accent-brand-500" min="0" [max]="peakDaily()" [value]="day.events" [attr.aria-label]="'Events on ' + day.date"></meter>
+            <span class="text-end tabular-nums">{{ day.events | number }}</span>
+          </li>
+        }
+      </ol>
+    </app-component-card>
+  }
+  <app-component-card title="Events by category">
+    <p class="aud-muted mb-3">Snapshot through record #{{ result.asOfSequence | number }}</p>
+    <div class="overflow-x-auto"><table class="aud-table">
+      <thead><tr><th scope="col">Category</th><th scope="col">Events</th></tr></thead>
+      <tbody>
+        @for (row of categoryCounts(); track row[0]) {
+          <tr><td>{{ label(row[0]) }}</td><td>{{ row[1] | number }}</td></tr>
+        } @empty { <tr><td colspan="2">No events matched the applied filters.</td></tr> }
+      </tbody>
+    </table></div>
+  </app-component-card>
+} @else if (page(); as result) {
+  <app-component-card title="Records">
+    <p class="aud-muted mb-3">Snapshot through record #{{ result.throughSequence | number }} · Page {{ pageNumber }}</p>
+    <div class="overflow-x-auto"><table class="aud-table">
+      <thead><tr><th scope="col">Sequence</th><th scope="col">Occurred (Luanda)</th><th scope="col">Event</th><th scope="col">Module</th><th scope="col">Severity</th><th scope="col">Outcome</th><th scope="col">Details</th></tr></thead>
+      <tbody>
+        @for (row of result.data; track row.id) {
+          <tr>
+            <td>{{ row.sequence | number }}</td><td class="whitespace-nowrap">{{ row.occurredAt | date:'medium':'+0100' }}</td>
+            <td class="break-all">{{ row.eventType }}</td><td>{{ row.module }}</td>
+            <td><span class="aud-badge" [attr.data-state]="row.severity">{{ label(row.severity) }}</span></td>
+            <td><span class="aud-badge" [attr.data-state]="row.outcome">{{ label(row.outcome) }}</span></td>
+            <td><button type="button" class="aud-secondary" (click)="detail(row)" [attr.aria-label]="'View record ' + row.sequence">View</button></td>
+          </tr>
+        } @empty { <tr><td colspan="7">No events matched the applied filters.</td></tr> }
+      </tbody>
+    </table></div>
+    <div class="mt-4 flex gap-2">
+      <button type="button" class="aud-secondary" [disabled]="!hasPrevious" (click)="previous()">Previous</button>
+      <button type="button" class="aud-secondary" [disabled]="result.nextCursor === null" (click)="next()">Next</button>
+    </div>
+  </app-component-card>
+}
