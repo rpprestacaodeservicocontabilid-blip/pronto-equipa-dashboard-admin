@@ -1,0 +1,99 @@
+<app-component-card [title]="titles[action]">
+  <form class="space-y-4" (ngSubmit)="submit()">
+    <p class="nt-muted">Scope · {{ scopeName }}</p>
+    <fieldset class="space-y-4" [disabled]="busy()">
+      @if (action === 'draft' || action === 'rule') {
+        <div class="grid gap-4 sm:grid-cols-2">
+          <label class="nt-label">Code
+            <input class="nt-input" name="code" [(ngModel)]="code" placeholder="COMPANY_ANNOUNCEMENT" maxlength="80" [readOnly]="action === 'rule' && !!row" required />
+          </label>
+          @if (action === 'draft') {
+            <label class="nt-label">Category
+              <select class="nt-input" name="category" [(ngModel)]="category">
+                @for (item of categories; track item) { <option [value]="item">{{ label(item) }}</option> }
+              </select>
+            </label>
+          } @else {
+            <label class="nt-label">Domain event type
+              <input class="nt-input" name="eventType" [(ngModel)]="eventType" maxlength="100" required />
+            </label>
+          }
+        </div>
+      }
+      @if (action === 'draft' || action === 'edit') {
+        <label class="nt-label">Subject <input class="nt-input" name="subject" [(ngModel)]="subject" maxlength="200" required /></label>
+        <label class="nt-label">Message <textarea class="nt-input" name="body" [(ngModel)]="body" rows="5" maxlength="16000" required></textarea></label>
+        <p class="nt-muted">Use placeholders such as <code ngNonBindable>{{name}}</code> for values supplied when sending.</p>
+      }
+      @if (action === 'campaign' || action === 'rule') {
+        <label class="nt-label">Published template
+          <select class="nt-input" name="template" [ngModel]="template" (ngModelChange)="selectTemplate($event)" required>
+            <option value="">Select a template</option>
+            @for (item of templates(); track item.id) {
+              @if (isManual(item)) {
+                <option [value]="text(item, 'code')">{{ text(item, 'code') }} · {{ label(text(item, 'category')) }}</option>
+              }
+            }
+          </select>
+        </label>
+        @if (templatesBusy()) {
+          <p class="nt-muted" role="status">Loading published templates…</p>
+        } @else if (moreTemplates()) {
+          <button type="button" class="nt-secondary" (click)="loadTemplates()">Load more templates</button>
+        }
+        <label class="nt-label">Recipient user IDs
+          <textarea class="nt-input" name="recipients" [(ngModel)]="recipients" placeholder="101, 102, 103" rows="2" maxlength="6000" required></textarea>
+        </label>
+        <div class="flex flex-wrap gap-4">
+          @for (channel of options(); track channel) {
+            <label class="nt-label flex items-center gap-2">
+              <input type="checkbox" class="accent-brand-600" [checked]="channels.includes(channel)" (change)="toggle(channel, $any($event.target).checked)" />
+              {{ label(channel) }}
+            </label>
+          }
+        </div>
+        @if (action === 'campaign') {
+          <label class="nt-label max-w-sm">Schedule in Angola time (optional)
+            <input type="datetime-local" class="nt-input" name="scheduled" [(ngModel)]="scheduled" />
+          </label>
+          <p class="nt-muted">Confirm the scope and recipient IDs. An empty send time queues the campaign for immediate processing.</p>
+        } @else {
+          <label class="nt-label flex items-center gap-2">
+            <input type="checkbox" class="accent-brand-600" name="enabled" [(ngModel)]="enabled" /> Rule enabled
+          </label>
+          <p class="nt-muted">The event payload must supply the template variables. Use the recipient IDs registered in this company.</p>
+        }
+      }
+      @if (action === 'preview' || action === 'campaign') {
+        @for (key of keys; track key) {
+          <label class="nt-label">{{ key }}
+            <input class="nt-input" [name]="'variable-' + key" [(ngModel)]="variables[key]" maxlength="4000" required />
+          </label>
+        }
+      }
+      @switch (action) {
+        @case ('publish') {
+          <p class="nt-muted">Publishing makes this version available for use. Future edits require a new draft.</p>
+        }
+        @case ('cancel') {
+          <p class="nt-muted">Cancel pending deliveries for notification {{ row?.id }}?</p>
+        }
+        @case ('retry') {
+          <p class="nt-muted">Queue a new attempt for delivery {{ row?.id }}?</p>
+        }
+      }
+    </fieldset>
+    @if (error()) { <p class="nt-error" role="alert">{{ error() }}</p> }
+    @if (preview(); as result) {
+      <article class="rounded-lg border border-gray-200 bg-gray-50 p-4 text-gray-900 dark:border-gray-700 dark:bg-gray-800 dark:text-white">
+        <p class="nt-muted">Version {{ result.version }}</p>
+        <h3 class="font-semibold">{{ result.subject }}</h3>
+        <p class="mt-2 whitespace-pre-wrap break-words text-sm">{{ result.bodyText }}</p>
+      </article>
+    }
+    <div class="flex flex-wrap gap-2">
+      <button type="submit" class="nt-button" [disabled]="busy()">{{ busy() ? 'Working…' : titles[action] }}</button>
+      <button type="button" class="nt-secondary" (click)="closed.emit()" [disabled]="busy()">Close</button>
+    </div>
+  </form>
+</app-component-card>

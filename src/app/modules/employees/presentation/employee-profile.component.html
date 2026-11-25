@@ -1,0 +1,180 @@
+<app-component-card [title]="employee() ? employee()!.firstName + ' ' + employee()!.lastName : 'Employee profile'">
+  @if (loading()) { <p role="status" class="mb-3 text-sm text-gray-600 dark:text-gray-400">Loading employee profile…</p> }
+  @if (error()) {
+    <p role="alert" class="feedback mb-3">{{ error() }}</p>
+    @if (!employee()) { <button type="button" class="action" (click)="load()">Retry</button> }
+  }
+  @if (notice()) { <p role="status" class="notice mb-3">{{ notice() }}</p> }
+  @if (employee(); as row) {
+    <div class="mb-5 flex flex-wrap items-center justify-between gap-3">
+      <p class="text-sm text-gray-600 dark:text-gray-400">{{ row.employeeNumber }} · {{ labels[row.status] }}</p>
+      <a [routerLink]="['/employees', company, 'all']" class="text-sm text-brand-600 hover:underline dark:text-brand-400">Back to directory</a>
+    </div>
+    @switch (view) {
+      @case ('profile') {
+        <dl class="mb-5 grid gap-4 text-sm text-gray-700 dark:text-gray-300 sm:grid-cols-2 xl:grid-cols-4">
+          <div><dt class="font-medium">Admitted</dt><dd>{{ row.admissionDate | date:'mediumDate':'UTC' }}</dd></div>
+          <div><dt class="font-medium">Job title</dt><dd>{{ row.jobTitle || '—' }}</dd></div>
+          <div><dt class="font-medium">Job category</dt><dd>{{ row.jobCategory || '—' }}</dd></div>
+          <div><dt class="font-medium">Department ID</dt><dd>{{ row.departmentId ?? '—' }}</dd></div>
+        </dl>
+        @if (allowed(grants.update)) {
+          <form #form="ngForm" (ngSubmit)="form.valid && saveNames()" class="grid gap-4 sm:grid-cols-2">
+            <label class="field">First name <input class="control" name="firstName" [(ngModel)]="firstName" maxlength="100" required /></label>
+            <label class="field">Last name <input class="control" name="lastName" [(ngModel)]="lastName" maxlength="100" required /></label>
+            <div class="sm:col-span-2"><button class="action action-primary" [disabled]="loading() || busy() || form.invalid || (!firstName.trim() || !lastName.trim()) || (firstName.trim() === row.firstName && lastName.trim() === row.lastName)">Save name</button></div>
+          </form>
+        }
+      }
+      @case ('personal') {
+        <form #form="ngForm" (ngSubmit)="form.valid && savePersonal()" class="grid gap-4 sm:grid-cols-2">
+          <label class="field">Date of birth <input class="control" type="date" name="dateOfBirth" [(ngModel)]="personal.dateOfBirth" [readonly]="!allowed(grants.personalManage)" /></label>
+          <label class="field">Nationality <input class="control" name="nationality" maxlength="80" [(ngModel)]="personal.nationality" [readonly]="!allowed(grants.personalManage)" /></label>
+          <label class="field">Email <input class="control" type="email" name="email" email maxlength="255" [(ngModel)]="personal.email" [readonly]="!allowed(grants.personalManage)" /></label>
+          <label class="field">Telephone <input class="control" type="tel" name="phone" maxlength="40" [(ngModel)]="personal.phone" [readonly]="!allowed(grants.personalManage)" /></label>
+          @if (allowed(grants.personalManage)) {
+            <div class="sm:col-span-2"><button class="action action-primary" [disabled]="loading() || busy() || form.invalid">Save personal data</button></div>
+          }
+        </form>
+      }
+      @case ('professional') {
+        <form #form="ngForm" (ngSubmit)="form.valid && saveTransfer()" class="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
+          <label class="field">Department ID <input class="control" type="number" min="1" step="1" name="department" [(ngModel)]="job.departmentId" [readonly]="!allowed(grants.transfer)" /></label>
+          <label class="field">Job title <input class="control" name="jobTitle" maxlength="150" [(ngModel)]="job.jobTitle" [readonly]="!allowed(grants.transfer)" /></label>
+          <label class="field">Job category <input class="control" name="jobCategory" maxlength="100" [(ngModel)]="job.jobCategory" [readonly]="!allowed(grants.transfer)" /></label>
+          @if (allowed(grants.transfer)) {
+            <label class="field">Effective date <input class="control" type="date" name="effectiveDate" [(ngModel)]="effectiveDate" required /></label>
+            <label class="field xl:col-span-2">Reason <input class="control" name="reason" maxlength="500" [(ngModel)]="reason" required /></label>
+            <div class="sm:col-span-2 xl:col-span-3"><button class="action action-primary" [disabled]="loading() || busy() || form.invalid || !reason.trim()">Record transfer</button></div>
+          }
+        </form>
+      }
+      @case ('status') {
+        @let statuses = statusChoices(row.status);
+        @if (statuses.length) {
+          <form #form="ngForm" (ngSubmit)="form.valid && saveStatus()" class="grid gap-4 sm:grid-cols-2">
+            <label class="field">New status
+              <select class="control" name="status" [(ngModel)]="nextStatus" required>
+                <option value="">Select a status</option>
+                @for (status of statuses; track status) { <option [value]="status">{{ row.status === 'TERMINATED' ? 'Rehire' : labels[status] }}</option> }
+              </select>
+            </label>
+            <label class="field">Effective date <input class="control" type="date" name="effectiveDate" [(ngModel)]="effectiveDate" required /></label>
+            <label class="field">Reason <input class="control" name="reason" maxlength="500" [(ngModel)]="reason" required /></label>
+            @if (nextStatus === 'TERMINATED') {
+              <label class="field">Termination reason <input class="control" name="terminationReason" maxlength="500" [(ngModel)]="terminationReason" required /></label>
+            }
+            <label class="flex items-center gap-2 text-sm text-gray-700 dark:text-gray-300 sm:col-span-2">
+              <input type="checkbox" name="confirmed" [(ngModel)]="confirmed" required /> I confirm this employment status change.
+            </label>
+            <div class="sm:col-span-2"><button class="action action-primary" [disabled]="loading() || busy() || form.invalid || !confirmed">Confirm change</button></div>
+          </form>
+        } @else {
+          <p class="text-sm text-gray-600 dark:text-gray-400">No status changes are available for this account.</p>
+        }
+      }
+      @case ('bank') {
+        @if (bank(); as account) {
+          <dl class="mb-5 grid gap-4 text-sm text-gray-700 dark:text-gray-300 sm:grid-cols-2 xl:grid-cols-4">
+            <div><dt class="font-medium">Bank</dt><dd>{{ account.bankName }}</dd></div>
+            <div><dt class="font-medium">Account holder</dt><dd>{{ account.accountName }}</dd></div>
+            <div><dt class="font-medium">Account</dt><dd>{{ mask(account.accountNumber) }} · {{ account.currency }}</dd></div>
+            <div><dt class="font-medium">IBAN</dt><dd>{{ mask(account.iban) }}</dd></div>
+          </dl>
+        } @else {
+          <p class="mb-4 text-sm text-gray-600 dark:text-gray-400">No bank account recorded.</p>
+        }
+        @if (allowed(grants.bankManage)) {
+          <form #form="ngForm" (ngSubmit)="form.valid && saveBank()" class="grid gap-4 sm:grid-cols-2 xl:grid-cols-3" autocomplete="off">
+            <label class="field">Bank name <input class="control" name="bankName" maxlength="120" [(ngModel)]="bankDraft.bankName" required /></label>
+            <label class="field">Account holder <input class="control" name="accountName" maxlength="150" [(ngModel)]="bankDraft.accountName" required /></label>
+            <label class="field">Account number <input class="control" name="accountNumber" maxlength="50" [(ngModel)]="bankDraft.accountNumber" required /></label>
+            <label class="field">IBAN <input class="control" name="iban" maxlength="34" [(ngModel)]="bankDraft.iban" /></label>
+            <label class="field">Currency <input class="control" name="currency" maxlength="3" pattern="[A-Za-z]{3}" [(ngModel)]="bankDraft.currency" required /></label>
+            <div class="sm:col-span-2 xl:col-span-3"><button class="action action-primary" [disabled]="loading() || busy() || form.invalid">Save bank account</button></div>
+          </form>
+        }
+      }
+      @case ('dependents') {
+        <ul class="mb-5 divide-y divide-gray-200 text-sm text-gray-700 dark:divide-gray-800 dark:text-gray-300">
+          @for (item of dependents(); track item.id) {
+            <li class="py-3"><span class="font-medium">{{ item.fullName }}</span> · {{ item.relationship }}
+              @if (item.dateOfBirth) { · {{ item.dateOfBirth | date:'mediumDate':'UTC' }} }
+              @if (item.fiscalDependent) { · Fiscal dependent }
+            </li>
+          } @empty { <li class="py-3">No dependents recorded.</li> }
+        </ul>
+        @if (allowed(grants.dependentManage)) {
+          <form #form="ngForm" (ngSubmit)="form.valid && saveDependent()" class="grid gap-4 sm:grid-cols-2">
+            <label class="field">Full name <input class="control" name="fullName" maxlength="200" [(ngModel)]="dependent.fullName" required /></label>
+            <label class="field">Relationship <input class="control" name="relationship" maxlength="80" [(ngModel)]="dependent.relationship" required /></label>
+            <label class="field">Date of birth <input class="control" type="date" name="dateOfBirth" [(ngModel)]="dependent.dateOfBirth" /></label>
+            <label class="flex items-center gap-2 text-sm text-gray-700 dark:text-gray-300"><input type="checkbox" name="fiscal" [(ngModel)]="dependent.fiscalDependent" /> Fiscal dependent</label>
+            <div class="sm:col-span-2"><button class="action action-primary" [disabled]="loading() || busy() || form.invalid">Add dependent</button></div>
+          </form>
+        }
+      }
+      @case ('documents') {
+        @if (allowed('documents:associations:create')) {
+          <form #form="ngForm" (ngSubmit)="form.valid && attachDocument()" class="mb-4 flex flex-wrap items-end gap-3">
+            <label class="field min-w-56 flex-1">Existing document ID
+              <input class="control" name="documentId" [(ngModel)]="documentId" required minlength="36" maxlength="36" />
+            </label>
+            <a class="action" [routerLink]="['/documents', company, 'library']">Browse document library</a>
+            <button class="action action-primary" [disabled]="loading() || busy() || form.invalid">Associate document</button>
+          </form>
+        }
+        <ul class="divide-y divide-gray-200 text-sm text-gray-700 dark:divide-gray-800 dark:text-gray-300">
+          @for (item of documents(); track item.id) {
+            <li class="flex flex-wrap items-center justify-between gap-3 py-3">
+              <div>
+                <p class="font-medium">{{ item.name }}</p>
+                <p>{{ item.categoryCode || 'Uncategorised' }} · {{ item.status }}
+                  @if (item.expiresAt) { · Expires {{ item.expiresAt | date:'mediumDate':'UTC' }} }
+                </p>
+              </div>
+              @if (link(); as downloadLink) {
+                @if (downloadLink.id === item.id) {
+                  <a [href]="downloadLink.url" target="_blank" rel="noopener noreferrer" class="action">Open download</a>
+                }
+              }
+              @if (allowed('documents:download') && (item.status === 'ACTIVE' || item.status === 'ARCHIVED')) {
+                <button type="button" class="action" [disabled]="loading() || busy()" (click)="download(item)">Get download link</button>
+              }
+            </li>
+          } @empty { <li class="py-3">No documents on this page.</li> }
+        </ul>
+        <div class="mt-4 flex gap-3">
+          <button type="button" class="action" [disabled]="loading() || busy() || documentsPage <= 1" (click)="load(documentsPage - 1)">Previous</button>
+          <button type="button" class="action" [disabled]="loading() || busy() || documents().length < documentsPageSize" (click)="load(documentsPage + 1)">Next</button>
+        </div>
+      }
+      @case ('history') {
+        @if (history(); as data) {
+          <div class="grid gap-6 text-sm text-gray-700 dark:text-gray-300 lg:grid-cols-2">
+            <section>
+              <h3 class="mb-3 font-semibold">Status history</h3>
+              <ol class="divide-y divide-gray-200 dark:divide-gray-800">
+                @for (item of data.status; track item.id) {
+                  <li class="py-3"><p>{{ item.effectiveAt | date:'mediumDate':'UTC' }} · {{ item.fromStatus ? labels[item.fromStatus] + ' → ' : '' }}{{ labels[item.toStatus] }}</p>
+                    @if (item.reason) { <p class="mt-1 break-words">{{ item.reason }}</p> }
+                  </li>
+                } @empty { <li class="py-3">No status history.</li> }
+              </ol>
+            </section>
+            <section>
+              <h3 class="mb-3 font-semibold">Professional history</h3>
+              <ol class="divide-y divide-gray-200 dark:divide-gray-800">
+                @for (item of data.professional; track item.id) {
+                  <li class="py-3"><p>{{ item.effectiveFrom | date:'mediumDate':'UTC' }} · {{ item.jobTitle || 'No job title' }} · {{ item.jobCategory || 'No job category' }}</p>
+                    @if (item.reason) { <p class="mt-1 break-words">{{ item.reason }}</p> }
+                  </li>
+                } @empty { <li class="py-3">No professional history.</li> }
+              </ol>
+            </section>
+          </div>
+        }
+      }
+    }
+  }
+</app-component-card>

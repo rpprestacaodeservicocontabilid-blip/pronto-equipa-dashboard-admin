@@ -1,4 +1,7 @@
 <app-page-breadcrumb [pageTitle]="section.title" />
+@if (section.view === 'overview') {
+  <a class="ps-secondary mb-4" routerLink="/company-payslips">Open company payslips</a>
+}
 
 <form class="mb-5 space-y-4 rounded-xl border border-gray-200 bg-white p-4 dark:border-gray-800 dark:bg-gray-900" (ngSubmit)="applyFilters()">
   <div class="grid items-end gap-3 sm:grid-cols-2 xl:grid-cols-[minmax(12rem,1.5fr)_minmax(9rem,1fr)_minmax(9rem,1fr)_auto]">

@@ -1,0 +1,56 @@
+<app-component-card [title]="mode === 'new' ? 'Register an employee' : 'Employee file import'">
+  @if (error()) { <p class="feedback mb-4" role="alert">{{ error() }}</p> }
+  @if (mode === 'new') {
+    @if (created(); as employee) {
+      <p class="notice mb-4" role="status">
+        {{ employee.firstName }} {{ employee.lastName }} was registered.
+        @if (canRead) {
+          <a [routerLink]="['/employees', company, 'details', employee.id]" class="font-medium underline">Open profile</a>
+        }
+      </p>
+    }
+    <form #registration="ngForm" (ngSubmit)="registration.valid && save()" class="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
+      @for (field of fields; track field.key) {
+        <label class="field">{{ field.label }}
+          <input class="control" [name]="field.key" [type]="field.type" [maxlength]="field.max"
+            [required]="field.required" [email]="field.type === 'email'" [(ngModel)]="draft[field.key]" [disabled]="busy()" />
+        </label>
+      }
+      <label class="field">Department ID
+        <input class="control" type="number" name="departmentId" min="1" step="1" [(ngModel)]="draft.departmentId" [disabled]="busy()" />
+      </label>
+      <div class="sm:col-span-2 xl:col-span-3">
+        <button class="action action-primary" [disabled]="busy() || registration.invalid">Register employee</button>
+      </div>
+    </form>
+  } @else {
+    <p class="mb-4 text-sm text-gray-600 dark:text-gray-400">Use the template headers in a CSV file or the first worksheet of an XLSX workbook. Import up to 500 employees per file.</p>
+    <div class="mb-4 flex flex-wrap items-end gap-4">
+      <button type="button" class="action" (click)="template()">Download template</button>
+      <label class="field">CSV or Excel workbook
+        <input class="control" #file type="file" accept=".csv,.xlsx,text/csv,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" (change)="chooseFile(file)" [disabled]="busy()" />
+      </label>
+    </div>
+    @if (busy()) { <p role="status" class="text-sm text-gray-600 dark:text-gray-400">Processing file…</p> }
+    @if (preview(); as selection) {
+      <p class="mb-3 text-sm text-gray-700 dark:text-gray-300">{{ selection.employees.length }} valid records · {{ selection.errors.length }} errors</p>
+      @if (selection.errors.length) {
+        <ul class="feedback max-h-60 overflow-auto" aria-label="Import validation errors">
+          @for (item of selection.errors; track item.record) { <li>Record {{ item.record }} · {{ item.message }}</li> }
+        </ul>
+      } @else {
+        <button type="button" class="action action-primary" (click)="submitImport()" [disabled]="busy()">Confirm import</button>
+      }
+    }
+    @if (imported(); as report) {
+      <p class="notice mb-3" role="status">{{ report.succeeded }} registered · {{ report.failed }} failed · {{ report.total }} total</p>
+      @if (report.failed) {
+        <ul class="feedback max-h-60 overflow-auto" aria-label="Failed records">
+          @for (row of report.results; track row.index) {
+            @if (!row.success) { <li>{{ row.employeeNumber }} · {{ row.error }}</li> }
+          }
+        </ul>
+      }
+    }
+  }
+</app-component-card>

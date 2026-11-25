@@ -33,7 +33,7 @@ export class OnboardingApi {
     return this.get<{ url: string }>('applications/' + id + '/documents/' + documentId + '/download');
   }
   action(id: string, action: string, body: Record<string, unknown>) {
-    return this.post<unknown>('applications/' + id + '/' + action, body);
+    return this.post<{ status?: string }>('applications/' + id + '/' + action, body);
   }
 
   private get<T>(path: string, query: Query = {}) {

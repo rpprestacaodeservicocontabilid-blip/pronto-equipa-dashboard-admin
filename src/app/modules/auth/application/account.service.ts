@@ -13,5 +13,5 @@ export class AccountService {
   revokeOtherSessions() { return this.api.revokeOtherSessions(); }
   linkGoogle(code: string) { return this.api.linkGoogle(code); }
   unlinkGoogle() { return this.api.unlinkGoogle(); }
-  checkPermission(userId: number, permission: string) { return this.api.checkPermission(userId, permission); }
+  checkPermission(userId: number, permission: string, companyId?: number) { return this.api.checkPermission(userId, permission, companyId); }
 }

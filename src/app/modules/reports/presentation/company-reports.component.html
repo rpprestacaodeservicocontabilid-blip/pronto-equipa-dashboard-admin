@@ -1,0 +1,237 @@
+<app-page-breadcrumb [pageTitle]="section()?.title ?? 'Company reports'" />
+
+<div class="space-y-5">
+  <div class="flex flex-wrap items-center justify-between gap-3">
+    @if (company(); as workspace) {
+      <h2 class="text-xl font-semibold text-gray-950 dark:text-white">{{ workspace.company.name }}</h2>
+    }
+    <a routerLink="/company-reports" class="pr-secondary">Change company</a>
+  </div>
+  @if (forbidden()) {
+    <p class="pr-error" role="alert">{{ forbidden() }}</p>
+  } @else if (company(); as workspace) {
+    @if (error()) { <p class="pr-error" role="alert">{{ error() }}</p> }
+    @if (message()) { <p class="pr-muted" role="status">{{ message() }}</p> }
+    @if (busy()) { <p class="pr-muted" role="status">Loading report data…</p> }
+
+    @switch (section()?.view) {
+      @case ('dashboard') {
+        <app-component-card title="Indicator filters">
+          <form class="flex flex-wrap items-end gap-3" (ngSubmit)="loadDashboard()">
+            <label class="pr-label">From<input class="pr-input" name="from" type="date" [(ngModel)]="filters.from"></label>
+            <label class="pr-label">Through<input class="pr-input" name="to" type="date" [(ngModel)]="filters.to"></label>
+            <label class="pr-label">Department ID<input class="pr-input" name="department" type="number" min="1" [(ngModel)]="filters.departmentId"></label>
+            @if (allowed('reports:payroll:read', 'reports:salary:read-sensitive')) {
+              <label class="pr-label flex min-h-10 items-center gap-2">
+                <input type="checkbox" class="accent-brand-500" name="compare" [(ngModel)]="compare"> Compare payroll with previous period
+              </label>
+            }
+            <button class="pr-button" type="submit" [disabled]="busy()">Apply filters</button>
+          </form>
+        </app-component-card>
+        @if (dashboard(); as indicators) {
+          <app-component-card title="Current workforce">
+            <p class="pr-muted mb-3">Source Employees · Updated {{ indicators.asOf | date:'medium':'+0100' }} (Luanda)</p>
+            <dl class="grid gap-3 sm:grid-cols-2">
+              <div class="pr-stat"><dt>Active workers</dt><dd>{{ indicators.workforce.active | number }}</dd></div>
+              <div class="pr-stat"><dt>Total registered workers</dt><dd>{{ indicators.workforce.total | number }}</dd></div>
+            </dl>
+          </app-component-card>
+          @if (allowed('reports:payroll:read', 'reports:salary:read-sensitive')) {
+            <app-component-card title="Closed payroll">
+              <p class="pr-muted mb-3">Period {{ activePeriod()?.from || 'First available' }} to {{ activePeriod()?.to || 'Latest available' }} · Personnel cost includes gross pay and employer charges.</p>
+              <div class="space-y-4">
+                @for (row of indicators.payrollByCurrency; track row.currency) {
+                  <dl class="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+                    <div class="pr-stat"><dt>Gross pay</dt><dd>{{ row.grossAmount | currency:row.currency:'code' }}</dd></div>
+                    <div class="pr-stat"><dt>Net pay</dt><dd>{{ row.netAmount | currency:row.currency:'code' }}</dd></div>
+                    <div class="pr-stat"><dt>Personnel cost</dt><dd>{{ row.personnelCost | currency:row.currency:'code' }}</dd></div>
+                    <div class="pr-stat"><dt>Closed worker results</dt><dd>{{ row.closedResults | number }}</dd></div>
+                  </dl>
+                } @empty { <p class="pr-muted">No closed payroll results for this period.</p> }
+              </div>
+            </app-component-card>
+            @if (previous(); as past) {
+              <app-component-card title="Previous payroll period">
+                <p class="pr-muted mb-3">{{ past.from }} to {{ past.to }}</p>
+                <dl class="grid gap-3 sm:grid-cols-2">
+                  @for (row of past.data.payrollByCurrency; track row.currency) {
+                    <div class="pr-stat"><dt>Previous personnel cost</dt><dd>{{ row.personnelCost | currency:row.currency:'code' }}</dd></div>
+                  } @empty { <p class="pr-muted">No closed payroll results for the previous period.</p> }
+                </dl>
+              </app-component-card>
+            }
+          }
+        }
+      }
+      @case ('catalog') {
+        <app-component-card [title]="section()?.domain ? section()!.title : 'Available reports'">
+          <div class="mb-4 flex flex-wrap items-end gap-3">
+            <label class="pr-label grow">Find a report
+              <input class="pr-input" type="search" [ngModel]="search()" (ngModelChange)="search.set($event)" placeholder="Code, name or source">
+            </label>
+            <button type="button" class="pr-secondary" [disabled]="busy()" (click)="refresh()">Refresh catalogue</button>
+          </div>
+          <ul class="grid gap-2 lg:grid-cols-2">
+            @for (row of matches(); track row.code) {
+              <li>
+                <button type="button" class="pr-secondary w-full flex-wrap justify-between gap-2 text-start" [disabled]="busy()"
+                  [attr.aria-pressed]="selected()?.code === row.code" (click)="select(row.code)">
+                  <span>{{ row.name }}</span><span class="pr-badge">{{ row.code }}</span>
+                </button>
+              </li>
+            } @empty { @if (!busy()) { <li class="pr-muted">No available reports match this selection.</li> } }
+          </ul>
+        </app-component-card>
+        @if (selected(); as report) {
+          <app-component-card [title]="report.name">
+            <p class="pr-muted mb-3">{{ domainLabels[report.domain] }} · Source {{ report.source }}</p>
+            <form class="space-y-4" (ngSubmit)="run(report)">
+              <ng-container [ngTemplateOutlet]="reportFilters" [ngTemplateOutletContext]="{ keys: report.workspaceFilters ?? [] }" />
+              @if (allowed('reports:execute')) {
+                <button class="pr-button" type="submit" [disabled]="busy()">Run report</button>
+              }
+            </form>
+          </app-component-card>
+        }
+      }
+      @case ('history') {
+        <app-component-card title="Saved executions">
+          <button class="pr-secondary mb-3" type="button" (click)="refresh()" [disabled]="busy()">Refresh</button>
+          <div class="overflow-x-auto">
+            <table class="pr-table w-full">
+              <thead><tr><th scope="col">Report</th><th scope="col">Generated</th><th scope="col">Status</th><th scope="col">Rows</th><th scope="col">Result</th></tr></thead>
+              <tbody>
+                @for (row of history(); track row.id) {
+                  <tr><td>{{ row.code }}</td><td>{{ row.generatedAt | date:'medium':'+0100' }}</td>
+                    <td><span class="pr-badge" [attr.data-status]="row.status">{{ row.status }}</span></td><td>{{ row.rowCount | number }}</td>
+                    <td><button type="button" class="pr-link" (click)="loadResult(row)" [disabled]="busy()">Open</button></td></tr>
+                } @empty { <tr><td colspan="5">{{ busy() ? 'Loading…' : 'No saved executions.' }}</td></tr> }
+              </tbody>
+            </table>
+          </div>
+        </app-component-card>
+      }
+      @case ('exports') {
+        <app-component-card title="Generated files">
+          <button class="pr-secondary mb-3" type="button" (click)="refresh()" [disabled]="busy()">Refresh</button>
+          <div class="overflow-x-auto">
+            <table class="pr-table w-full">
+              <thead><tr><th scope="col">File</th><th scope="col">Rows</th><th scope="col">Status</th><th scope="col">Expires (Luanda)</th><th scope="col">Action</th></tr></thead>
+              <tbody>
+                @for (row of files(); track row.id) {
+                  <tr><td>{{ row.filename }}</td><td>{{ row.rowCount | number }}</td>
+                    <td><span class="pr-badge" [attr.data-status]="row.status">{{ row.status }}</span></td><td>{{ row.expiresAt | date:'medium':'+0100' }}</td>
+                    <td><button type="button" class="pr-link" (click)="download(row)" [disabled]="busy() || row.status !== 'READY'">Download</button></td></tr>
+                } @empty { <tr><td colspan="5">{{ busy() ? 'Loading…' : 'No exports.' }}</td></tr> }
+              </tbody>
+            </table>
+          </div>
+        </app-component-card>
+      }
+      @case ('custom') {
+        @if (allowed('reports:custom:create')) {
+          <app-component-card title="Create custom report">
+            <label class="pr-label mb-3 max-w-xl">Source report
+              <select class="pr-input" name="source" [ngModel]="selected()?.code ?? ''" (ngModelChange)="select($event)" [disabled]="busy()">
+                <option value="">Choose a report</option>
+                @for (row of catalogue(); track row.code) { <option [value]="row.code">{{ row.name }} · {{ row.code }}</option> }
+              </select>
+            </label>
+            @if (selected(); as report) {
+              <form class="space-y-4" (ngSubmit)="saveTemplate(report)">
+                <label class="pr-label max-w-xl">Report name
+                  <input class="pr-input" name="title" required minlength="2" maxlength="120" [(ngModel)]="name">
+                </label>
+                <fieldset class="grid gap-2 sm:grid-cols-2 xl:grid-cols-3" [disabled]="busy()">
+                  <legend class="pr-label mb-2">Visible columns</legend>
+                  @for (field of report.fields; track field) {
+                    <label class="pr-label flex items-center gap-2">
+                      <input #column type="checkbox" class="accent-brand-500" [checked]="fields.includes(field)" (change)="toggleField(field, column.checked)">
+                      {{ fieldLabel(field) }}
+                    </label>
+                  }
+                </fieldset>
+                <ng-container [ngTemplateOutlet]="reportFilters" [ngTemplateOutletContext]="{ keys: report.workspaceFilters ?? [] }" />
+                <button type="submit" class="pr-button" [disabled]="busy() || name.trim().length < 2 || fields.length === 0">Save draft</button>
+              </form>
+            }
+          </app-component-card>
+        }
+        <app-component-card title="My custom reports">
+          <ul class="space-y-3">
+            @for (row of templates(); track row.id) {
+              <li class="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-gray-200 p-3 dark:border-gray-800">
+                <div>
+                  <p class="pr-label">{{ row.name }}</p>
+                  <p class="pr-muted">{{ row.code }} · Version {{ row.version }} · {{ row.status }}</p>
+                </div>
+                <div class="flex gap-2">
+                  @if (allowed('reports:execute')) {
+                    <button class="pr-secondary" type="button" (click)="previewTemplate(row)" [disabled]="busy()">Preview</button>
+                  }
+                  @if (row.status === 'DRAFT' && allowed('reports:custom:publish')) {
+                    <button class="pr-secondary" type="button" (click)="publish(row)" [disabled]="busy()">Publish</button>
+                  }
+                </div>
+              </li>
+            } @empty { @if (!busy()) { <li class="pr-muted">No custom reports.</li> } }
+          </ul>
+        </app-component-card>
+        @if (preview(); as table) {
+          <app-component-card title="Custom report preview">
+            <p class="pr-muted mb-3">{{ table.code }} · Version {{ table.version }} · {{ table.rowCount | number }} rows</p>
+            <app-company-report-table [rows]="table.data" />
+          </app-component-card>
+        }
+      }
+    }
+
+    @if (result(); as report) {
+      <app-component-card title="Saved report result">
+        <p class="pr-muted mb-3">{{ report.code }} · {{ report.rowCount | number }} rows · Generated {{ report.generatedAt | date:'medium':'+0100' }} (Luanda)</p>
+        @if (report.filters?.limit && report.rowCount >= report.filters!.limit!) {
+          <p class="pr-muted mb-3">Row limit reached. Narrow the filters to refine the result.</p>
+        }
+        @if (allowed('reports:exports:create')) {
+          <div class="mb-4 flex flex-wrap items-end gap-2">
+            <label class="pr-label">File format
+              <select class="pr-input" [(ngModel)]="format" [disabled]="busy()">
+                <option value="CSV">CSV</option><option value="XLSX">Excel</option><option value="PDF">PDF</option>
+              </select>
+            </label>
+            <button class="pr-secondary" type="button" [disabled]="busy()" (click)="exportResult(report)">Generate file</button>
+            @if (allowed('reports:exports:download')) {
+              @if (createdFile(); as file) {
+                <button class="pr-button" type="button" [disabled]="busy()" (click)="download(file)">Download {{ file.filename }}</button>
+              }
+              <a class="pr-link self-center" [routerLink]="['/company-reports', workspace.company.id, 'exports']">Export history</a>
+            }
+          </div>
+        }
+        <app-company-report-table [rows]="report.data" />
+      </app-component-card>
+    }
+  }
+</div>
+
+<ng-template #reportFilters let-keys="keys">
+  <div class="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
+    @if (keys.includes('from')) {
+      <label class="pr-label">From<input class="pr-input" type="date" [(ngModel)]="filters.from" [ngModelOptions]="{ standalone: true }"></label>
+    }
+    @if (keys.includes('to')) {
+      <label class="pr-label">Through<input class="pr-input" type="date" [(ngModel)]="filters.to" [ngModelOptions]="{ standalone: true }"></label>
+    }
+    @if (keys.includes('employeeId')) {
+      <label class="pr-label">Worker ID<input class="pr-input" [(ngModel)]="filters.employeeId" [ngModelOptions]="{ standalone: true }"></label>
+    }
+    @if (keys.includes('departmentId')) {
+      <label class="pr-label">Department ID<input class="pr-input" type="number" min="1" [(ngModel)]="filters.departmentId" [ngModelOptions]="{ standalone: true }"></label>
+    }
+    @if (keys.includes('status')) {
+      <label class="pr-label">Status<input class="pr-input" maxlength="30" [(ngModel)]="filters.status" [ngModelOptions]="{ standalone: true }"></label>
+    }
+    <label class="pr-label">Row limit<input class="pr-input" type="number" min="1" max="5000" [(ngModel)]="filters.limit" [ngModelOptions]="{ standalone: true }"></label>
+  </div>
+</ng-template>

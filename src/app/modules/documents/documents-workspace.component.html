@@ -1,0 +1,150 @@
+<app-page-breadcrumb [pageTitle]="section.title" homeLink="/documents" />
+<div class="space-y-5">
+  @if (denied()) { <p class="doc-error" role="alert">{{ denied() }}</p> }
+  @else {
+    <div class="flex flex-wrap items-center justify-between gap-3">
+      <span class="doc-muted">{{ companyName }} · #{{ company }}</span>
+      <a class="doc-link" routerLink="/documents">Switch company</a>
+    </div>
+    @if (error()) { <p class="doc-error" role="alert">{{ error() }}</p> }
+    @if (notice()) { <p class="doc-muted" role="status">{{ notice() }}</p> }
+    @if (loading()) { <p class="doc-muted" role="status">Loading documents…</p> }
+    @if (section.view === 'library') {
+      <form class="flex flex-wrap items-end gap-3" (ngSubmit)="close(); load()">
+        <label class="doc-label">Name<input class="doc-input" name="search" maxlength="120" [(ngModel)]="search"></label>
+        <label class="doc-label">Category code<input class="doc-input" name="category" maxlength="80" [(ngModel)]="categoryCode"></label>
+        @if (!section.filters?.['status']) {
+          <label class="doc-label">Status<select class="doc-input" name="state" [(ngModel)]="status">
+            <option value="">All states</option>@for (state of states; track state) { <option [value]="state">{{ label(state) }}</option> }
+          </select></label>
+        }
+        <button type="submit" class="doc-primary" [disabled]="busy() || loading()">Apply filters</button>
+      </form>
+    }
+    @if (section.view === 'upload') {
+      <app-component-card title="Upload documents">
+        <form class="space-y-4" (ngSubmit)="upload(categoryCode)">
+          <label class="doc-label">Category<select class="doc-input" name="uploadCategory" [(ngModel)]="categoryCode">
+            <option value="">No category</option>@for (entry of categories(); track entry.id) { <option [value]="field(entry, 'code')">{{ field(entry, 'name') }}</option> }
+          </select></label>
+          <label class="doc-label">Files<input class="doc-input" type="file" multiple (change)="fileChange($event)" [disabled]="busy()"></label>
+          <button class="doc-primary" type="submit" [disabled]="busy() || !files.length">{{ busy() ? 'Uploading…' : 'Upload selected files' }}</button>
+        </form>
+      </app-component-card>
+    }
+    @if (section.view === 'categories' && can('categories:manage')) {
+      <app-component-card title="Create category">
+        <form class="flex flex-wrap items-end gap-3" #form="ngForm" (ngSubmit)="form.valid && saveCategory()">
+          <label class="doc-label">Code<input class="doc-input" name="code" [(ngModel)]="category.code" pattern="[A-Z0-9_\-]{2,80}" required></label>
+          <label class="doc-label">Name<input class="doc-input" name="name" [(ngModel)]="category.name" minlength="2" maxlength="120" required></label>
+          <label class="doc-label">Scope<select class="doc-input" name="scope" [(ngModel)]="category.scope"><option value="COMPANY">Company</option><option value="EMPLOYEE">Employee</option></select></label>
+          <label class="doc-label">Confidentiality<select class="doc-input" name="confidentiality" [(ngModel)]="category.confidentiality">
+            @for (entry of confidentiality; track entry) { <option [value]="entry">{{ label(entry) }}</option> }
+          </select></label>
+          <button class="doc-primary" type="submit" [disabled]="form.invalid || busy()">Create category</button>
+        </form>
+      </app-component-card>
+    }
+    @if (storage(); as usage) {
+      <div class="grid gap-4 sm:grid-cols-3">
+        <app-component-card title="Used"><p class="doc-muted">{{ usage.usedBytes }} bytes</p></app-component-card>
+        <app-component-card title="Reserved"><p class="doc-muted">{{ usage.reservedBytes }} bytes</p></app-component-card>
+        <app-component-card title="Quota"><p class="doc-muted">{{ usage.quotaBytes }} bytes</p></app-component-card>
+      </div>
+    }
+    @if (policy(); as config) {
+      <app-component-card title="Company document policies">
+        <form class="max-w-xl space-y-4" #policyForm="ngForm" (ngSubmit)="policyForm.valid && savePolicy(config)">
+          <label class="doc-label flex gap-2"><input type="checkbox" name="review" [(ngModel)]="config.requireValidation"> Require review after security scanning</label>
+          <label class="doc-label">Default confidentiality<select class="doc-input" name="defaultConfidentiality" [(ngModel)]="config.defaultConfidentiality">@for (entry of confidentiality; track entry) { <option [value]="entry">{{ label(entry) }}</option> }</select></label>
+          <label class="doc-label">Maximum file size in bytes<input class="doc-input" type="number" name="max" min="1" step="1" [(ngModel)]="config.maxFileBytes" required></label>
+          <label class="doc-label">Default retention in days<input class="doc-input" type="number" name="days" min="0" max="36500" step="1" [(ngModel)]="config.defaultRetentionDays" required></label>
+          <button class="doc-primary" type="submit" [disabled]="policyForm.invalid || busy()">Save policy</button>
+        </form>
+      </app-component-card>
+    }
+    @if (action(); as operation) {
+      <app-component-card [title]="operation.title">
+        <form class="max-w-xl space-y-4" #operationForm="ngForm" (ngSubmit)="operationForm.valid && confirm(operation)">
+          @if (operation.reason) { <label class="doc-label">Reason<textarea class="doc-input" name="reason" [(ngModel)]="reason" minlength="3" maxlength="1000" required></textarea></label> }
+          @if (operation.method === 'PATCH') {
+            <label class="doc-label">Name<input class="doc-input" name="name" [(ngModel)]="name" maxlength="240" required></label>
+            <label class="doc-label">Category code<input class="doc-input" name="category" [(ngModel)]="actionCategory" maxlength="80"></label>
+            <label class="doc-label">New expiry date<input class="doc-input" type="date" name="expires" [(ngModel)]="expires"></label>
+          }
+          <div class="flex flex-wrap gap-2">
+            <button class="doc-primary" type="submit" [disabled]="busy() || operationForm.invalid">Confirm</button>
+            <button class="doc-button" type="button" (click)="action.set(null)" [disabled]="busy()">Close</button>
+          </div>
+        </form>
+      </app-component-card>
+    }
+    @if (detail(); as row) {
+      <app-component-card [title]="text(row['name'] ?? row.id)">
+        <p class="doc-muted break-all">{{ row.id }} · {{ label(row.status) }} @if (row.documentId) { · Document {{ row.documentId }} }</p>
+        <div class="my-3 flex flex-wrap gap-2">
+          @for (option of actions(row); track option.path) { <button type="button" class="doc-button" (click)="start(option)" [disabled]="busy()">{{ option.title }}</button> }
+          @if (section.view === 'library') {
+            @if (can('versions:read')) { <button type="button" class="doc-button" (click)="show(row, 'versions')">Version history</button> }
+            @if (can('read')) { <button type="button" class="doc-button" (click)="show(row, 'associations')">Associations</button> }
+            @if (row.status === 'ACTIVE' || row.status === 'ARCHIVED') {
+              @if (can('preview')) { <button type="button" class="doc-button" (click)="show(row, 'preview')">Prepare preview</button> }
+              @if (can('download')) { <button type="button" class="doc-button" (click)="show(row, 'download')">Prepare download</button> }
+            }
+          }
+          @if (section.view === 'batches' && can('read')) { <button type="button" class="doc-button" (click)="show(row, 'batch')">Batch progress</button> }
+          <button type="button" class="doc-button" (click)="close()" [disabled]="busy()">Close details</button>
+        </div>
+        @if (link(); as url) { <a class="doc-link" [href]="url" target="_blank" rel="noopener noreferrer">Open signed link</a> }
+        @if (related(); as content) {
+          <h3 class="doc-label">{{ content.title }}</h3>
+          <ul class="doc-muted mt-2 space-y-2">
+            @for (entry of content.rows; track entry.id) {
+              <li class="break-words">
+                @if (content.title === 'Versions') { Version {{ entry['version'] }} · {{ entry['name'] }} · {{ entry['sizeBytes'] }} bytes }
+                @else if (content.title === 'Associations') { {{ entry.data?.['entityType'] }} · {{ entry.data?.['entityId'] }} }
+                @else { {{ entry['name'] }} @if (entry['error']) { · Transfer could not be started } }
+                · {{ label(entry.status) }}
+              </li>
+            } @empty { <li>No records found.</li> }
+          </ul>
+        }
+        @if (section.view === 'library' && row.status === 'ACTIVE' && can('versions:create', 'upload')) {
+          <form class="mt-4 flex flex-wrap items-end gap-3" (ngSubmit)="upload('', row)">
+            <label class="doc-label">Replacement version<input class="doc-input" type="file" (change)="fileChange($event)" [disabled]="busy()"></label>
+            <button class="doc-primary" type="submit" [disabled]="busy() || !files.length">Upload version</button>
+          </form>
+        }
+      </app-component-card>
+    }
+    @if (uploadResults().length) {
+      <app-component-card title="Transfer results"><ul class="doc-muted space-y-2">
+        @for (result of uploadResults(); track result.index) { <li>{{ result.file }} · {{ result.status }}</li> }
+      </ul></app-component-card>
+    }
+    @if (columns.length && !loading()) {
+      <app-component-card [title]="section.title">
+        <div class="overflow-x-auto"><table class="doc-table">
+          <thead><tr>@for (column of columns; track column[0]) { <th scope="col">{{ column[1] }}</th> }<th scope="col">Status</th><th scope="col">Record</th></tr></thead>
+          <tbody>
+            @for (row of rows(); track row.id ?? row['code']) {
+              <tr>@for (column of columns; track column[0]) {
+                <td class="max-w-64 break-words">@if (column[0] === 'expiresAt' || column[0] === 'at') { {{ $any(field(row, column[0])) | date:'medium' }} } @else { {{ text(field(row, column[0])) }} }</td>
+              }
+              <td>{{ row.status ? label(row.status) : '—' }}</td>
+              <td>@if (row.id && section.view !== 'audit' && section.view !== 'categories') { <button type="button" class="doc-link" [disabled]="busy()" (click)="choose(row)">View</button> }</td></tr>
+            } @empty { <tr><td [attr.colspan]="columns.length + 2">No records match this view.</td></tr> }
+          </tbody>
+        </table></div>
+        @if (section.view !== 'categories') {
+          <div class="mt-3 flex flex-wrap items-center gap-3">
+            <button type="button" class="doc-button" [disabled]="busy() || page <= 1" (click)="close(); load(page - 1)">Previous</button>
+            <span class="doc-muted">Page {{ page }} @if (total !== null) { · {{ total }} records }</span>
+            <button type="button" class="doc-button" [disabled]="busy() || (total !== null ? page * 25 >= total : rows().length < 25)" (click)="close(); load(page + 1)">Next</button>
+            <button type="button" class="doc-button" [disabled]="busy()" (click)="close(); load(page)">Refresh</button>
+          </div>
+        }
+      </app-component-card>
+    }
+  }
+</div>

@@ -1,0 +1,78 @@
+<form class="grid gap-4" (ngSubmit)="submit()">
+  <div class="grid gap-3 sm:grid-cols-2">
+    <label class="sim-label">Scenario name
+      <input class="sim-input" name="name" required minlength="2" maxlength="120" [(ngModel)]="draft.name">
+    </label>
+    <label class="sim-label">Scenario type
+      <select class="sim-input" name="type" [(ngModel)]="draft.type" [disabled]="!!scenario">
+        @if (scenario) { <option [value]="scenario.type">{{ labels[scenario.type] }}</option> }
+        @else { @for (type of types; track type) { <option [value]="type">{{ labels[type] }}</option> } }
+      </select>
+    </label>
+    <label class="sim-label">Period start
+      <input class="sim-input" name="start" type="date" required [(ngModel)]="draft.configuration.period.startDate">
+    </label>
+    <label class="sim-label">Period end
+      <input class="sim-input" name="end" type="date" required [(ngModel)]="draft.configuration.period.endDate">
+    </label>
+    @if (draft.type !== 'INDIVIDUAL_PAYROLL') {
+      <label class="sim-label">Worker scope
+        <select class="sim-input" name="scope" [(ngModel)]="selection">
+          <option value="employees">Selected workers</option><option value="company">Company workforce</option>
+        </select>
+      </label>
+    }
+    @if (selection === 'employees' || draft.type === 'INDIVIDUAL_PAYROLL') {
+      <label class="sim-label">Worker IDs
+        <textarea class="sim-input" name="employees" rows="2" placeholder="UUIDs separated by commas or line breaks" [(ngModel)]="employees"></textarea>
+      </label>
+    }
+    <label class="sim-label">Department ID (optional)
+      <input class="sim-input" type="number" min="1" name="department" [(ngModel)]="draft.configuration.departmentId">
+    </label>
+    <label class="sim-label">Job category (optional)
+      <input class="sim-input" name="category" maxlength="100" [(ngModel)]="draft.configuration.jobCategory">
+    </label>
+    <label class="sim-label">Excluded worker IDs (optional)
+      <textarea class="sim-input" name="excluded" rows="2" [(ngModel)]="exclusions"></textarea>
+    </label>
+    <label class="sim-label">Baseline payroll run ID (optional)
+      <input class="sim-input" name="baseline" [(ngModel)]="draft.configuration.baselinePayrollRunId">
+    </label>
+  </div>
+
+  <fieldset class="space-y-3 border-t border-gray-200 pt-4 dark:border-gray-800">
+    <legend class="sim-label">Hypothetical payroll adjustments</legend>
+    @for (adjustment of draft.configuration.adjustments; track adjustment; let index = $index) {
+      <div class="grid gap-3 rounded-lg border border-gray-200 p-3 sm:grid-cols-3 dark:border-gray-800">
+        <label class="sim-label">Component code
+          <input class="sim-input" [name]="'code' + index" maxlength="80" [(ngModel)]="adjustment.componentCode">
+        </label>
+        <label class="sim-label">Operation
+          <select class="sim-input" [name]="'operation' + index" [(ngModel)]="adjustment.operation">
+            @for (operation of operations; track operation) { <option [value]="operation">{{ operation.replaceAll('_', ' ') }}</option> }
+          </select>
+        </label>
+        <label class="sim-label">Amount or percentage
+          <input class="sim-input" [name]="'value' + index" inputmode="decimal" [(ngModel)]="adjustment.value">
+        </label>
+        <label class="sim-label">Worker ID (optional)
+          <input class="sim-input" [name]="'worker' + index" [(ngModel)]="adjustment.employeeId">
+        </label>
+        <label class="sim-label">Effective from (optional)
+          <input class="sim-input" type="date" [name]="'from' + index" [(ngModel)]="adjustment.effectiveFrom">
+        </label>
+        <label class="sim-label">Effective to (optional)
+          <input class="sim-input" type="date" [name]="'to' + index" [(ngModel)]="adjustment.effectiveTo">
+        </label>
+        <button type="button" class="sim-action justify-self-start" (click)="draft.configuration.adjustments.splice(index, 1)">Remove adjustment {{ index + 1 }}</button>
+      </div>
+    }
+    <button type="button" class="sim-action" [disabled]="draft.configuration.adjustments.length >= 200" (click)="addAdjustment()">Add adjustment</button>
+  </fieldset>
+  @if (error) { <p class="sim-error" role="alert">{{ error }}</p> }
+  <div class="flex flex-wrap gap-2">
+    <button type="submit" class="sim-primary" [disabled]="busy">Save {{ scenario ? 'new version' : 'scenario' }}</button>
+    <button type="button" class="sim-action" [disabled]="busy" (click)="dismiss.emit()">Cancel</button>
+  </div>
+</form>

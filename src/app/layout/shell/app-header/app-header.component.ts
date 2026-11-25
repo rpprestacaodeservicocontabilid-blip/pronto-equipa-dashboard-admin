@@ -3,6 +3,7 @@ import { Component, inject } from '@angular/core';
 import { RouterModule } from '@angular/router';
 import { ThemeToggleButtonComponent } from '../../../shared/components/common/theme-toggle/theme-toggle-button.component';
 import { UserDropdownComponent } from '../../header/user-dropdown/user-dropdown.component';
+import { NotificationDropdownComponent } from '../../header/notification-dropdown/notification-dropdown.component';
 import { SidebarService } from '../../../core/services/sidebar.service';
 import { AuthService } from '../../../core/auth/auth.service';
 
@@ -15,6 +16,7 @@ import { ButtonComponent } from '../../../shared/components/ui/button/button.com
     RouterModule,
     ThemeToggleButtonComponent,
     UserDropdownComponent,
+    NotificationDropdownComponent,
   ],
   templateUrl: './app-header.component.html',
 })

@@ -32,7 +32,10 @@
             <h2 class="text-2xl font-semibold tracking-tight text-gray-950 dark:text-white">Platform reports</h2>
             <p class="pr-muted mt-1">Review reporting activity across client companies and compare it with the previous period.</p>
           </div>
-          <a class="pr-button" routerLink="/reports/catalog">Open report catalogue</a>
+          <div class="flex flex-wrap gap-2">
+            <a class="pr-button" routerLink="/reports/catalog">Open report catalogue</a>
+            <a class="pr-secondary" routerLink="/company-reports">Company reports</a>
+          </div>
         </div>
         @if (result(); as data) {
           <dl class="mt-5 grid grid-cols-2 gap-3 xl:grid-cols-4">

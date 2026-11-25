@@ -8,7 +8,7 @@ import { apiErrorMessage } from '../../../core/api/api-error';
 import { AuthService } from '../../../core/auth/auth.service';
 import { ComponentCardComponent } from '../../../shared/components/common/component-card/component-card.component';
 import { PageBreadcrumbComponent } from '../../../shared/components/common/page-breadcrumb/page-breadcrumb.component';
-import { label, Resource, Workspace } from '../domain/onboarding.models';
+import { label, requirementLabel, Resource, Workspace } from '../domain/onboarding.models';
 import { OnboardingApi } from '../infrastructure/onboarding-api.service';
 
 const TABS = [
@@ -59,6 +59,7 @@ export class ApplicationDetailsComponent {
   protected readonly timeline = computed(() => this.workspace()?.events.filter(row =>
     row.type.startsWith('onboarding.provisioning.') || ['onboarding.application.completed', 'onboarding.payment.required'].includes(row.type)) ?? []);
   protected readonly label = label;
+  protected readonly requirementLabel = requirementLabel;
   protected reason = '';
   protected assignee: number | null = null;
   protected email = '';
@@ -130,10 +131,13 @@ export class ApplicationDetailsComponent {
       ...(action.version !== undefined ? { version: action.version } : {}),
     };
     try {
-      await firstValueFrom(this.api.action(id, action.path, body));
+      const result = await firstValueFrom(this.api.action(id, action.path, body));
       if (id !== this.id) return;
       this.closeAction();
-      this.notice.set(action.success);
+      if (action.path.endsWith('/revoke')) this.inviteCode.set(null);
+      const status = action.path === 'activate' || action.path === 'retry' ? result.status : undefined;
+      this.notice.set(status === 'AWAITING_PAYMENT' ? 'Setup is ready. Activation awaits payment confirmation.'
+        : status === 'COMPLETED' ? 'Company environment activated.' : action.success);
       await this.refresh();
     } catch (error) { if (id === this.id) this.actionError.set(apiErrorMessage(error)); }
     finally { this.saving.set(false); }

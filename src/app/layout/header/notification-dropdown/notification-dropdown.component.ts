@@ -1,138 +1,76 @@
-import { CommonModule } from '@angular/common';
-import { Component, ElementRef, HostListener, OnDestroy, OnInit } from '@angular/core';
-import { RouterModule } from '@angular/router';
-import { Subscription } from 'rxjs';
-import { DropdownComponent } from '../../../shared/components/ui/dropdown/dropdown.component';
-import { DropdownItemComponent } from '../../../shared/components/ui/dropdown/dropdown-item/dropdown-item.component';
+import { DatePipe, DOCUMENT } from '@angular/common';
+import { Component, DestroyRef, ElementRef, HostListener, NgZone, computed, effect, inject, signal } from '@angular/core';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
+import { RouterLink } from '@angular/router';
+import { timer } from 'rxjs';
 import { DropdownService } from '../../../core/services/dropdown.service';
-import { ButtonComponent } from '../../../shared/components/ui/button/button.component';
-
-interface NotificationItem {
-  id: string;
-  name: string;
-  avatar: string;
-  action: string;
-  project: string;
-  time: string;
-  status: 'online' | 'offline' | 'busy';
-}
+import { NotificationInbox } from '../../../modules/notifications/application/notification-inbox.service';
+import { InboxItem } from '../../../modules/notifications/domain/notifications.models';
+import { NotificationsApi } from '../../../modules/notifications/infrastructure/notifications-api.service';
 
 @Component({
   selector: 'app-notification-dropdown',
+  standalone: true,
   templateUrl: './notification-dropdown.component.html',
-  imports: [ButtonComponent, CommonModule, RouterModule, DropdownComponent, DropdownItemComponent]
+  imports: [DatePipe, RouterLink],
 })
-export class NotificationDropdownComponent implements OnInit, OnDestroy {
-  readonly dropdownId = 'notification-dropdown';
-  isOpen = false;
-  notifying = true;
+export class NotificationDropdownComponent {
+  private readonly dropdown = inject(DropdownService);
+  private readonly element = inject<ElementRef<HTMLElement>>(ElementRef);
+  private readonly api = inject(NotificationsApi);
+  private readonly destroyRef = inject(DestroyRef);
+  private readonly document = inject(DOCUMENT);
+  protected readonly inbox = inject(NotificationInbox);
+  protected readonly open = signal(false);
+  protected readonly loading = signal(false);
+  protected readonly failed = signal(false);
+  protected readonly items = signal<InboxItem[]>([]);
+  private readonly key = computed(() => this.inbox.identity() + ':' + this.inbox.company());
 
-  notifications: NotificationItem[] = [
-    {
-      id: '1',
-      name: 'Terry Franci',
-      avatar: '/images/user/user-02.jpg',
-      action: 'requests permission to change',
-      project: 'Project - Nganter App',
-      time: '5 min ago',
-      status: 'online',
-    },
-    {
-      id: '2',
-      name: 'Alena Franci',
-      avatar: '/images/user/user-03.jpg',
-      action: 'requests permission to change',
-      project: 'Project - Nganter App',
-      time: '8 min ago',
-      status: 'online',
-    },
-    {
-      id: '3',
-      name: 'Jocelyn Kenter',
-      avatar: '/images/user/user-04.jpg',
-      action: 'requests permission to change',
-      project: 'Project - Nganter App',
-      time: '15 min ago',
-      status: 'online',
-    },
-    {
-      id: '4',
-      name: 'Brandon Philips',
-      avatar: '/images/user/user-05.jpg',
-      action: 'requests permission to change',
-      project: 'Project - Nganter App',
-      time: '1 hr ago',
-      status: 'offline',
-    },
-    {
-      id: '5',
-      name: 'Terry Franci',
-      avatar: '/images/user/user-02.jpg',
-      action: 'requests permission to change',
-      project: 'Project - Nganter App',
-      time: '5 min ago',
-      status: 'online',
-    },
-    {
-      id: '6',
-      name: 'Alena Franci',
-      avatar: '/images/user/user-03.jpg',
-      action: 'requests permission to change',
-      project: 'Project - Nganter App',
-      time: '8 min ago',
-      status: 'online',
-    },
-    {
-      id: '7',
-      name: 'Jocelyn Kenter',
-      avatar: '/images/user/user-04.jpg',
-      action: 'requests permission to change',
-      project: 'Project - Nganter App',
-      time: '15 min ago',
-      status: 'online',
-    },
-    {
-      id: '8',
-      name: 'Brandon Philips',
-      avatar: '/images/user/user-05.jpg',
-      action: 'requests permission to change',
-      project: 'Project - Nganter App',
-      time: '1 hr ago',
-      status: 'offline',
-    },
-  ];
-
-  private sub?: Subscription;
-
-  constructor(
-    private elementRef: ElementRef,
-    private dropdownService: DropdownService
-  ) {}
-
-  ngOnInit(): void {
-    this.sub = this.dropdownService.activeDropdown$.subscribe((activeId) => {
-      this.isOpen = activeId === this.dropdownId;
+  constructor() {
+    this.dropdown.activeDropdown$.pipe(takeUntilDestroyed()).subscribe(id => this.open.set(id === 'notification-dropdown'));
+    effect(onCleanup => {
+      const identity = this.inbox.identity();
+      const company = this.inbox.company();
+      if (!this.open() || !identity) { this.items.set([]); return; }
+      const key = this.key();
+      this.items.set([]);
+      this.loading.set(true);
+      this.failed.set(false);
+      const request = this.api.inbox(company, 1).subscribe({
+        next: entries => {
+          if (key !== this.key() || !this.open()) return;
+          this.items.set(entries.slice(0, 5));
+          this.loading.set(false);
+          this.inbox.refresh();
+        },
+        error: () => {
+          if (key !== this.key() || !this.open()) return;
+          this.loading.set(false);
+          this.failed.set(true);
+        },
+      });
+      onCleanup(() => request.unsubscribe());
     });
+    const zone = inject(NgZone);
+    zone.runOutsideAngular(() => timer(15000, 45000).pipe(takeUntilDestroyed(this.destroyRef)).subscribe(() => {
+      if (this.document.visibilityState === 'visible') zone.run(() => this.inbox.refresh());
+    }));
   }
 
-  ngOnDestroy(): void {
-    this.sub?.unsubscribe();
-  }
-
-  toggleDropdown(event?: Event): void {
-    event?.stopPropagation();
-    this.dropdownService.toggle(this.dropdownId);
-    this.notifying = false;
-  }
-
-  closeDropdown(): void {
-    this.dropdownService.close(this.dropdownId);
-  }
+  protected toggle() { this.dropdown.toggle('notification-dropdown'); }
+  protected close() { this.dropdown.close('notification-dropdown'); }
 
   @HostListener('document:click', ['$event'])
-  onDocumentClick(event: MouseEvent): void {
-    if (this.isOpen && !this.elementRef.nativeElement.contains(event.target)) {
-      this.closeDropdown();
-    }
+  protected outside(event: MouseEvent) {
+    if (this.open() && !this.element.nativeElement.contains(event.target as Node)) this.close();
+  }
+
+  @HostListener('keydown.escape', ['$event'])
+  protected escape(event: Event) {
+    if (!this.open()) return;
+    event.stopPropagation();
+    this.close();
+    this.element.nativeElement.querySelector('button')?.focus();
   }
 }

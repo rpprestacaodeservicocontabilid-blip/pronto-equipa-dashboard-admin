@@ -8,6 +8,22 @@ import { apiErrorMessage } from '../../../core/api/api-error';
 import { signInDestination } from './authenticated.guard';
 
 const messages = {
+  identity: {
+    title: 'Identity administration access required',
+    description: 'Managing global identities requires the SUPER_ADMIN role.',
+  },
+  authorization: {
+    title: 'Authorization administration access required',
+    description: 'Managing platform authorization requires the SUPER_ADMIN role.',
+  },
+  integrations: {
+    title: 'Integrations access required',
+    description: 'The platform integration catalogue requires the SUPER_ADMIN role.',
+  },
+  'platform-operations': {
+    title: 'Platform operations access required',
+    description: 'Operational monitoring requires the SUPER_ADMIN role.',
+  },
   companies: {
     title: 'Platform access required',
     description: 'Managing client companies requires the SUPER_ADMIN role.',
@@ -22,7 +38,7 @@ const messages = {
   },
   'platform-billing': {
     title: 'Platform billing access required',
-    description: 'Managing platform billing requires the SUPER_ADMIN role.',
+    description: 'Your account needs platform billing access for this page.',
   },
   onboarding: {
     title: 'Onboarding access required',
@@ -43,6 +59,14 @@ const messages = {
   audit: {
     title: 'Audit access required',
     description: 'You need the platform audit permission for this section.',
+  },
+  subscriptions: {
+    title: 'Subscriptions access required',
+    description: 'Managing platform subscriptions requires the SUPER_ADMIN role.',
+  },
+  notifications: {
+    title: 'Notifications access required',
+    description: 'You need the platform notifications permission for this section.',
   },
   support: {
     title: 'Support access required',

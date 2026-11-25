@@ -3,15 +3,19 @@ import { HttpTestingController, provideHttpClientTesting } from '@angular/common
 import { TestBed } from '@angular/core/testing';
 import { ResolveStart, Router, provideRouter } from '@angular/router';
 import { RouterTestingHarness } from '@angular/router/testing';
-import { filter, firstValueFrom } from 'rxjs';
+import { Observable, filter, firstValueFrom } from 'rxjs';
 import { routes } from './app.routes';
 import { AuthService } from './modules/auth/application/auth.service';
 import { AUTH_STORAGE_KEY, AuthSessionStore } from './modules/auth/application/auth-session.store';
 import { SignInComponent } from './pages/auth-pages/sign-in/sign-in.component';
 
+import { BROWSER_SESSION_WRITE } from './modules/auth/infrastructure/auth-api.service';
+
 describe('Dashboard entry routes', () => {
   beforeEach(() => TestBed.configureTestingModule({
-    providers: [provideRouter(routes), provideHttpClient(), provideHttpClientTesting()],
+    providers: [provideRouter(routes), provideHttpClient(), provideHttpClientTesting(),
+      { provide: BROWSER_SESSION_WRITE, useValue: (_scope: string, action: () => Observable<unknown>) => action() },
+    ],
   }));
   afterEach(() => localStorage.removeItem(AUTH_STORAGE_KEY));
 

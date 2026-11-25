@@ -25,6 +25,7 @@ export class AccountSecurityComponent implements OnInit {
   readonly pending = signal<SecurityAction | null>(null);
   currentPassword = ''; newPassword = ''; confirmPassword = '';
   permission = '';
+  companyId: number | null = null;
   readonly permissionResult = signal<string | null>(null);
   ngOnInit() { void this.load(); }
   private async run(action: () => Promise<void>) {
@@ -71,7 +72,7 @@ export class AccountSecurityComponent implements OnInit {
     this.permissionResult.set(null);
     return this.run(async () => {
       const permission = this.permission.trim();
-      const result = await firstValueFrom(this.account.checkPermission(Number(this.auth.claims()!.sub), permission));
+      const result = await firstValueFrom(this.account.checkPermission(Number(this.auth.claims()!.sub), permission, this.companyId ?? undefined));
       this.permissionResult.set(`${permission}: ${result.allowed ? 'Allowed' : 'Not allowed'}`);
     });
   }

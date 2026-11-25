@@ -1,21 +1,29 @@
-<app-page-breadcrumb pageTitle="Client companies" homeLink="/companies" />
-<app-component-card title="Company management">
-  <p class="mb-5 text-sm text-gray-500 dark:text-gray-400">Manage access for companies registered on PRONTOEQUIPAS.</p>
+<app-page-breadcrumb [pageTitle]="title" homeLink="/companies/overview" />
+<app-component-card [title]="title">
   <form (ngSubmit)="load(1, true)" class="mb-5 flex flex-wrap gap-3">
-    <input name="search" [(ngModel)]="search" aria-label="Search companies" placeholder="Search companies" class="h-11 flex-1 rounded-lg border border-gray-300 bg-transparent px-4 text-gray-800 dark:border-gray-700 dark:text-white/90" />
+    <input name="search" [(ngModel)]="search" maxlength="150" aria-label="Search by name, slug or NIF" placeholder="Search by name, slug or NIF" class="h-11 flex-1 rounded-lg border border-gray-300 bg-transparent px-4 text-gray-800 dark:border-gray-700 dark:text-white/90" />
     <button [disabled]="busy()" class="rounded-lg bg-brand-500 px-5 py-2 text-white disabled:opacity-50 dark:bg-brand-500">Search</button>
     <button type="button" (click)="load(result()?.pagination?.page || 1)" [disabled]="busy()" class="rounded-lg border border-gray-300 px-5 py-2 text-gray-700 dark:border-gray-700 dark:text-gray-300">Refresh</button>
   </form>
   @if (error()) { <p role="alert" class="mb-4 text-error-600 dark:text-error-400">{{ error() }}</p> }
   @if (notice()) { <p role="status" class="mb-4 text-success-600 dark:text-success-400">{{ notice() }}</p> }
   @if (pending(); as company) {
-    <section aria-label="Confirm company status change" class="mb-5 rounded-lg border border-warning-500 bg-warning-50 p-4 text-gray-800 dark:bg-warning-500/10 dark:text-white/90">
-      <p>{{ company.status === 'ACTIVE' ? 'Suspend' : 'Activate' }} {{ company.name }}? Suspension prevents company access.</p>
+    <form (ngSubmit)="confirmStatus()" aria-label="Confirm company status change" class="mb-5 rounded-lg border border-warning-500 bg-warning-50 p-4 text-gray-800 dark:bg-warning-500/10 dark:text-white/90">
+      @if (company.status === 'ACTIVE') {
+        <p>Suspend {{ company.name }}? Members will lose access to this company while it is suspended.</p>
+      } @else {
+        <p>Reactivate {{ company.name }}? Members with valid access can use this company again.</p>
+      }
+      <label class="mt-4 block text-sm font-medium">
+        Reason
+        <textarea name="reason" [(ngModel)]="reason" required minlength="3" maxlength="500" rows="2"
+          class="mt-1 block w-full rounded-lg border border-gray-300 bg-white p-3 dark:border-gray-700 dark:bg-gray-900"></textarea>
+      </label>
       <div class="mt-3 flex gap-3">
-        <button type="button" [disabled]="busy()" (click)="confirmStatus()" class="rounded-lg bg-brand-500 px-4 py-2 text-white dark:bg-brand-500">Confirm</button>
+        <button type="submit" [disabled]="busy() || reason.trim().length < 3" class="rounded-lg bg-brand-500 px-4 py-2 text-white disabled:opacity-50 dark:bg-brand-500">Confirm</button>
         <button type="button" [disabled]="busy()" (click)="pending.set(null)" class="rounded-lg border border-gray-300 px-4 py-2 dark:border-gray-700">Cancel</button>
       </div>
-    </section>
+    </form>
   }
   @if (busy()) { <p role="status" class="py-4 text-gray-500 dark:text-gray-400">Loading…</p> }
   @if (result(); as result) {
@@ -25,10 +33,13 @@
         <tbody>
           @for (company of result.data; track company.id) {
             <tr class="border-b border-gray-100 dark:border-gray-800">
-              <td class="p-3 font-medium">{{ company.name }}<span class="block text-xs text-gray-500 dark:text-gray-400">{{ company.slug }}</span></td>
+              <td class="p-3 font-medium">
+                <a [routerLink]="['/companies/profile', company.id]" class="text-brand-600 hover:underline dark:text-brand-400">{{ company.name }}</a>
+                <span class="block text-xs text-gray-500 dark:text-gray-400">{{ company.slug }}</span>
+              </td>
               <td class="p-3">{{ company.nif || '—' }}</td><td class="p-3">{{ company.email || '—' }}</td>
-              <td class="p-3">{{ company.status }}</td>
-              <td class="p-3 text-end"><button type="button" [disabled]="busy()" (click)="pending.set(company)" class="text-brand-600 disabled:opacity-50 dark:text-brand-400">{{ company.status === 'ACTIVE' ? 'Suspend' : 'Activate' }}</button></td>
+              <td class="p-3">{{ company.status === 'ACTIVE' ? 'Active' : 'Suspended' }}</td>
+              <td class="p-3 text-end"><button type="button" [disabled]="busy()" (click)="selectStatusChange(company)" class="text-brand-600 disabled:opacity-50 dark:text-brand-400">{{ company.status === 'ACTIVE' ? 'Suspend' : 'Reactivate' }}</button></td>
             </tr>
           } @empty { <tr><td colspan="5" class="p-8 text-center">No companies found.</td></tr> }
         </tbody>

@@ -2,6 +2,7 @@
   <app-page-breadcrumb [pageTitle]="section.title" homeLink="/payments" />
   <div class="flex flex-wrap items-start justify-between gap-3">
     <p class="max-w-3xl text-sm text-gray-600 dark:text-gray-400">{{ section.description }}</p>
+    @if (view === 'overview') { <a class="action" routerLink="/company-payments">Open company payments</a> }
     @if (view !== 'settings' && (view !== 'audit' || applied().purpose)) {
       <button class="action" type="button" (click)="refresh()" [disabled]="result().loading">Refresh</button>
     }

@@ -1,0 +1,234 @@
+<app-page-breadcrumb [pageTitle]="section.title" />
+<div class="mb-5 flex flex-wrap items-center gap-3">
+  <span class="nt-badge">{{ scopeName() }}</span>
+  @if (!section.platformOnly) {
+    <button type="button" class="nt-secondary" [disabled]="pickerBusy() || actionBusy()" (click)="picker() ? picker.set(false) : findCompanies()">Change scope</button>
+  }
+  <button type="button" class="nt-secondary" [disabled]="busy() || actionBusy()" (click)="load()">Refresh</button>
+  @if (section.path === 'campaigns' && can('bulk:send') && can('templates:read')) {
+    <button type="button" class="nt-button" [disabled]="actionBusy()" (click)="start('campaign')">New campaign</button>
+  }
+  @if (section.path === 'templates' && can('templates:create')) {
+    <button type="button" class="nt-button" [disabled]="actionBusy()" (click)="start('draft')">New template</button>
+  }
+  @if (section.path === 'rules' && company() && can('rules:manage') && can('templates:read')) {
+    <button type="button" class="nt-button" [disabled]="actionBusy()" (click)="start('rule')">New rule</button>
+  }
+  @if (section.path === 'reports' && can('reports:export')) {
+    <button type="button" class="nt-button" [disabled]="exporting() || busy()" (click)="exportReport()">Export report</button>
+  }
+</div>
+
+@if (picker()) {
+  <app-component-card class="mb-5" title="Select notification scope">
+    <form class="flex flex-wrap items-end gap-3" (ngSubmit)="findCompanies()">
+      <label class="nt-label grow">Company name or ID
+        <input class="nt-input" type="search" name="search" [(ngModel)]="search" maxlength="100" />
+      </label>
+      <button type="submit" class="nt-button" [disabled]="pickerBusy() || actionBusy()">Search</button>
+      <button type="button" class="nt-secondary" [disabled]="actionBusy()" (click)="choose(null)">Use platform scope</button>
+    </form>
+    @if (pickerError()) {
+      <p class="nt-error mt-4" role="alert">{{ pickerError() }}</p>
+    } @else if (pickerBusy()) {
+      <p class="nt-muted mt-4" role="status">Loading companies…</p>
+    } @else if (companies(); as directory) {
+      <ul class="mt-3 divide-y divide-gray-100 dark:divide-gray-800">
+        @for (item of directory.items; track item.id) {
+          <li class="py-2"><button type="button" class="nt-link" [disabled]="actionBusy()" (click)="choose(item)">{{ item.name }} · #{{ item.id }}</button></li>
+        } @empty { <li class="nt-muted py-2">No active companies match your search.</li> }
+      </ul>
+      @if (directory.total > directory.limit) {
+        <div class="mt-2 flex items-center gap-3">
+          <button type="button" class="nt-secondary" [disabled]="directory.page <= 1" (click)="findCompanies(directory.page - 1)">Previous</button>
+          <span class="nt-muted">Page {{ directory.page }}</span>
+          <button type="button" class="nt-secondary" [disabled]="directory.page * directory.limit >= directory.total" (click)="findCompanies(directory.page + 1)">Next</button>
+        </div>
+      }
+    }
+  </app-component-card>
+}
+@if (error()) { <p class="nt-error mb-5" role="alert">{{ error() }}</p> }
+@if (notice()) { <p class="nt-success mb-5" role="status">{{ notice() }}</p> }
+@for (entry of commands(); track entry) {
+  <app-notification-command class="mb-5 block" [action]="entry.action" [row]="entry.row" [company]="company()" [scopeName]="scopeName()"
+    (saved)="finish($event)" (working)="actionBusy.set($event)" (closed)="command.set(null)" />
+}
+
+@if (busy()) {
+  <p class="nt-muted py-4" role="status">Loading notifications data…</p>
+} @else if (section.endpoint === 'rules' && !company()) {
+  <app-component-card title="Automatic rules"><p class="nt-muted">Select a company to view rules linked to its domain events.</p></app-component-card>
+} @else {
+  @switch (section.view) {
+    @case ('report') {
+      @if (report(); as data) {
+        <div class="mb-5 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+          <app-component-card title="Notifications"><span class="text-title-sm font-semibold text-gray-900 dark:text-white">{{ data.messages | number }}</span></app-component-card>
+          <app-component-card title="Deliveries"><span class="text-title-sm font-semibold text-gray-900 dark:text-white">{{ data.totalDeliveries | number }}</span></app-component-card>
+          <app-component-card title="Confirmed"><span class="text-title-sm font-semibold text-gray-900 dark:text-white">{{ (data.byStatus['DELIVERED'] || 0) | number }}</span></app-component-card>
+          <app-component-card title="Permanent failures"><span class="text-title-sm font-semibold text-gray-900 dark:text-white">{{ (data.byStatus['FAILED_PERMANENT'] || 0) | number }}</span></app-component-card>
+        </div>
+        <div class="grid gap-4 lg:grid-cols-2">
+          <app-component-card title="Delivery status">
+            <dl class="divide-y divide-gray-100 dark:divide-gray-800">
+              @for (metric of data.byStatus | keyvalue; track metric.key) {
+                <div class="flex items-center justify-between gap-3 py-2"><dt class="nt-badge" [attr.data-status]="metric.key">{{ label(metric.key) }}</dt><dd class="nt-muted">{{ metric.value | number }}</dd></div>
+              } @empty { <p class="nt-muted">No deliveries recorded.</p> }
+            </dl>
+          </app-component-card>
+          <app-component-card title="Delivery channels">
+            <dl class="divide-y divide-gray-100 dark:divide-gray-800">
+              @for (metric of data.byChannel | keyvalue; track metric.key) {
+                <div class="nt-muted flex justify-between gap-3 py-2"><dt>{{ label(metric.key) }}</dt><dd>{{ metric.value | number }}</dd></div>
+              }
+            </dl>
+          </app-component-card>
+        </div>
+      }
+    }
+    @case ('providers') {
+      @if (providers(); as data) {
+        <div class="grid gap-4 sm:grid-cols-3">
+          @for (item of data; track item.channel) {
+            <app-component-card [title]="label(item.channel)">
+              <span class="nt-badge" [attr.data-status]="item.configured && item.recipientsAvailable ? 'DELIVERED' : 'UNKNOWN'">
+                {{ !item.recipientsAvailable ? 'No verified recipients' : item.configured ? 'Configured' : 'Not configured' }}
+              </span>
+            </app-component-card>
+          }
+        </div>
+      }
+    }
+    @case ('policy') {
+      @if (policies(); as data) {
+        <app-component-card title="Published category policies" desc="Mandatory templates always apply to trusted system events.">
+          <div class="overflow-x-auto">
+            <table class="nt-table">
+              <thead><tr><th scope="col">Template</th><th scope="col">Category</th><th scope="col">Policy</th><th scope="col">Version</th></tr></thead>
+              <tbody>
+                @for (item of data; track item.code) {
+                  <tr><td>{{ item.code }}</td><td>{{ label(item.category) }}</td><td>{{ item.mandatory ? 'Mandatory' : 'Follows preferences' }}</td><td>{{ item.version }}</td></tr>
+                } @empty { <tr><td colspan="4">No published templates in this scope.</td></tr> }
+              </tbody>
+            </table>
+          </div>
+        </app-component-card>
+      }
+    }
+    @case ('settings') {
+      @if (settings(); as data) {
+        <app-component-card title="Runtime configuration">
+          <dl class="grid gap-4 sm:grid-cols-3">
+            <div><dt class="nt-label">Retention</dt><dd class="nt-muted mt-2">{{ data.retentionDays }} days</dd></div>
+            <div><dt class="nt-label">Automatic cleanup</dt><dd class="nt-muted mt-2">{{ data.cleanupEnabled ? 'Enabled' : 'Disabled' }}</dd></div>
+            <div><dt class="nt-label">Daily quota</dt><dd class="nt-muted mt-2">{{ data.dailyQuota | number }}</dd></div>
+          </dl>
+        </app-component-card>
+      }
+    }
+    @case ('list') {
+      @if (table(); as data) {
+        <app-component-card [title]="section.title">
+          <div class="mb-4 flex flex-wrap gap-3">
+            @if (options.length) {
+              <label class="nt-label">Status
+                <select class="nt-input min-w-40" [ngModel]="status" (ngModelChange)="status = $event; load(1)" [disabled]="actionBusy()">
+                  <option value="">All statuses</option>
+                  @for (option of options; track option) { <option [value]="option">{{ label(option) }}</option> }
+                </select>
+              </label>
+            }
+            @if (section.endpoint === 'deliveries') {
+              <label class="nt-label">Channel
+                <select class="nt-input min-w-40" [ngModel]="channel" (ngModelChange)="channel = $event; load(1)" [disabled]="actionBusy()">
+                  <option value="">All channels</option>
+                  @for (option of channels; track option) { <option [value]="option">{{ label(option) }}</option> }
+                </select>
+              </label>
+            }
+          </div>
+          <div class="overflow-x-auto">
+            <table class="nt-table">
+              <thead><tr>
+                @for (column of section.columns; track column.key) { <th scope="col">{{ column.title }}</th> }
+                <th scope="col">Status</th><th scope="col">Created</th><th scope="col">Details</th>
+              </tr></thead>
+              <tbody>
+                @for (row of data.items; track row.id) {
+                  <tr>
+                    @for (column of section.columns; track column.key) { <td class="max-w-56 break-words">{{ field(row, column.key) }}</td> }
+                    <td><span class="nt-badge" [attr.data-status]="row.status">{{ label(row.status) }}</span></td>
+                    <td class="whitespace-nowrap">{{ row.createdAt | date:'short':'+0100' }}</td>
+                    <td><button type="button" class="nt-link" (click)="inspect(row)" [disabled]="actionBusy()" [attr.aria-pressed]="selected()?.id === row.id">View</button></td>
+                  </tr>
+                } @empty { <tr><td [attr.colspan]="(section.columns?.length ?? 0) + 3">No records match this view.</td></tr> }
+              </tbody>
+            </table>
+          </div>
+          <div class="mt-4 flex flex-wrap items-center gap-3">
+            <span class="nt-muted me-auto">{{ data.total | number }} records · Page {{ data.page }}</span>
+            <button type="button" class="nt-secondary" [disabled]="data.page <= 1 || actionBusy()" (click)="load(data.page - 1)">Previous</button>
+            <button type="button" class="nt-secondary" [disabled]="data.page * data.limit >= data.total || actionBusy()" (click)="load(data.page + 1)">Next</button>
+          </div>
+        </app-component-card>
+      }
+    }
+  }
+}
+
+@if (selected(); as row) {
+  <app-component-card class="mt-5" [title]="label(row.kind) + ' details'">
+    <p class="nt-muted break-all">{{ row.id }} · {{ label(row.status) }}</p>
+    @if (row.kind === 'TEMPLATE') {
+      <p class="mt-3 font-medium text-gray-900 dark:text-white">{{ field(row, 'subject') }}</p>
+      <p class="nt-muted mt-2 whitespace-pre-wrap break-words">{{ field(row, 'body') }}</p>
+    }
+    @if (details(); as history) {
+      <h3 class="nt-label mt-4">{{ row.kind === 'TEMPLATE' ? 'Version history' : 'Delivery attempts' }}</h3>
+      <ul class="nt-muted mt-2 space-y-2">
+        @for (item of history; track item.id) {
+          <li class="flex flex-wrap items-center gap-3">
+            {{ row.kind === 'TEMPLATE' ? 'Version ' + field(item, 'version') : 'Attempt ' + field(item, 'attempts') }}
+            · {{ label(item.status) }} · {{ item.createdAt | date:'medium':'+0100' }}
+            @if (row.kind === 'TEMPLATE') {
+              <button type="button" class="nt-link" [disabled]="actionBusy()" (click)="start('preview', item)">Preview this version</button>
+            }
+          </li>
+        } @empty { <li>No history is recorded.</li> }
+      </ul>
+    }
+    <div class="mt-4 flex flex-wrap gap-2">
+      @switch (row.kind) {
+        @case ('TEMPLATE') {
+          <button type="button" class="nt-secondary" [disabled]="actionBusy()" (click)="start('preview', row)">Preview</button>
+          @if (row.status === 'DRAFT' && can('templates:update')) {
+            <button type="button" class="nt-secondary" [disabled]="actionBusy()" (click)="start('edit', row)">Edit draft</button>
+          }
+          @if (row.status === 'DRAFT' && can('templates:publish')) {
+            <button type="button" class="nt-button" [disabled]="actionBusy()" (click)="start('publish', row)">Publish</button>
+          }
+          @if (row.status === 'PUBLISHED' && !row.data['mandatory'] && can('templates:create')) {
+            <button type="button" class="nt-secondary" [disabled]="actionBusy()" (click)="start('draft', row)">Create new version</button>
+          }
+        }
+        @case ('MESSAGE') {
+          @if (row.data['origin'] === 'CAMPAIGN' && (row.status === 'PENDING' || row.status === 'SCHEDULED') && can('campaigns:cancel')) {
+            <button type="button" class="nt-secondary" [disabled]="actionBusy()" (click)="start('cancel', row)">Cancel campaign</button>
+          }
+        }
+        @case ('DELIVERY') {
+          @if (row.status === 'FAILED_PERMANENT' && can('deliveries:retry')) {
+            <button type="button" class="nt-secondary" [disabled]="actionBusy()" (click)="start('retry', row)">Retry delivery</button>
+          }
+        }
+        @case ('RULE') {
+          @if (can('rules:manage') && can('templates:read')) {
+            <button type="button" class="nt-secondary" [disabled]="actionBusy()" (click)="start('rule', row)">Edit rule</button>
+          }
+        }
+      }
+      <button type="button" class="nt-secondary" (click)="selected.set(null)">Close details</button>
+    </div>
+  </app-component-card>
+}

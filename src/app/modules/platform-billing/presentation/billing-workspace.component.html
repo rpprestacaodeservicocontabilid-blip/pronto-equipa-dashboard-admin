@@ -7,8 +7,11 @@
     }
     <div class="ms-auto flex flex-wrap gap-2">
       <button type="button" class="action" (click)="refresh()" [disabled]="state().loading || busy()">Refresh</button>
-      @if (mainAction; as action) {
+      @if (mainAction && can(mainAction.permission) ? mainAction : null; as action) {
         <button type="button" class="action primary" [disabled]="busy()" (click)="open(action)">{{ action.title }}</button>
+      }
+      @if (section.path === 'reports' && can('reports:export')) {
+        <button type="button" class="action primary" [disabled]="busy() || !overview()" (click)="exportReport()">Export report</button>
       }
     </div>
   </div>
@@ -139,7 +142,7 @@
       <div class="overflow-x-auto">
         <table class="billing-table">
           <thead><tr><th scope="col">Company</th><th scope="col">Tax ID</th><th scope="col">Invoiced</th>
-            <th scope="col">Collected</th><th scope="col">Outstanding</th><th scope="col">Overdue invoices</th><th scope="col">Activity</th></tr></thead>
+            <th scope="col">Applied to invoices</th><th scope="col">Outstanding</th><th scope="col">Unapplied funds</th><th scope="col">Overdue invoices</th><th scope="col">Activity</th></tr></thead>
           <tbody>
             @for (account of accountList; track account.company.id) {
               <tr>
@@ -148,16 +151,19 @@
                 <td>@for (row of account.balances; track row.currency) { <div>{{ money(row.invoiced, row.currency) }}</div> } @empty { — }</td>
                 <td>@for (row of account.balances; track row.currency) { <div>{{ money(row.paid, row.currency) }}</div> } @empty { — }</td>
                 <td>@for (row of account.balances; track row.currency) { <div>{{ money(row.outstanding, row.currency) }}</div> } @empty { — }</td>
+                <td>@for (row of account.balances; track row.currency) { <div>{{ money(row.unapplied ?? '0.00', row.currency) }}</div> } @empty { — }</td>
                 <td>{{ account.overdue }}</td>
                 <td>
                   <div class="flex flex-wrap gap-2">
                     @for (link of accountLinks; track link.path) {
-                      <a class="text-link" [routerLink]="['/platform-billing', link.path]" [queryParams]="{ companyId: account.company.id }">{{ link.label }}</a>
+                      @if (canOpenPath(link.path)) {
+                        <a class="text-link" [routerLink]="['/platform-billing', link.path]" [queryParams]="{ companyId: account.company.id }">{{ link.label }}</a>
+                      }
                     }
                   </div>
                 </td>
               </tr>
-            } @empty { <tr><td colspan="7">No companies match this filter.</td></tr> }
+            } @empty { <tr><td colspan="8">No companies match this filter.</td></tr> }
           </tbody>
         </table>
       </div>

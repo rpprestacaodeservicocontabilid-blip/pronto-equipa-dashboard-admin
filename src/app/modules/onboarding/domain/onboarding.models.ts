@@ -3,6 +3,16 @@ export const APPLICATION_STATUSES = [
   'REJECTED', 'CANCELLED', 'PROVISIONING', 'FAILED', 'AWAITING_PAYMENT', 'COMPLETED',
 ] as const;
 export const MODES = ['SELF_SERVICE', 'ADMIN_ASSISTED', 'SALES_ASSISTED', 'MIGRATION', 'ENTERPRISE', 'INVITATION'] as const;
+export type OnboardingMode = typeof MODES[number];
+export type RequirementMode = 'companyVerificationModes' | 'organizationRequiredModes';
+export type ApplicationTab = 'summary' | 'company' | 'documents' | 'subscription' | 'configuration' | 'provisioning' | 'invitations' | 'imports' | 'history';
+
+export interface ProvisioningStep {
+  step: string;
+  status: 'PENDING' | 'RUNNING' | 'FAILED' | 'COMPLETED';
+  attempts: number | null;
+  updatedAt: string | null;
+}
 
 export interface CompanyInput {
   name: string;
@@ -77,6 +87,9 @@ export interface Workspace {
   payroll?: { currency: string; payDay: number; legalRuleSetId: string; effectiveFrom: string; componentCount: number };
   plan?: { planVersionId: string; interval: string; trialDays: number };
   subscriptionStatus: string | null;
+  approvalBlockers?: string[];
+  activationBlockers?: string[];
+  provisioning?: ProvisioningStep[];
   workflowVersion?: number;
   requiredDocuments: number;
   termsVersion?: string;
@@ -84,6 +97,7 @@ export interface Workspace {
   approvedBy?: number;
   decisionReason?: string;
   canInvite: boolean;
+  canVerifyCompany?: boolean;
   canRemind: boolean;
   canClose: boolean;
   duplicates: Application[];
@@ -119,6 +133,8 @@ export interface OnboardingPolicy {
   requiredDocuments: number;
   invitationHours: number;
   inactivityDays: number;
+  companyVerificationModes?: OnboardingMode[];
+  organizationRequiredModes?: OnboardingMode[];
 }
 export interface PolicyResponse {
   current: OnboardingPolicy;
@@ -134,3 +150,20 @@ export function label(value?: string | null) {
   const content = value.replace(/^onboarding\./, '').replaceAll(/[_.-]/g, ' ').toLowerCase();
   return content[0]?.toUpperCase() + content.slice(1);
 }
+
+const requirementLabels: Record<string, string> = {
+  'representative-accepted-invitation': 'The representative must accept the invitation',
+  'verified-email': 'The representative must verify their email',
+  company: 'Company details are required',
+  plan: 'A published plan must be selected',
+  'payroll-settings': 'Payroll settings are required',
+  organization: 'Add at least one department or cost centre',
+  'published-legal-rules': 'Select a published legal rules version',
+  terms: 'The representative must accept the terms',
+  'validated-documents': 'Validate the required documents',
+  'company-verification': 'Verify the company details',
+  'independent-approval': 'An independent administrator must approve the application',
+  'subscription-payment': 'Wait for confirmation from the subscription service',
+};
+
+export const requirementLabel = (code: string) => requirementLabels[code] ?? label(code);

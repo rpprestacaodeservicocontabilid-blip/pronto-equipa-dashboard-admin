@@ -1,0 +1,80 @@
+<div class="space-y-5">
+  <app-component-card title="Registration queue">
+    <form (ngSubmit)="list(1, true)" class="mb-4 flex flex-wrap items-end gap-3">
+      <label class="field">Status
+        <select class="control" name="status" [(ngModel)]="status">
+          <option value="">All statuses</option>
+          @for (item of statuses; track item) { <option [value]="item">{{ labels[item] }}</option> }
+        </select>
+      </label>
+      <button class="action" [disabled]="loading()">Filter</button>
+      @if (canDraft) { <button type="button" class="action action-primary" (click)="newDraft()" [disabled]="busy()">New draft</button> }
+    </form>
+    @if (loading()) { <p role="status" class="text-sm text-gray-600 dark:text-gray-400">Loading registrations…</p> }
+    @if (result(); as page) {
+      <ul class="divide-y divide-gray-200 dark:divide-gray-800">
+        @for (item of page.items; track item.id) {
+          <li class="flex flex-wrap items-center justify-between gap-2 py-3 text-sm text-gray-700 dark:text-gray-300">
+            <div>
+              <p class="font-medium">{{ item.firstName || '' }} {{ item.lastName || '' }} {{ item.firstName || item.lastName ? '' : 'Unnamed worker' }}</p>
+              <p>{{ item.employeeNumber || 'No employee number' }} · {{ labels[item.status] }} · {{ item.updatedAt | date:'mediumDate' }}</p>
+            </div>
+            <button type="button" class="action" (click)="inspect(item.id)" [disabled]="busy()">Open</button>
+          </li>
+        } @empty { <li class="py-4 text-sm text-gray-600 dark:text-gray-400">No registrations found.</li> }
+      </ul>
+      <div class="mt-4 flex items-center gap-3 text-sm text-gray-700 dark:text-gray-300">
+        <button type="button" class="action" (click)="list(page.page - 1)" [disabled]="loading() || page.page <= 1">Previous</button>
+        <button type="button" class="action" (click)="list(page.page + 1)" [disabled]="loading() || page.page * page.limit >= page.total">Next</button>
+        <span>{{ page.total }} registrations · Page {{ page.page }}</span>
+      </div>
+    }
+  </app-component-card>
+  @if (error()) { <p role="alert" class="feedback">{{ error() }}</p> }
+  @if (notice()) { <p role="status" class="notice">{{ notice() }}</p> }
+  @if (open()) {
+    <app-component-card [title]="selected() ? labels[selected()!.status] : 'New draft'">
+      <form #form="ngForm" (ngSubmit)="save()" class="space-y-4">
+        <fieldset [disabled]="!canEdit || busy()" class="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
+          @for (field of fields; track field.key) {
+            <label class="field">{{ field.label }}
+              <input class="control" [name]="field.key" [type]="field.type" [maxlength]="field.max"
+                [email]="field.type === 'email'" [(ngModel)]="draft[field.key]" />
+            </label>
+          }
+          <label class="field">Department ID
+            <input class="control" type="number" name="departmentId" min="1" step="1" [(ngModel)]="draft.departmentId" />
+          </label>
+        </fieldset>
+        @if (canEdit) {
+          <div class="flex flex-wrap gap-3">
+            <button class="action action-primary" [disabled]="busy() || form.invalid">Save draft</button>
+            @if (selected()) {
+              <button type="button" class="action" (click)="save(true)" [disabled]="busy() || form.invalid">Submit for review</button>
+            }
+          </div>
+        }
+      </form>
+      @if (selected(); as data) {
+        @if (data.decisionReason) { <p class="mt-4 text-sm text-gray-700 dark:text-gray-300">{{ data.decisionReason }}</p> }
+        @if (data.employeeId) {
+          <a class="action mt-4" [routerLink]="['/employees', company, 'details', data.employeeId]">Open employee profile</a>
+        }
+        @if (canReview) {
+          <form class="mt-5 space-y-3">
+            <label class="field">Review reason
+              <textarea class="control" name="reason" [(ngModel)]="reason" maxlength="500" rows="2"></textarea>
+            </label>
+            <label class="flex items-center gap-2 text-sm text-gray-700 dark:text-gray-300">
+              <input type="checkbox" name="confirmed" [(ngModel)]="confirmed" /> I confirm this review decision.
+            </label>
+            <div class="flex flex-wrap gap-3">
+              <button type="button" class="action action-primary" (click)="decide('approve')" [disabled]="busy() || !confirmed">Approve and activate</button>
+              <button type="button" class="action" (click)="decide('reject')" [disabled]="busy() || !confirmed || reason.trim().length < 3">Reject registration</button>
+            </div>
+          </form>
+        }
+      }
+    </app-component-card>
+  }
+</div>

@@ -1,0 +1,220 @@
+<app-page-breadcrumb [pageTitle]="section.title" />
+<div class="space-y-5">
+  <div class="flex flex-wrap items-center justify-between gap-3">
+    @if (section.view === 'subscriptions' || section.view === 'records') {
+      <form class="flex flex-wrap items-end gap-3" (ngSubmit)="scope()">
+        <label class="sub-label">Company ID<input class="sub-input" type="number" min="1" max="2147483647" name="company" [(ngModel)]="companyFilter"></label>
+        @if (section.view === 'subscriptions' && !section.status) {
+          <label class="sub-label">Status<select class="sub-input" name="status" [(ngModel)]="status">
+            <option value="">All statuses</option>@for (value of statuses; track value) { <option [value]="value">{{ label(value) }}</option> }
+          </select></label>
+        }
+        <button type="submit" class="sub-button" [disabled]="loading() || saving()">Apply filters</button>
+      </form>
+    }
+    <div class="ms-auto flex flex-wrap gap-2">
+      <button type="button" class="sub-button" [disabled]="loading() || saving()" (click)="load()">Refresh</button>
+      @if (section.path === 'plans') { <button class="sub-primary" type="button" [disabled]="loading() || saving()" (click)="editor.set({plan: null})">New plan</button> }
+      @if (section.path === 'directory' && companyId) { <button class="sub-primary" type="button" [disabled]="loading() || saving()" (click)="start('create', '')">New subscription</button> }
+      @if (section.view === 'features') { <button class="sub-primary" type="button" [disabled]="saving()" (click)="showFeature = !showFeature">Add feature</button> }
+      @if (section.path === 'reports' && report(); as data) { <button class="sub-primary" type="button" (click)="exportReport(data)">Export report</button> }
+    </div>
+  </div>
+  @if (error()) { <p class="sub-error" role="alert">{{ error() }}</p> }
+  @if (notice()) { <p class="rounded-lg bg-success-50 p-3 text-sm text-success-700 dark:bg-success-500/15 dark:text-success-300" role="status">{{ notice() }}</p> }
+  @if (editor(); as edit) {
+    <app-subscription-plan-editor [plan]="edit.plan" [catalogue]="featureList()" [busy]="saving()" (closed)="editor.set(null)" (submitted)="savePlan($event)" />
+  }
+  @if (command(); as cmd) {
+    <app-component-card [title]="titles[cmd.type]">
+      <form #operation="ngForm" class="space-y-4" (ngSubmit)="operation.valid && submit()">
+        <fieldset class="space-y-3" [disabled]="saving()">
+          <p class="sub-muted break-all">{{ companyId ? 'Company #' + companyId + ' · ' : '' }}{{ cmd.id }}</p>
+          @switch (cmd.type) {
+            @case ('publish') { <p class="sub-muted">Publish this version for new commercial selections. Existing contracts keep their assigned version.</p> }
+            @case ('archive') { <p class="sub-muted">Archive the plan from the commercial catalogue?</p> }
+            @case ('renew') { <p class="sub-muted">Request renewal through billing for the current subscription period.</p> }
+            @default {
+              @if (cmd.type !== 'convert' && cmd.type !== 'create') { <label class="sub-label">Reason<textarea class="sub-input" name="reason" [(ngModel)]="form.reason" minlength="3" maxlength="1000" required></textarea></label> }
+            }
+          }
+          @if (cmd.type === 'cancel') { <label class="sub-label flex gap-2"><input type="checkbox" name="end" [(ngModel)]="form.atPeriodEnd"> Cancel at the end of the current period</label> }
+          @if (cmd.type === 'extend') { <label class="sub-label">Additional days<input class="sub-input" name="days" type="number" min="1" max="60" [(ngModel)]="form.days" required></label> }
+          @if (cmd.type === 'convert' || cmd.type === 'create') {
+            <label class="sub-label">Published version<select class="sub-input" name="version" [(ngModel)]="form.versionId" required>
+              <option value="">Select a plan</option>
+              @for (plan of planList(); track plan.id) { @if (plan.status === 'PUBLISHED' && plan.currentVersionId) { <option [value]="plan.currentVersionId">{{ plan.name }}</option> } }
+            </select></label>
+            <label class="sub-label">Billing interval<select class="sub-input" name="interval" [(ngModel)]="form.interval">@for (value of intervals; track value) { <option [value]="value">{{ label(value) }}</option> }</select></label>
+          }
+          @if (cmd.type === 'override') {
+            <div class="grid gap-3 sm:grid-cols-2">
+              <label class="sub-label">Feature<select class="sub-input" name="feature" [(ngModel)]="form.feature">
+                <option value="">No feature change</option>@for (item of featureList(); track item.id) { <option [value]="item['code']">{{ item['name'] }}</option> }
+              </select></label>
+              @if (form.feature) { <label class="sub-label self-end flex gap-2"><input type="checkbox" name="enabled" [(ngModel)]="form.enabled"> Enable feature</label> }
+              <label class="sub-label">Quota<select class="sub-input" name="metric" [(ngModel)]="form.metric">
+                <option value="">No quota change</option>@for (item of metrics; track item) { <option [value]="item">{{ label(item) }}</option> }
+              </select></label>
+              @if (form.metric) { <label class="sub-label">Limit (blank for unlimited)<input class="sub-input" name="limit" [(ngModel)]="form.limit" inputmode="numeric" pattern="[0-9]{1,18}"></label> }
+              <label class="sub-label">Expires (local time)<input class="sub-input" type="datetime-local" name="expires" [(ngModel)]="form.expires"></label>
+            </div>
+          }
+        </fieldset>
+        <div class="flex gap-2">
+          <button type="submit" class="sub-primary" [disabled]="operation.invalid || loading() || saving()">{{ titles[cmd.type] }}</button>
+          <button type="button" class="sub-button" [disabled]="saving()" (click)="command.set(null)">Close</button>
+        </div>
+      </form>
+    </app-component-card>
+  }
+  @if (loading()) { <p class="sub-muted" role="status">Loading subscription data…</p> }
+  @switch (section.view) {
+    @case ('report') {
+      @if (report(); as data) {
+        <div class="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
+          @for (metric of data | keyvalue; track metric.key) {
+            <app-component-card [title]="reportLabel(metric.key)"><strong class="text-title-sm text-gray-900 dark:text-white">{{ metric.value }}</strong></app-component-card>
+          }
+        </div>
+      }
+    }
+    @case ('plans') {
+      <div class="grid gap-4 lg:grid-cols-2">
+        <app-component-card title="Plan catalogue">
+          <ul class="divide-y divide-gray-100 dark:divide-gray-800">
+            @for (plan of planList(); track plan.id) {
+              <li class="flex items-center justify-between gap-3 py-3">
+                <button type="button" class="sub-link text-start" [disabled]="saving()" (click)="selectedPlan.set(plan); editor.set(null); command.set(null)">{{ plan.name }} · {{ plan.code }}</button>
+                <span class="sub-muted">{{ label(plan.status) }}</span>
+              </li>
+            } @empty { <li class="sub-muted">No plans found.</li> }
+          </ul>
+        </app-component-card>
+        @if (selectedPlan(); as plan) {
+          <app-component-card [title]="plan.name">
+            <p class="sub-muted">{{ plan.description }}</p>
+            @if (plan.status !== 'ARCHIVED') {
+              <div class="my-3 flex flex-wrap gap-2">
+                <button type="button" class="sub-primary" [disabled]="saving()" (click)="editor.set({plan})">New version</button>
+                <button type="button" class="sub-button" [disabled]="saving()" (click)="start('archive', plan.id)">Archive plan</button>
+              </div>
+            }
+            <ul class="space-y-3">
+              @for (version of plan.versions ?? []; track version.id) {
+                <li class="rounded-lg border border-gray-200 p-3 dark:border-gray-800">
+                  <p class="sub-label">Version {{ version.version }} · {{ label(version.status) }} @if (version.id === plan.currentVersionId) { · Current }</p>
+                  <ul class="sub-muted my-2">
+                    @for (price of version.prices; track $index) { <li>{{ label(price.interval) }} · {{ price.amount }} {{ price.currency }} @if (price.customDays) { · {{ price.customDays }} days }</li> }
+                  </ul>
+                  <p class="sub-muted break-words">Features · {{ display(version.features) }}</p>
+                  <p class="sub-muted break-words">Quotas · {{ display(version.limits) }}</p>
+                  @if (version.status === 'DRAFT' && plan.status !== 'ARCHIVED') {
+                    <button type="button" class="sub-button mt-2" [disabled]="saving()" (click)="start('publish', version.id)">Publish version</button>
+                  }
+                </li>
+              } @empty { <li class="sub-muted">Create a version draft to publish prices and entitlements.</li> }
+            </ul>
+          </app-component-card>
+        }
+      </div>
+    }
+    @case ('features') {
+      @if (showFeature) {
+        <app-component-card title="New feature">
+          <form class="grid items-end gap-3 sm:grid-cols-4" #featureForm="ngForm" (ngSubmit)="featureForm.valid && addFeature()">
+            <label class="sub-label">Code<input class="sub-input" name="code" [(ngModel)]="feature.code" pattern="[a-z0-9][a-z0-9._\-]{1,79}" required></label>
+            <label class="sub-label">Name<input class="sub-input" name="name" [(ngModel)]="feature.name" maxlength="120" required></label>
+            <label class="sub-label">Description<input class="sub-input" name="description" [(ngModel)]="feature.description" maxlength="1000"></label>
+            <button type="submit" class="sub-primary" [disabled]="saving() || featureForm.invalid">Save feature</button>
+          </form>
+        </app-component-card>
+      }
+      <app-component-card title="Features">
+        <ul class="divide-y divide-gray-100 dark:divide-gray-800">
+          @for (item of featureList(); track item.id) {
+            <li class="py-3"><p class="sub-label">{{ item['name'] }} · {{ item['code'] }}</p><p class="sub-muted">{{ item['description'] }}</p></li>
+          } @empty { <li class="sub-muted">No features found.</li> }
+        </ul>
+      </app-component-card>
+    }
+    @case ('policy') {
+      @if (policy(); as config) {
+        <app-component-card title="Platform defaults">
+          <form #policyForm="ngForm" class="max-w-xl space-y-4" (ngSubmit)="policyForm.valid && savePolicy(config)">
+            <label class="sub-label">Trial days<input class="sub-input" name="trial" type="number" min="0" max="90" [(ngModel)]="config.trialDays" required></label>
+            <label class="sub-label">Grace period days<input class="sub-input" name="grace" type="number" min="0" max="90" [(ngModel)]="config.graceDays" required></label>
+            <label class="sub-label">Renewal notice days<input class="sub-input" name="notice" type="number" min="0" max="180" [(ngModel)]="config.renewalNoticeDays" required></label>
+            <label class="sub-label flex gap-2"><input type="checkbox" name="trialOnce" [(ngModel)]="config.trialEligibleOnce"> Limit each company to one trial</label>
+            <button type="submit" class="sub-primary" [disabled]="saving() || policyForm.invalid">Save policy</button>
+          </form>
+        </app-component-card>
+      }
+    }
+    @default {
+      @if (!subscriptionId || section.view === 'subscriptions') {
+        <app-component-card title="Subscription directory">
+          <div class="overflow-x-auto">
+            <table class="sub-table">
+              <thead><tr><th scope="col">Company</th><th scope="col">State</th><th scope="col">Billing interval</th><th scope="col">Period end</th><th scope="col">Details</th></tr></thead>
+              <tbody>
+                @for (row of rows(); track row.id) {
+                  <tr><td>#{{ row.companyId }}</td><td>{{ label(row.status) }}</td><td>{{ display(row['interval']) }}</td>
+                    <td>{{ (display(row['currentPeriodEnd']) !== '—' ? $any(row['currentPeriodEnd']) : null) | date:'mediumDate' }}</td>
+                    <td><button type="button" class="sub-link" [disabled]="saving()" (click)="choose(row)">View subscription</button></td></tr>
+                } @empty { <tr><td colspan="5">No subscriptions match this view.</td></tr> }
+              </tbody>
+            </table>
+          </div>
+          @if (rows().length === 100) { <p class="sub-muted mt-3">Showing the 100 most recently updated subscriptions. Filter by company to narrow the result.</p> }
+        </app-component-card>
+      }
+      @if (selected(); as row) {
+        <app-component-card [title]="'Company #' + row.companyId + ' · ' + label(row.status)">
+          <p class="sub-muted break-all">{{ row.id }}</p>
+          <p class="sub-muted mt-2">Plan · {{ $any(row['planVersion'])?.name || display(row['planVersionId']) }} @if (row['cancelAtPeriodEnd']) { · Cancellation scheduled }</p>
+          @if (section.view === 'subscriptions') {
+            <div class="my-3 flex flex-wrap gap-2">
+              @for (action of companyCommands(row); track action) { <button type="button" class="sub-button" [disabled]="saving() || loading()" (click)="start(action, row.id)">{{ titles[action] }}</button> }
+            </div>
+          }
+          <nav class="mt-3 flex flex-wrap gap-4" aria-label="Subscription records">
+            @for (path of ['changes','renewals','usage','overrides','alerts','history']; track path) {
+              <a class="sub-link" [routerLink]="['/subscriptions', path]" [queryParams]="{companyId: row.companyId, subscriptionId: row.id}" [attr.aria-current]="path === section.path ? 'page' : null">{{ label(path) }}</a>
+            }
+          </nav>
+        </app-component-card>
+        @if (section.path === 'overrides' && (row.status === 'ACTIVE' || row.status === 'TRIALING')) { <button type="button" class="sub-primary" [disabled]="saving()" (click)="start('override', row.id)">Create exception</button> }
+        @if (section.path === 'renewals' && (row.status === 'ACTIVE' || row.status === 'GRACE_PERIOD')) { <button type="button" class="sub-primary" [disabled]="saving()" (click)="start('renew', row.id)">Request renewal</button> }
+      }
+      @if (resultPage(); as page) {
+        <app-component-card [title]="section.title">
+          <div class="overflow-x-auto">
+            <table class="sub-table">
+              <thead><tr>@for (column of columns; track column[0]) { <th scope="col">{{ column[1] }}</th> }<th scope="col">Status</th>@if (section.path === 'changes') { <th scope="col">Actions</th> }</tr></thead>
+              <tbody>
+                @for (item of page.items; track item.id) {
+                  <tr>@for (column of columns; track column[0]) { <td class="min-w-24 break-words">{{ display(item[column[0]]) }}</td> }<td>{{ label(item.status) }}</td>
+                    @if (section.path === 'changes') {
+                      <td>@if (item.status === 'PENDING') {
+                        <div class="flex gap-2">
+                          @if (canApprove(item)) { <button type="button" class="sub-button" [disabled]="saving()" (click)="start('approve', item.id)">Approve</button> }
+                          <button type="button" class="sub-button" [disabled]="saving()" (click)="start('reject', item.id)">Reject</button>
+                        </div>
+                      }</td>
+                    }
+                  </tr>
+                } @empty { <tr><td [attr.colspan]="columns.length + (section.path === 'changes' ? 2 : 1)">No records found for this subscription.</td></tr> }
+              </tbody>
+            </table>
+          </div>
+          <div class="mt-3 flex flex-wrap items-center gap-3">
+            <button type="button" class="sub-button" [disabled]="saving() || page.page <= 1" (click)="load(page.page - 1)">Previous</button>
+            <span class="sub-muted">Page {{ page.page }} · {{ page.total }} records</span>
+            <button type="button" class="sub-button" [disabled]="saving() || page.page * page.limit >= page.total" (click)="load(page.page + 1)">Next</button>
+          </div>
+        </app-component-card>
+      }
+    }
+  }
+</div>

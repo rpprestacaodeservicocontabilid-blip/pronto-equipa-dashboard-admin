@@ -1,0 +1,376 @@
+<app-page-breadcrumb [pageTitle]="section()?.title ?? 'Simulations'" />
+<div class="space-y-5">
+  <div class="flex flex-wrap items-center gap-3">
+    <a routerLink="/simulations" class="sim-action">Change company</a>
+    @if (context(); as workspace) { <span class="sim-label">{{ workspace.company.name }}</span> }
+    <span class="sim-chip">Simulation only</span>
+  </div>
+  @if (denied()) {
+    <p class="sim-error" role="alert">{{ denied() }}</p>
+  } @else if (context(); as workspace) {
+    @if (error()) { <p class="sim-error" role="alert">{{ error() }}</p> }
+    @if (notice()) { <p class="sim-chip" role="status">{{ notice() }}</p> }
+    @if (busy()) { <p class="sim-muted" role="status">Loading simulation data…</p> }
+    @switch (section()?.view) {
+      @case ('scenarios') {
+        <app-component-card title="Scenarios">
+          <div class="mb-4 flex flex-wrap items-end gap-3">
+            <label class="sim-label">Status
+              <select class="sim-input" [(ngModel)]="status" (ngModelChange)="reload()" [disabled]="busy()">
+                <option value="">All statuses</option>
+                @for (state of scenarioStates; track state) { <option [value]="state">{{ state.replaceAll('_', ' ') }}</option> }
+              </select>
+            </label>
+            <button type="button" class="sim-action" (click)="reload()" [disabled]="busy()">Refresh</button>
+            @if (allowed(p.create, p.sensitive)) {
+              <button type="button" class="sim-primary" (click)="selectScenario(null, true)" [disabled]="busy() || editing()">New scenario</button>
+            }
+          </div>
+          <div class="overflow-x-auto">
+            <table class="sim-table">
+              <thead><tr><th>Name</th><th>Type</th><th>Status</th><th>Version</th><th>Updated</th></tr></thead>
+              <tbody>
+                @for (row of scenarios(); track row.id) {
+                  <tr>
+                    <td><button type="button" class="sim-link text-start" (click)="selectScenario(row)" [disabled]="busy() || editing()">{{ row.name }}</button></td>
+                    <td>{{ types[row.type] }}</td><td><span class="sim-chip">{{ row.status.replaceAll('_', ' ') }}</span></td>
+                    <td>{{ row.version }}</td><td>{{ row.updatedAt | date:'mediumDate' }}</td>
+                  </tr>
+                } @empty { <tr><td colspan="5">{{ busy() ? 'Loading…' : 'No scenarios for this selection.' }}</td></tr> }
+              </tbody>
+            </table>
+          </div>
+        </app-component-card>
+        @if (editing()) {
+          <app-component-card [title]="selectedScenario() ? 'Edit scenario' : 'Create scenario'">
+            <app-scenario-editor [scenario]="selectedScenario()" [initialType]="section()?.type ?? 'CUSTOM'" [busy]="busy()"
+              (save)="save($event)" (dismiss)="editing.set(false)" />
+          </app-component-card>
+        } @else if (selectedScenario(); as row) {
+          <app-component-card [title]="row.name">
+            <p class="sim-muted mb-3">{{ row.configuration.period.startDate }} – {{ row.configuration.period.endDate }} · Version {{ row.version }}</p>
+            <p class="sim-muted mb-3">{{ row.configuration.employeeIds?.length || 'Company' }} workforce selection · {{ row.configuration.adjustments.length }} adjustments</p>
+            <div class="flex flex-wrap gap-2">
+              @if (row.status !== 'ARCHIVED' && allowed(p.update, p.sensitive)) {
+                <button type="button" class="sim-action" (click)="editing.set(true)" [disabled]="busy()">Edit</button>
+              }
+              @if (allowed(p.duplicate, p.sensitive)) {
+                <button type="button" class="sim-action" (click)="scenarioAction(row, 'duplicate')" [disabled]="busy()">Duplicate</button>
+              }
+              @if (row.status !== 'ARCHIVED' && allowed(p.archive)) {
+                <button type="button" class="sim-action" (click)="scenarioAction(row, 'archive')" [disabled]="busy()">Archive</button>
+              }
+              @if (allowed(p.history, p.sensitive)) {
+                <button type="button" class="sim-action" (click)="history(row)" [disabled]="busy()">Version history</button>
+              }
+              @if (row.status !== 'ARCHIVED' && executionPermission(row)) {
+                <button type="button" class="sim-primary" (click)="execute(row)" [disabled]="busy()">Run simulation</button>
+              }
+              @if (allowed(p.runs, p.sensitive)) {
+                <a class="sim-action" [routerLink]="['/simulations', workspace.company.id, 'overview']"
+                  [queryParams]="{ scenario: row.id, run: runId || null }">View scenario runs</a>
+              }
+            </div>
+            @if (versions(); as historyRows) {
+              <div class="mt-4 space-y-2">
+                @for (version of historyRows; track version.id) {
+                  <details class="sim-muted rounded-lg border border-gray-200 p-3 dark:border-gray-800">
+                    <summary class="cursor-pointer">Version {{ version.version }} · {{ version.createdAt | date:'medium' }}</summary>
+                    <pre class="mt-2 overflow-x-auto">{{ version.configuration | json }}</pre>
+                  </details>
+                } @empty { <p class="sim-muted">No version history.</p> }
+              </div>
+            }
+          </app-component-card>
+        }
+      }
+      @case ('runs') {
+        <dl class="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+          @for (indicator of runIndicators(); track indicator.label) {
+            <div class="rounded-xl border border-gray-200 bg-white px-4 py-3 dark:border-gray-800 dark:bg-gray-900">
+              <dt class="sim-muted">{{ indicator.label }}</dt>
+              <dd class="text-xl font-semibold tabular-nums text-gray-900 dark:text-white">{{ indicator.value }}</dd>
+            </div>
+          }
+        </dl>
+        <app-component-card title="Recent executions">
+          <div class="mb-4 flex flex-wrap items-end gap-3">
+            <label class="sim-label">Status
+              <select class="sim-input" [(ngModel)]="status" (ngModelChange)="reload()" [disabled]="busy()">
+                <option value="">All statuses</option>
+                @for (state of runStates; track state) { <option [value]="state">{{ state.replaceAll('_', ' ') }}</option> }
+              </select>
+            </label>
+            <button type="button" class="sim-action" (click)="reload()" [disabled]="busy()">Refresh</button>
+            @if (scenarioFilter) {
+              <button type="button" class="sim-action" (click)="scenarioFilter = ''; reload()" [disabled]="busy()">Show all scenarios</button>
+            }
+          </div>
+          <div class="overflow-x-auto">
+            <table class="sim-table">
+              <thead><tr><th>Run</th><th>Type</th><th>Status</th><th>Version</th><th>Workers</th><th>Created</th></tr></thead>
+              <tbody>
+                @for (run of runs(); track run.id) {
+                  <tr>
+                    <td><button type="button" class="sim-link font-mono" [disabled]="busy()" (click)="openRun(run.id)" [title]="run.id">{{ run.id.slice(0, 8) }}</button></td>
+                    <td>{{ types[run.type] }}</td><td><span class="sim-chip">{{ run.status.replaceAll('_', ' ') }}</span></td>
+                    <td>{{ run.scenarioVersion }}</td><td>{{ run.employeeCount ?? '—' }}</td><td>{{ run.createdAt | date:'medium' }}</td>
+                  </tr>
+                } @empty { <tr><td colspan="6">{{ busy() ? 'Loading…' : 'No runs for this selection.' }}</td></tr> }
+              </tbody>
+            </table>
+          </div>
+        </app-component-card>
+        @if (results(); as output) {
+          <app-component-card title="Run results">
+            <div class="space-y-4">
+              <div class="flex flex-wrap items-center gap-3">
+                <strong class="sim-label break-all">{{ output.run.id }}</strong>
+                <span class="sim-chip">{{ output.run.status.replaceAll('_', ' ') }}</span>
+                <button type="button" class="sim-action" [disabled]="busy()" (click)="openRun(output.run.id)">Refresh results</button>
+                @if (['FAILED', 'PARTIALLY_COMPLETED'].includes(output.run.status) && mayRetry(output.run)) {
+                  <button type="button" class="sim-action" [disabled]="busy()" (click)="runAction(output.run, 'retry-failed')">Retry failures</button>
+                }
+                @if (activeStatuses.includes(output.run.status) && allowed(p.cancel)) {
+                  <button type="button" class="sim-action" [disabled]="busy()" (click)="runAction(output.run, 'cancel')">Cancel run</button>
+                }
+              </div>
+              @if (progress(); as counts) {
+                <div class="flex flex-wrap items-center gap-3 sim-muted">
+                  <progress class="w-32 accent-brand-500" [value]="counts.completed + counts.failed" [max]="counts.total || 1" aria-label="Workers processed"></progress>
+                  <span>{{ counts.completed }} completed · {{ counts.failed }} failed · {{ counts.total }} workers</span>
+                </div>
+              }
+              @if (output.run.totals; as totals) {
+                <dl class="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+                  <div class="rounded-lg border border-gray-200 p-3 dark:border-gray-800"><dt class="sim-muted">Gross pay</dt><dd class="sim-label">{{ totals.gross | currency:'AOA':'code' }}</dd></div>
+                  <div class="rounded-lg border border-gray-200 p-3 dark:border-gray-800"><dt class="sim-muted">Deductions</dt><dd class="sim-label">{{ totals.deductions | currency:'AOA':'code' }}</dd></div>
+                  <div class="rounded-lg border border-gray-200 p-3 dark:border-gray-800"><dt class="sim-muted">Net pay</dt><dd class="sim-label">{{ totals.net | currency:'AOA':'code' }}</dd></div>
+                  <div class="rounded-lg border border-gray-200 p-3 dark:border-gray-800"><dt class="sim-muted">Employer charges</dt><dd class="sim-label">{{ totals.employerCosts | currency:'AOA':'code' }}</dd></div>
+                </dl>
+              }
+              <div class="overflow-x-auto">
+                <table class="sim-table">
+                  <thead><tr><th>Worker ID</th><th>Status</th><th>Gross</th><th>Deductions</th><th>Net</th><th>Employer charges</th><th>Details</th></tr></thead>
+                  <tbody>
+                    @for (row of output.items; track row.employeeId) {
+                      <tr>
+                        <td class="font-mono">{{ row.employeeId }}</td><td>{{ row.status }}</td>
+                        @if (row.result; as result) {
+                          <td>{{ result.grossAmount | currency:result.currency:'code' }}</td>
+                          <td>{{ result.deductionsAmount | currency:result.currency:'code' }}</td>
+                          <td>{{ result.netAmount | currency:result.currency:'code' }}</td>
+                          <td>{{ result.employerCostsAmount | currency:result.currency:'code' }}</td>
+                          <td><button type="button" class="sim-link" [disabled]="busy()" (click)="explain(output.run, row)">Explain</button></td>
+                        } @else { <td colspan="5">{{ row.issue?.message || 'Result unavailable' }}</td> }
+                      </tr>
+                    } @empty { <tr><td colspan="7">No results are available yet.</td></tr> }
+                  </tbody>
+                </table>
+              </div>
+              @if (explanation(); as trace) {
+                <section class="rounded-lg border border-gray-200 p-4 dark:border-gray-800">
+                  <header class="mb-3 flex flex-wrap items-center justify-between gap-3">
+                    <h2 class="sim-label">Calculation details · {{ trace.employeeId }}</h2>
+                    <button class="sim-action" type="button" (click)="explanation.set(null)">Close</button>
+                  </header>
+                  <p class="sim-muted">Engine {{ trace.engineVersion }} · Rules {{ trace.legalRuleSetVersion }}</p>
+                  <pre class="sim-muted overflow-x-auto">{{ trace.lines | json }}</pre>
+                </section>
+              }
+              @if (output.run.status === 'COMPLETED') {
+                <div class="flex flex-wrap items-end gap-3">
+                  @if (allowed(p.export, p.sensitive)) {
+                    <label class="sim-label">File format
+                      <select class="sim-input" [(ngModel)]="format" [disabled]="busy()">
+                        <option value="CSV">CSV</option><option value="XLSX">Excel</option><option value="PDF">PDF</option>
+                      </select>
+                    </label>
+                    <button type="button" class="sim-action" (click)="createExport(output.run)" [disabled]="busy()">Create export</button>
+                  }
+                  @if (allowed(p.download, p.sensitive)) {
+                    <a class="sim-action" [routerLink]="['/simulations', workspace.company.id, 'exports']"
+                      [queryParams]="{ run: output.run.id }">View run exports</a>
+                  }
+                </div>
+                @if (allowed(p.propose, p.sensitive)) {
+                  <form class="flex flex-wrap items-end gap-3" (ngSubmit)="submitProposal(output.run)">
+                    <label class="sim-label grow">Proposal reason
+                      <textarea class="sim-input" rows="2" name="reason" maxlength="2000" [(ngModel)]="reason" [disabled]="busy()"></textarea>
+                    </label>
+                    <button type="submit" class="sim-primary" [disabled]="busy() || reason.trim().length < 5">Submit proposal</button>
+                  </form>
+                }
+              }
+            </div>
+          </app-component-card>
+        }
+      }
+      @case ('compare') {
+        <app-component-card title="Compare completed results">
+          <form class="grid items-end gap-3 lg:grid-cols-4" (ngSubmit)="compare()">
+            <label class="sim-label">Baseline type
+              <select class="sim-input" name="mode" [(ngModel)]="compareMode" (ngModelChange)="baseline = ''; comparisons.set(null)" [disabled]="busy()">
+                <option value="scenario">Another simulation</option><option value="official">Closed payroll</option>
+              </select>
+            </label>
+            @if (compareMode === 'scenario') {
+              <label class="sim-label">Baseline run
+                <select class="sim-input" name="baseline" [(ngModel)]="baseline" [disabled]="busy()">
+                  <option value="">Select a completed run</option>
+                  @for (row of runs(); track row.id) { <option [value]="row.id">{{ types[row.type] }} · {{ row.id.slice(0, 8) }}</option> }
+                </select>
+              </label>
+            } @else {
+              <label class="sim-label">Closed payroll run ID
+                <input class="sim-input" name="baseline" [(ngModel)]="baseline" [disabled]="busy()">
+              </label>
+            }
+            <label class="sim-label">Comparison run
+              <select class="sim-input" name="run" [(ngModel)]="runId" [disabled]="busy()">
+                <option value="">Select a completed run</option>
+                @for (row of runs(); track row.id) { <option [value]="row.id">{{ types[row.type] }} · {{ row.id.slice(0, 8) }}</option> }
+              </select>
+            </label>
+            <button type="submit" class="sim-primary" [disabled]="busy() || !runId || !baseline">Compare</button>
+          </form>
+        </app-component-card>
+        @if (comparisons(); as comparison) {
+          <app-component-card title="Comparison by worker">
+            <div class="space-y-2">
+              @for (row of comparison.comparison; track row.employeeId) {
+                <details class="sim-muted rounded-lg border border-gray-200 p-3 dark:border-gray-800">
+                  <summary class="cursor-pointer">{{ row.employeeId }} · {{ row.affected ? 'Changed' : 'Unchanged' }}</summary>
+                  <div class="mt-2 overflow-x-auto">
+                    <table class="sim-table">
+                      <thead><tr><th>Metric</th><th>Baseline</th><th>Simulated</th><th>Difference</th><th>%</th></tr></thead>
+                      <tbody>
+                        @for (metric of ['grossAmount', 'deductionsAmount', 'netAmount', 'employerCostsAmount']; track metric; let i = $index) {
+                          @if (row.differences[metric]; as value) {
+                            <tr><td>{{ ['Gross', 'Deductions', 'Net', 'Employer charges'][i] }}</td>
+                              <td>{{ value.base | currency:'AOA':'code' }}</td><td>{{ value.compared | currency:'AOA':'code' }}</td>
+                              <td>{{ value.difference | currency:'AOA':'code' }}</td>
+                              <td>{{ value.percentage === null ? '—' : (value.percentage | number:'1.0-2') + '%' }}</td>
+                            </tr>
+                          }
+                        }
+                      </tbody>
+                    </table>
+                  </div>
+                </details>
+              } @empty { <p class="sim-muted">No workers in this comparison.</p> }
+            </div>
+          </app-component-card>
+        }
+      }
+      @case ('projections') {
+        <app-component-card title="Project personnel costs">
+          <form class="grid gap-4" (ngSubmit)="project()">
+            <div class="flex flex-wrap items-end gap-3">
+              <label class="sim-label">Completed run
+                <select class="sim-input" name="run" [(ngModel)]="runId" (ngModelChange)="projections.set([])" [disabled]="busy()">
+                  <option value="">Select a completed run</option>
+                  @for (row of runs(); track row.id) { <option [value]="row.id">{{ types[row.type] }} · {{ row.id.slice(0, 8) }}</option> }
+                </select>
+              </label>
+              <label class="sim-label">Months
+                <input type="number" class="sim-input" name="months" min="1" max="36" [(ngModel)]="projectionMonths" [disabled]="busy()">
+              </label>
+              <button type="button" class="sim-action" (click)="loadProjections()" [disabled]="busy() || !runId">Load saved projections</button>
+            </div>
+            @for (change of changes; track change; let i = $index) {
+              <div class="flex flex-wrap items-end gap-3">
+                <label class="sim-label">Month<input class="sim-input" type="number" min="1" [max]="projectionMonths" [name]="'month' + i" [(ngModel)]="change.month" [disabled]="busy()"></label>
+                <label class="sim-label">Salary increase (%)<input class="sim-input" inputmode="decimal" [name]="'increase' + i" [(ngModel)]="change.salary" [disabled]="busy()"></label>
+                <label class="sim-label">Headcount change<input class="sim-input" type="number" min="-500" max="500" [name]="'headcount' + i" [(ngModel)]="change.headcount" [disabled]="busy()"></label>
+                <button type="button" class="sim-action" (click)="changes.splice(i, 1)" [disabled]="busy()">Remove change</button>
+              </div>
+            }
+            <div class="flex flex-wrap gap-2">
+              <button type="button" class="sim-action" (click)="addProjectionChange()" [disabled]="busy() || changes.length >= 36">Add monthly change</button>
+              <button type="submit" class="sim-primary" [disabled]="busy() || !runId">Create projection</button>
+            </div>
+          </form>
+        </app-component-card>
+        @for (projection of projections(); track projection.id) {
+          <app-component-card title="Saved projection">
+            <p class="sim-label mb-3">{{ projection.periods.length }} months · Total cost {{ projection.total.cost | currency:'AOA':'code' }}</p>
+            <div class="overflow-x-auto">
+              <table class="sim-table">
+                <thead><tr><th>Month</th><th>Workers</th><th>Gross</th><th>Net</th><th>Employer charges</th><th>Total cost</th></tr></thead>
+                <tbody>
+                  @for (row of projection.periods; track row.month) {
+                    <tr><td>{{ row.month }}</td><td>{{ row.workforce }}</td><td>{{ row.grossAmount | currency:row.currency:'code' }}</td>
+                      <td>{{ row.netAmount | currency:row.currency:'code' }}</td><td>{{ row.employerCharges | currency:row.currency:'code' }}</td>
+                      <td>{{ row.totalPersonnelCost | currency:row.currency:'code' }}</td></tr>
+                  }
+                </tbody>
+              </table>
+            </div>
+          </app-component-card>
+        }
+      }
+      @case ('proposals') {
+        <app-component-card title="Submitted proposals">
+          <button type="button" class="sim-action mb-3" (click)="reload()" [disabled]="busy()">Refresh</button>
+          <div class="overflow-x-auto">
+            <table class="sim-table">
+              <thead><tr><th>Proposal</th><th>Run</th><th>Status</th><th>Submitted</th></tr></thead>
+              <tbody>
+                @for (row of proposals(); track row.id) {
+                  <tr><td><button type="button" class="sim-link" (click)="openProposal(row)" [disabled]="busy()">{{ row.id.slice(0, 8) }}</button></td>
+                    <td>{{ row.runId.slice(0, 8) }}</td><td><span class="sim-chip">{{ row.status.replaceAll('_', ' ') }}</span></td>
+                    <td>{{ row.submittedAt | date:'medium' }}</td></tr>
+                } @empty { <tr><td colspan="4">{{ busy() ? 'Loading…' : 'No proposals.' }}</td></tr> }
+              </tbody>
+            </table>
+          </div>
+        </app-component-card>
+        @if (detail(); as row) {
+          <app-component-card title="Proposal details">
+            <div class="space-y-3">
+              <p class="sim-muted whitespace-pre-wrap">{{ row.reason }}</p>
+              @if (allowed(p.runs, p.sensitive)) {
+                <a class="sim-link" [routerLink]="['/simulations', workspace.company.id, 'overview']"
+                  [queryParams]="{ run: row.runId, scenario: row.scenarioId }">View simulated results</a>
+              }
+              @for (decision of row.decisions ?? []; track $index) {
+                <p class="sim-muted"><strong>{{ decision.decision.replaceAll('_', ' ') }}</strong> · {{ decision.decidedAt | date:'medium' }}<br>{{ decision.reason }}</p>
+              }
+              @if (['SUBMITTED', 'UNDER_REVIEW'].includes(row.status) && (allowed(p.approve, p.sensitive) || allowed(p.reject, p.sensitive))) {
+                <label class="sim-label">Decision reason
+                  <textarea rows="2" class="sim-input" maxlength="2000" [(ngModel)]="reason" [disabled]="busy()"></textarea>
+                </label>
+                <div class="flex flex-wrap gap-2">
+                  @if (allowed(p.approve, p.sensitive)) {
+                    <button type="button" class="sim-primary" (click)="decide(row, 'approve')" [disabled]="busy() || reason.trim().length < 5">Approve</button>
+                    <button type="button" class="sim-action" (click)="decide(row, 'request-revision')" [disabled]="busy() || reason.trim().length < 5">Request revision</button>
+                  }
+                  @if (allowed(p.reject, p.sensitive)) {
+                    <button type="button" class="sim-action" (click)="decide(row, 'reject')" [disabled]="busy() || reason.trim().length < 5">Reject</button>
+                  }
+                </div>
+              }
+            </div>
+          </app-component-card>
+        }
+      }
+      @case ('exports') {
+        <app-component-card title="Generated files">
+          <button type="button" class="sim-action mb-3" (click)="reload()" [disabled]="busy()">Refresh</button>
+          <div class="overflow-x-auto">
+            <table class="sim-table">
+              <thead><tr><th>File</th><th>Format</th><th>Rows</th><th>Created</th><th>Action</th></tr></thead>
+              <tbody>
+                @for (row of exports(); track row.id) {
+                  <tr><td>{{ row.filename }}</td><td>{{ row.format }}</td><td>{{ row.rowCount }}</td><td>{{ row.createdAt | date:'medium' }}</td>
+                    <td><button type="button" class="sim-action" [disabled]="busy() || row.status !== 'READY'" (click)="download(row)">Download</button></td></tr>
+                } @empty { <tr><td colspan="5">{{ busy() ? 'Loading…' : 'No generated files.' }}</td></tr> }
+              </tbody>
+            </table>
+          </div>
+        </app-component-card>
+      }
+    }
+  }
+</div>

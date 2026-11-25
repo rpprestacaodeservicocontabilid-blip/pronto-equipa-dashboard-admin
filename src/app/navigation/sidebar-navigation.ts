@@ -5,13 +5,25 @@ import { canOpenLegalSection, LEGAL_READ, LEGAL_SECTIONS } from '../modules/lega
 import { LOAN_SECTIONS, canOpen } from '../modules/loans/domain/loans-sections';
 import { ORGANIZATION_NAVIGATION } from '../modules/organization/domain/organization-navigation';
 import { canOpenPayments, canOpenPaymentSection, PAYMENT_SECTIONS } from '../modules/payments/domain/payment-navigation';
-import { BILLING_SECTIONS } from '../modules/platform-billing/domain/billing-navigation';
+import { companyPaymentAccess, companyPaymentSections } from '../modules/payments/domain/company-payments.navigation';
+import { BILLING_SECTIONS, canReadBilling, firstBillingSection } from '../modules/platform-billing/domain/billing-navigation';
+import { subscriptionSections } from '../modules/subscriptions/subscriptions.navigation';
+import { TENANCY_SECTIONS } from '../modules/tenancy/tenancy.navigation';
+import { EMPLOYEE_SECTIONS, hasEmployeeGrants } from '../modules/employees/domain/employee-navigation';
+import { AUTHORIZATION_SECTIONS } from '../modules/authorization/authorization.navigation';
+import { INTEGRATION_SECTIONS } from '../modules/integrations/integrations.navigation';
+import { OPERATIONS_SECTIONS } from '../modules/platform-operations/platform-operations.navigation';
+import { canDocument, sections as documentSections } from '../modules/documents/documents.navigation';
+import { canSimulate, simulationSections } from '../modules/simulations/simulations.navigation';
 import { ONBOARDING_SECTIONS } from '../modules/onboarding/domain/onboarding.navigation';
 import { PAYSLIP_SECTIONS } from '../modules/payslips/domain/payslip-supervision.navigation';
+import { companyPayslipSections, hasPayslipGrants } from '../modules/payslips/domain/company-payslips.navigation';
 import { REPORT_SECTIONS } from '../modules/reports/domain/platform-reports.navigation';
+import { companyReportSections, hasReportGrants } from '../modules/reports/domain/company-reports.navigation';
 import { AI_SECTIONS } from '../modules/ai-assistant/domain/ai-assistant.navigation';
 import { AUDIT_SECTIONS, canOpenAudit } from '../modules/audit/domain/audit.navigation';
 import { SUPPORT_ACCESS, SUPPORT_SECTIONS, supportGrant } from '../modules/support/domain/support.navigation';
+import { NOTIFICATIONS_ACCESS, NOTIFICATION_SECTIONS, notificationGrant } from '../modules/notifications/domain/notifications.navigation';
 import { canOpenEngineSection, ENGINE_SECTIONS } from '../modules/payroll-engine/domain/engine-access';
 import { canOpenPayrollSection, PAYROLL_SECTIONS } from '../modules/payroll/domain/payroll-sections';
 import { SECTIONS as SALARY_SECTIONS, can as canViewSalary } from '../modules/salary-structure/domain/salary-sections';
@@ -20,7 +32,7 @@ export interface SidebarLink {
   id: string;
   title: string;
   group?: string;
-  requires?: (permissions: string[]) => boolean;
+  requires?: (permissions: string[], platformAdmin: boolean) => boolean;
   fragment?: string;
 }
 
@@ -31,7 +43,7 @@ export interface SidebarModule {
   tenant: boolean;
   platformOnly?: boolean;
   platformPermission?: string;
-  visibleTo?: (permissions: readonly string[]) => boolean;
+  visibleTo?: (permissions: readonly string[], platformAdmin: boolean) => boolean;
   links: SidebarLink[];
 }
 
@@ -40,9 +52,29 @@ const icons = (path: string) =>
 
 export const SIDEBAR_MODULES: SidebarModule[] = [
   {
-    id: 'companies', title: 'Client companies', tenant: false, platformOnly: true,
+    id: 'companies', title: 'Tenancy', tenant: false, platformOnly: true,
     icon: icons('<path d="M3 21V3h12v18M15 9h6v12M7 7h4M7 11h4M7 15h4M1 21h22"/>'),
-    links: [{ id: '', title: 'Company list' }],
+    links: TENANCY_SECTIONS.map(({ path, title, group }) => ({ id: path, title, group })),
+  },
+  {
+    id: 'identity', title: 'Identity', tenant: false, platformOnly: true,
+    icon: icons('<circle cx="12" cy="8" r="4"/><path d="M4 21v-2a6 6 0 0 1 6-6h4a6 6 0 0 1 6 6v2"/>'),
+    links: [{ id: 'users', title: 'User directory' }, { id: 'disabled', title: 'Administratively disabled' }],
+  },
+  {
+    id: 'authorization', title: 'Authorization', tenant: false, platformOnly: true,
+    icon: icons('<path d="M12 22s7-3 7-10V5l-7-3-7 3v7c0 7 7 10 7 10Z M9 12l2 2 4-4"/>'),
+    links: AUTHORIZATION_SECTIONS.map(({ path, title }) => ({ id: path, title })),
+  },
+  {
+    id: 'integrations', title: 'Integrations', tenant: false, platformOnly: true,
+    icon: icons('<path d="M9 2v5m6-5v5M6 7h12v4a6 6 0 0 1-12 0V7Zm6 10v5M3 7h18"/>'),
+    links: INTEGRATION_SECTIONS.map(({ path, title }) => ({ id: path, title })),
+  },
+  {
+    id: 'platform-operations', title: 'Platform operations', tenant: false, platformOnly: true,
+    icon: icons('<path d="M3 12h4l3-8 4 16 3-8h4"/>'),
+    links: OPERATIONS_SECTIONS.map(({ path, title }) => ({ id: path, title })),
   },
   {
     id: 'contracts', title: 'Contracts', tenant: true,
@@ -61,6 +93,13 @@ export const SIDEBAR_MODULES: SidebarModule[] = [
       id: item.path === 'overview' ? '' : item.path, title: item.label, group: group.title,
       requires: permissions => permissions.includes('organization:read') && (!item.permission || permissions.includes(item.permission)),
     }))),
+  },
+  {
+    id: 'employees', title: 'Employees', tenant: true,
+    icon: icons('<circle cx="9" cy="7" r="3"/><path d="M3 21v-3a6 6 0 0 1 12 0v3M16 4a3 3 0 0 1 0 6m2 3a5 5 0 0 1 3 5v3"/>'),
+    links: EMPLOYEE_SECTIONS.map(section => ({
+      id: section.path, title: section.title, requires: permissions => hasEmployeeGrants(permissions, section.grants),
+    })),
   },
   {
     id: 'leave', title: 'Leave', tenant: true,
@@ -118,6 +157,12 @@ export const SIDEBAR_MODULES: SidebarModule[] = [
     })),
   },
   {
+    id: 'company-payments', title: 'Company payments', tenant: true,
+    icon: icons('<rect x="3" y="5" width="18" height="14" rx="2"/><path d="M3 10h18m-14 5h5"/>'),
+    links: companyPaymentSections.map(section => ({ id: section.path, title: section.title, group: section.group,
+      requires: grants => companyPaymentAccess(grants, ...section.grants) })),
+  },
+  {
     id: 'payments', title: 'Payments', tenant: false, visibleTo: canOpenPayments,
     icon: icons('<rect x="3" y="5" width="18" height="14" rx="2"/><path d="M3 10h18m-15 5h4m3 0h2"/>'),
     links: PAYMENT_SECTIONS.map(section => ({
@@ -137,9 +182,40 @@ export const SIDEBAR_MODULES: SidebarModule[] = [
     ],
   },
   {
-    id: 'platform-billing', title: 'Platform billing', tenant: false, platformOnly: true,
+    id: 'simulations', title: 'Simulations', tenant: true,
+    icon: icons('<path d="M4 19h16M5 15l4-5 4 3 6-7M14 6h5v5"/>'),
+    links: simulationSections.map(section => ({ id: section.path, title: section.title, group: section.group,
+      requires: grants => canSimulate(grants, ...section.grants) })),
+  },
+  {
+    id: 'simulation-oversight', title: 'Simulation oversight', tenant: false, platformOnly: true,
+    icon: icons('<path d="M3 12s3-6 9-6 9 6 9 6-3 6-9 6-9-6-9-6Z"/><circle cx="12" cy="12" r="2"/>'),
+    links: [{ id: '', title: 'Company simulation indicators' }],
+  },
+  {
+    id: 'documents', title: 'Documents', tenant: true,
+    icon: icons('<path d="M3 7a2 2 0 0 1 2-2h5l2 2h7a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2Z"/>'),
+    links: documentSections.map(section => ({ id: section.path, title: section.title, group: section.group,
+      requires: grants => canDocument(grants, ...section.permissions) })),
+  },
+  {
+    id: 'document-oversight', title: 'Document oversight', tenant: false, platformOnly: true,
+    icon: icons('<path d="M4 20V4m0 16h16M8 16v-4m4 4V7m4 9v-6"/>'),
+    links: [{ id: '', title: 'Company document indicators' }],
+  },
+  {
+    id: 'subscriptions', title: 'Subscriptions', tenant: false, platformOnly: true,
+    icon: icons('<rect x="3" y="5" width="18" height="14" rx="2"/><path d="M3 10h18m-14 5h5"/>'),
+    links: subscriptionSections.map(section => ({ id: section.path, title: section.title, group: section.group })),
+  },
+  {
+    id: 'platform-billing', title: 'Platform billing', tenant: false,
+    visibleTo: (grants, platformAdmin) => Boolean(firstBillingSection(grants, platformAdmin)),
     icon: icons('<path d="M5 3h14v18l-3-2-4 2-4-2-3 2V3Zm3 5h8m-8 4h8m-8 4h4"/>'),
-    links: BILLING_SECTIONS.map(section => ({ id: section.path, title: section.title, group: section.group })),
+    links: BILLING_SECTIONS.map(section => ({
+      id: section.path, title: section.title, group: section.group,
+      requires: (grants, platformAdmin) => canReadBilling(section, grants, platformAdmin),
+    })),
   },
   {
     id: 'onboarding', title: 'Onboarding', tenant: false, platformOnly: true,
@@ -147,9 +223,21 @@ export const SIDEBAR_MODULES: SidebarModule[] = [
     links: ONBOARDING_SECTIONS.map(section => ({ id: section.path, title: section.title, group: section.group })),
   },
   {
+    id: 'company-payslips', title: 'Company payslips', tenant: true,
+    icon: icons('<path d="M6 3h12v18l-3-2-3 2-3-2-3 2V3Zm3 5h6m-6 4h6m-6 4h4"/>'),
+    links: companyPayslipSections.map(section => ({ id: section.path, title: section.title, group: section.group,
+      requires: grants => hasPayslipGrants(grants, ...section.grants) })),
+  },
+  {
     id: 'payslips', title: 'Payslips', tenant: false, platformOnly: true,
     icon: icons('<path d="M6 3h12v18l-3-2-3 2-3-2-3 2V3Zm3 5h6m-6 4h6m-6 4h3"/>'),
     links: PAYSLIP_SECTIONS.map(section => ({ id: section.path, title: section.title, group: section.group })),
+  },
+  {
+    id: 'company-reports', title: 'Company reports', tenant: true,
+    icon: icons('<path d="M5 20V4h11l3 3v13H5Zm4-5v2m3-5v5m3-8v8"/>'),
+    links: companyReportSections.map(section => ({ id: section.path, title: section.title, group: section.group,
+      requires: grants => hasReportGrants(grants, ...section.grants) })),
   },
   {
     id: 'reports', title: 'Reports', tenant: false, platformOnly: true,
@@ -167,6 +255,18 @@ export const SIDEBAR_MODULES: SidebarModule[] = [
     links: AUDIT_SECTIONS.map(section => ({
       id: section.path, title: section.title, group: section.group, requires: grants => grants.includes(section.permission),
     })),
+  },
+  {
+    id: 'notifications', title: 'Notifications', tenant: false,
+    icon: icons('<path d="M18 8a6 6 0 0 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9m-9 12a3 3 0 0 0 6 0"/>'),
+    links: [
+      { id: 'inbox', title: 'My notifications', group: 'Notification centre' },
+      { id: 'preferences', title: 'My preferences', group: 'Notification centre' },
+      ...NOTIFICATION_SECTIONS.map(section => ({
+        id: section.path, title: section.title, group: section.group,
+        requires: (grants: string[]) => grants.includes(NOTIFICATIONS_ACCESS) && grants.includes(notificationGrant(section.permission)),
+      })),
+    ],
   },
   {
     id: 'support', title: 'Support', tenant: false, platformPermission: SUPPORT_ACCESS,

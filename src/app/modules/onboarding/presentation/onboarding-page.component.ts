@@ -7,7 +7,8 @@ import { apiErrorMessage } from '../../../core/api/api-error';
 import { PageBreadcrumbComponent } from '../../../shared/components/common/page-breadcrumb/page-breadcrumb.component';
 import { ComponentCardComponent } from '../../../shared/components/common/component-card/component-card.component';
 import { downloadWorkbook, printReport, ReportDocument } from '../../../shared/utils/report-documents';
-import { Application, APPLICATION_STATUSES, Count, label, MODES, OnboardingEvent, Overview, PolicyResponse, Resource } from '../domain/onboarding.models';
+import { Application, APPLICATION_STATUSES, Count, label, MODES, OnboardingEvent, OnboardingMode, Overview,
+  PolicyResponse, RequirementMode, Resource } from '../domain/onboarding.models';
 import { OnboardingSection } from '../domain/onboarding.navigation';
 import { OnboardingApi } from '../infrastructure/onboarding-api.service';
 
@@ -47,7 +48,10 @@ export class OnboardingPageComponent {
   protected readonly statuses = this.section.resource ? RESOURCE_STATUSES[this.section.resource] : APPLICATION_STATUSES;
   protected readonly filters = { search: '', status: '', mode: '', owner: '', assignee: '', from: '', to: '', applicationId: '' };
   protected readonly draft = { name: '', taxId: '', email: '', phone: '', address: '', mode: 'ADMIN_ASSISTED', source: '' };
-  protected policyInput = { requiredDocuments: 0, invitationHours: 24, inactivityDays: 7, reason: '' };
+  protected policyInput = {
+    requiredDocuments: 0, invitationHours: 24, inactivityDays: 7, reason: '',
+    companyVerificationModes: [] as OnboardingMode[], organizationRequiredModes: [] as OnboardingMode[],
+  };
   protected grouping: 'daily' | 'weekly' | 'monthly' = 'daily';
   protected page = 1;
   protected total = 0;
@@ -116,7 +120,11 @@ export class OnboardingPageComponent {
           const data = await firstValueFrom(this.api.policy());
           if (sequence !== this.sequence) return;
           this.policy.set(data);
-          this.policyInput = { ...data.current, reason: '' };
+          this.policyInput = {
+            ...data.current, reason: '',
+            companyVerificationModes: data.current.companyVerificationModes ?? [],
+            organizationRequiredModes: data.current.organizationRequiredModes ?? [],
+          };
         }
       }
     } catch (error) {
@@ -154,20 +162,29 @@ export class OnboardingPageComponent {
   }
 
   protected async publish(policy: PolicyResponse) {
-    const { requiredDocuments, invitationHours, inactivityDays, reason } = this.policyInput;
+    const { requiredDocuments, invitationHours, inactivityDays, companyVerificationModes, organizationRequiredModes, reason } = this.policyInput;
     if (this.saving() || !reason.trim()) return;
     this.saving.set(true);
     this.actionError.set('');
     this.notice.set('');
     try {
-      const version = await firstValueFrom(this.api.publish({ requiredDocuments, invitationHours, inactivityDays }, policy.current.version, reason.trim()));
+      const version = await firstValueFrom(this.api.publish({
+        requiredDocuments, invitationHours, inactivityDays, companyVerificationModes, organizationRequiredModes,
+      }, policy.current.version, reason.trim()));
       this.notice.set('Policy version ' + version.version + ' published.');
       await this.refresh();
     } catch (error) { this.actionError.set(apiErrorMessage(error)); }
     finally { this.saving.set(false); }
   }
 
+  protected setRequirement(key: RequirementMode, mode: OnboardingMode, event: Event) {
+    const checked = (event.target as HTMLInputElement).checked;
+    const selected = this.policyInput[key].filter(item => item !== mode);
+    this.policyInput[key] = checked ? [...selected, mode] : selected;
+  }
+
   protected applicationTab() {
+    if (this.section.tab) return this.section.tab;
     if (this.section.group === 'Provisioning') return 'provisioning';
     if (this.section.group === 'Company verification') return 'company';
     return 'summary';

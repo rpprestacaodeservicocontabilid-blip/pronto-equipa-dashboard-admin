@@ -68,7 +68,7 @@ export class AppSidebarComponent {
   protected readonly modules = computed(() => this.sortedModules().filter(item =>
     (!item.platformOnly || this.auth.isPlatformAdmin()) &&
     (!item.platformPermission || this.auth.claims()?.permissions.includes(item.platformPermission)) &&
-    (!item.visibleTo || item.visibleTo(this.auth.claims()?.permissions ?? []))));
+    (!item.visibleTo || item.visibleTo(this.auth.claims()?.permissions ?? [], this.auth.isPlatformAdmin()))));
   protected readonly groups = computed(() => {
     const nav = SIDEBAR_MODULES.find(item => item.id === this.unfolded());
     if (!nav) return [];
@@ -83,7 +83,7 @@ export class AppSidebarComponent {
     return [...groups].map(([title, links]): MenuGroup => {
       const key = nav.id + '/' + title;
       return { title, key, links: ordered(links, this.preferences()[key], item => this.linkId(item))
-        .filter(link => !permissions || !link.requires || link.requires(permissions)) };
+        .filter(link => !permissions || !link.requires || link.requires(permissions, !nav.tenant && this.auth.isPlatformAdmin())) };
     }).filter(group => group.links.length);
   });
 
@@ -130,6 +130,7 @@ export class AppSidebarComponent {
     if (!segments[1]) return false;
     let section = segments[2] ?? '';
     if (nav.id === 'contracts' && section === 'details') section = 'all';
+    if (nav.id === 'employees' && section === 'details') section = 'all';
     if (nav.id === 'contracts' && section === 'dashboard') section = '';
     if ((nav.id === 'organization' || nav.id === 'leave') && section === 'overview') section = '';
     return section === link.id;

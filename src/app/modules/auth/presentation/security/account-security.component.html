@@ -43,6 +43,7 @@
   <app-component-card id="permissions" class="block scroll-mt-24" title="Access permissions">
     <p class="mb-4 text-sm text-gray-500 dark:text-gray-400">Platform roles: {{ auth.claims()?.roles?.join(', ') || 'None' }}</p>
     <form #permissionForm="ngForm" (ngSubmit)="permissionForm.valid && checkPermission()" class="max-w-lg space-y-3">
+      <label class="block text-sm" for="permission-company">Company ID (leave blank for platform access)<input appAuthInput type="number" min="1" step="1" id="permission-company" name="companyId" [(ngModel)]="companyId" /></label>
       <label class="block text-sm" for="permission-name">Permission name<input appAuthInput id="permission-name" name="permission" [(ngModel)]="permission" required /></label>
       <button [disabled]="busy() || permissionForm.invalid" class="text-sm text-brand-600 disabled:opacity-50 dark:text-brand-400">Check my permission</button>
     </form>

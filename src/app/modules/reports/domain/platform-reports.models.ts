@@ -1,4 +1,4 @@
-export type ReportCode = 'REPORT_ACTIVITY' | 'DOMAIN_USAGE' | 'PAYSLIP_ACTIVITY' | 'ONBOARDING_ACTIVITY' | 'PAYROLL_ACTIVITY' | 'PAYMENT_ACTIVITY';
+export type ReportCode = 'REPORT_ACTIVITY' | 'DOMAIN_USAGE' | 'PAYSLIP_ACTIVITY' | 'ONBOARDING_ACTIVITY' | 'PAYROLL_ACTIVITY' | 'PAYMENT_ACTIVITY' | 'SIMULATION_ACTIVITY';
 export type Grouping = 'day' | 'month';
 export type Format = 'CSV' | 'XLSX' | 'PDF';
 export type Cadence = 'DAILY' | 'WEEKLY' | 'MONTHLY';

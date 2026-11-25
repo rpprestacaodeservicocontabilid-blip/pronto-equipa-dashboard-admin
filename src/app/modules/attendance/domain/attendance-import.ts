@@ -1,5 +1,9 @@
+import type { ImportSheet } from '../../../shared/utils/read-csv';
 import { UUID, validDate } from './attendance-format';
 import { Employee, PUNCH_TYPES, PunchInput, PunchType } from './attendance.models';
+
+export { readCsv } from '../../../shared/utils/read-csv';
+export type { ImportSheet } from '../../../shared/utils/read-csv';
 
 export const IMPORT_FIELDS = [
   { key: 'employeeId', title: 'Employee UUID or employee number', required: true },
@@ -13,49 +17,8 @@ export const IMPORT_FIELDS = [
 
 type Field = (typeof IMPORT_FIELDS)[number]['key'];
 export type ImportMapping = Record<Field, number>;
-export type ImportSheet = { columns: string[]; rows: string[][] };
-export type ImportPreview = { rows: PunchInput[]; errors: { row: number; message: string }[]; duplicates: number };
 
-export function readCsv(source: string): ImportSheet {
-  const content = source.replace(/^\uFEFF/, '');
-  const header = content.split(/\r?\n/, 1)[0];
-  const delimiter = header.replace(/"(?:[^"]|"")*"/g, '').includes(';') ? ';' : ',';
-  const lines: string[][] = [];
-  let row: string[] = [];
-  let cell = '';
-  let quoted = false;
-  let closed = false;
-  for (let index = 0; index < content.length; index++) {
-    const char = content[index];
-    if (quoted) {
-      if (char === '"' && content[index + 1] === '"') { cell += '"'; index++; }
-      else if (char === '"') { quoted = false; closed = true; }
-      else cell += char;
-    } else if (char === delimiter || char === '\r' || char === '\n') {
-      row.push(cell.trim());
-      cell = '';
-      closed = false;
-      if (char !== delimiter) {
-        if (char === '\r' && content[index + 1] === '\n') index++;
-        if (row.some(Boolean)) lines.push(row);
-        row = [];
-      }
-    } else if (char === '"' && !cell && !closed) {
-      quoted = true;
-    } else if (closed || char === '"') {
-      throw new Error('Invalid quotation in the CSV file.');
-    } else {
-      cell += char;
-    }
-  }
-  if (quoted) throw new Error('The CSV contains an unclosed quoted field.');
-  row.push(cell.trim());
-  if (row.some(Boolean)) lines.push(row);
-  const [columns, ...rows] = lines;
-  if (!columns || columns.length < 3 || !rows.length) throw new Error('Use a CSV with a header and at least one row.');
-  if (rows.length > 5000) throw new Error('Import up to 5,000 rows per file.');
-  return { columns, rows };
-}
+export type ImportPreview = { rows: PunchInput[]; errors: { row: number; message: string }[]; duplicates: number };
 
 export function defaultMapping(columns: string[]): ImportMapping {
   const normalized = columns.map(column => column.toLowerCase().replace(/[^a-z0-9]/g, ''));

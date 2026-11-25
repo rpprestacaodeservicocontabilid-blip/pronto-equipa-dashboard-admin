@@ -47,7 +47,7 @@ export class AuthApiService {
   resetPassword(input: PasswordResetInput) { return this.http.post<void>(`${this.base}/auth/reset-password`, input); }
   changePassword(input: PasswordChangeInput) { return this.http.post<void>(`${this.base}/auth/change-password`, input); }
   refresh() {
-    return this.http.post<AuthTokens | null>(`${this.base}/auth/browser/refresh`, {}, browserSession).pipe(map(result => {
+    return this.sessionWrite(this.base, () => this.http.post<AuthTokens | null>(`${this.base}/auth/browser/refresh`, {}, browserSession)).pipe(map(result => {
       if (!result) throw new HttpErrorResponse({ status: 401, statusText: 'No active browser session' });
       return result;
     }));
@@ -64,7 +64,7 @@ export class AuthApiService {
   }
   linkGoogle(code: string) { return this.http.post<void>(`${this.base}/oauth/google/link`, { code }); }
   unlinkGoogle() { return this.http.delete<void>(`${this.base}/oauth/google/unlink`); }
-  checkPermission(userId: number, permission: string) {
-    return this.http.get<{ allowed: boolean }>(`${this.base}/authorization/users/${userId}/permissions/${encodeURIComponent(permission)}`);
+  checkPermission(userId: number, permission: string, companyId?: number) {
+    return this.http.get<{ allowed: boolean }>(`${this.base}/authorization/users/${userId}/permissions/${encodeURIComponent(permission)}`, { params: companyId === undefined ? {} : { companyId } });
   }
 }

@@ -1,0 +1,101 @@
+<app-page-breadcrumb [pageTitle]="preferencePage ? 'Notification preferences' : 'My notifications'" />
+
+<div class="mb-5 flex flex-wrap items-end gap-3">
+  @if (companies(); as options) {
+    <label class="nt-label">Mailbox
+      <select class="nt-input min-w-52" [ngModel]="company()" (ngModelChange)="choose($event)" [disabled]="writing()">
+        <option [ngValue]="null">Platform</option>
+        @for (option of options; track option.id) { <option [ngValue]="option.id">{{ option.name }}</option> }
+      </select>
+    </label>
+  } @else {
+    <button type="button" class="nt-secondary" (click)="findCompanies()" [disabled]="loadingCompanies() || writing()">Switch mailbox</button>
+    <span class="nt-muted self-center">{{ company() ? 'Company #' + company() : 'Platform mailbox' }}</span>
+  }
+  <a class="nt-link self-center" [routerLink]="preferencePage ? '/notifications/inbox' : '/notifications/preferences'"
+    [queryParams]="{companyId: company()}">{{ preferencePage ? 'Back to my notifications' : 'Manage preferences' }}</a>
+</div>
+
+@if (error()) { <p role="alert" class="nt-error mb-4">{{ error() }}</p> }
+
+@if (loading()) {
+  <p role="status" class="nt-muted py-4">Loading…</p>
+} @else if (preferencePage) {
+  <app-component-card title="Channels by category">
+    <label class="nt-label max-w-xs">Category
+      <select class="nt-input" [(ngModel)]="category" [disabled]="writing()">
+        @for (item of categories; track item) { <option [value]="item">{{ label(item) }}</option> }
+      </select>
+    </label>
+    <p class="nt-muted mt-4">Mandatory notices follow the platform policy.</p>
+    <div class="mt-4 grid gap-3 sm:grid-cols-3">
+      @for (channel of channels; track channel) {
+        <label class="nt-label flex items-center gap-3 rounded-lg border border-gray-200 p-4 dark:border-gray-800">
+          <input type="checkbox" class="size-4 accent-brand-600" [checked]="preferenceEnabled(channel)"
+            [disabled]="writing() || !preferencesReady()" (change)="changePreference(channel, $event)" />
+          {{ label(channel) }}
+        </label>
+      }
+    </div>
+    <button type="button" class="nt-secondary mt-5" (click)="loadHistory()" [disabled]="writing()">Preference history</button>
+    @if (history(); as records) {
+      <ul class="nt-muted mt-4 space-y-2">
+        @for (row of records; track row.id) {
+          <li>{{ label($any(row.data['category'])) }} · {{ label($any(row.data['channel'])) }} · {{ row.data['enabled'] ? 'Enabled' : 'Disabled' }} · {{ row.createdAt | date:'medium' }}</li>
+        } @empty { <li>No preference changes yet.</li> }
+      </ul>
+    }
+  </app-component-card>
+} @else {
+  <app-component-card title="Notification centre">
+    <div class="flex flex-wrap items-center justify-between gap-3">
+      <p class="nt-muted">{{ inbox.count() }} unread</p>
+      <button type="button" class="nt-secondary" [disabled]="writing() || !inbox.count()" (click)="mark('read-all')">Mark all as read</button>
+    </div>
+    <div class="mt-3 flex flex-wrap gap-2" aria-label="Filter by read status">
+      @for (value of filters; track value) {
+        <button type="button" [class]="value === state ? 'nt-button' : 'nt-secondary'" [attr.aria-pressed]="value === state"
+          [disabled]="writing()" (click)="filter(value)">{{ value ? label(value) : 'All active' }}</button>
+      }
+    </div>
+    @if (detail(); as entry) {
+      <article id="notification-detail" class="mt-4 rounded-lg border border-brand-200 bg-brand-50/50 p-4 dark:border-brand-500/30 dark:bg-brand-500/10">
+        <div class="flex flex-wrap items-center justify-between gap-2">
+          <h2 class="break-words text-base font-semibold text-gray-900 dark:text-white">{{ entry.data.subject }}</h2>
+          <a class="nt-link" routerLink="/notifications/inbox" [queryParams]="{companyId: company()}">Close notification</a>
+        </div>
+        <p class="mt-2 whitespace-pre-wrap break-words text-sm text-gray-700 dark:text-gray-200">{{ entry.data.body }}</p>
+        <ng-container [ngTemplateOutlet]="actions" [ngTemplateOutletContext]="{ $implicit: entry }" />
+      </article>
+    }
+    <ul class="mt-4 divide-y divide-gray-100 dark:divide-gray-800">
+      @for (entry of entries(); track entry.id) {
+        <li class="py-4">
+          <div class="flex flex-wrap items-center gap-2">
+            <a class="nt-link break-words" routerLink="/notifications/inbox" [queryParams]="{entry: entry.id, companyId: company()}" fragment="notification-detail">{{ entry.data.subject }}</a>
+            <span class="nt-badge" [attr.data-status]="entry.data.readState">{{ label(entry.data.readState) }}</span>
+          </div>
+          <p class="nt-muted mt-1">{{ entry.createdAt | date:'medium' }} @if (entry.data.category) { · {{ label(entry.data.category) }} }</p>
+          <p class="mt-2 line-clamp-2 break-words text-sm text-gray-700 dark:text-gray-300">{{ entry.data.body }}</p>
+          <ng-container [ngTemplateOutlet]="actions" [ngTemplateOutletContext]="{ $implicit: entry }" />
+        </li>
+      } @empty { <li class="nt-muted py-6">No notifications match this view.</li> }
+    </ul>
+    <div class="mt-2 flex flex-wrap items-center gap-3">
+      <button type="button" class="nt-secondary" (click)="browse(page - 1)" [disabled]="page === 1 || writing()">Previous</button>
+      <span class="nt-muted">Page {{ page }}</span>
+      <button type="button" class="nt-secondary" (click)="browse(page + 1)" [disabled]="entries().length < 50 || writing()">Next</button>
+    </div>
+  </app-component-card>
+}
+
+<ng-template #actions let-entry>
+  @if (entry.data.readState !== 'ARCHIVED') {
+    <div class="mt-2 flex flex-wrap gap-3">
+      @if (entry.data.readState === 'UNREAD') {
+        <button type="button" class="nt-secondary" [disabled]="writing()" (click)="mark('read', entry.id)">Mark as read</button>
+      }
+      <button type="button" class="nt-secondary" [disabled]="writing()" (click)="mark('archive', entry.id)">Archive</button>
+    </div>
+  }
+</ng-template>

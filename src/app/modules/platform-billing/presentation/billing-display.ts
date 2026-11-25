@@ -11,6 +11,7 @@ export const ageingLabels = ['Current', '1–30 days', '31–60 days', '61–90 
 export const columns: Record<BillingKind, Column[]> = {
   INVOICE: [reference, company, ['issuedAt', 'Issued'], ['dueAt', 'Due date'], ['total', 'Total'], ['outstanding', 'Outstanding'], state],
   PAYMENT: [['reference', 'Reference'], company, ['provider', 'Provider'], value, ['updatedAt', 'Last update'], state],
+  PAYMENT_ALLOCATION: [['paymentId', 'Receipt'], ['invoiceId', 'Invoice'], company, value, ['actor', 'Applied by'], created, state],
   RECEIPT: [reference, company, ['issuedAt', 'Issued'], value, state],
   CREDIT_NOTE: [reference, company, ['originalNumber', 'Original invoice'], value, ['issuedAt', 'Issued'], state],
   REFUND: [['id', 'Reference'], company, value, ['reason', 'Reason'], created, state],
@@ -32,19 +33,24 @@ export const statuses: Partial<Record<BillingKind, string[]>> = {
   REFUND: ['REQUESTED', 'APPROVED', 'COMPLETED', 'REJECTED'],
   SCHEDULE: ['ACTIVE', 'CANCELLED'],
   OUTBOX: ['PENDING', 'RETRY', 'DEAD', 'PROCESSED_INTERNAL', 'PUBLISHED'],
-  BANK_ENTRY: ['UNMATCHED', 'MATCHED'],
+  BANK_ENTRY: ['UNMATCHED', 'DISPUTED', 'MATCHED'],
+  RECONCILIATION: ['MATCHED', 'REVERSED'],
 };
 
 export const detailColumns: Partial<Record<BillingKind, Column[]>> = {
   INVOICE: [['id', 'Record ID'], ['paid', 'Paid'], ['credited', 'Credit applied'], ['tax', 'Tax'],
     ['subscriptionId', 'Subscription'], ['originalInvoiceId', 'Original invoice'], ['reason', 'Reason']],
-  PAYMENT: [['id', 'Record ID'], ['invoiceId', 'Invoice'], ['requestedBy', 'Recorded by'], ['confirmedBy', 'Confirmed by'], ['evidence', 'Evidence']],
+  PAYMENT: [['id', 'Record ID'], ['invoiceId', 'Initial invoice'], ['allocated', 'Applied'], ['availableToAllocate', 'Available to apply'],
+    ['requestedBy', 'Recorded by'], ['confirmedBy', 'Confirmed by'], ['confirmedAt', 'Confirmed'], ['evidence', 'Evidence']],
   RECEIPT: [['invoiceId', 'Invoice'], ['paymentId', 'Payment']],
   CREDIT_NOTE: [['invoiceId', 'Invoice'], ['reason', 'Reason']],
   REFUND: [['paymentId', 'Payment'], ['requestedBy', 'Requested by'], ['approvedBy', 'Reviewed by'], ['executedBy', 'Completed by'],
     ['completedAt', 'Completed'], ['evidence', 'Evidence']],
   ACCOUNT: [['address', 'Billing address'], ['updatedAt', 'Last change']],
   ACCOUNT_HISTORY: [['address', 'Billing address']],
+  BANK_ENTRY: [['paymentId', 'Payment'], ['reconciliationId', 'Reconciliation'], ['reviewReason', 'Discrepancy'], ['reviewedBy', 'Reviewed by'], ['reviewedAt', 'Reviewed']],
+  RECONCILIATION: [['id', 'Record ID'], ['amount', 'Matched amount'], ['reversalReason', 'Reversal reason'], ['reversedBy', 'Reversed by'], ['reversedAt', 'Reversed']],
+  AUDIT: [['reason', 'Reason']],
   TAX_RULE: [['legalReference', 'Fiscal reference']],
   OUTBOX: [['invoiceId', 'Invoice'], ['paymentId', 'Payment']],
   SCHEDULE: [['subscriptionId', 'Subscription'], ['dueDays', 'Payment term (days)'], ['automatic', 'Automatic']],
@@ -56,7 +62,7 @@ export function statusTone(status: string) {
     return 'bg-success-50 text-success-700 dark:bg-success-500/15 dark:text-success-400';
   }
   if (['FAILED', 'DEAD', 'REJECTED', 'OVERDUE'].includes(status)) return 'bg-error-50 text-error-700 dark:bg-error-500/15 dark:text-error-400';
-  if (['PENDING', 'REQUESTED', 'PARTIALLY_PAID', 'UNMATCHED', 'RETRY'].includes(status)) return 'bg-warning-50 text-warning-700 dark:bg-warning-500/15 dark:text-warning-400';
+  if (['PENDING', 'REQUESTED', 'PARTIALLY_PAID', 'UNMATCHED', 'DISPUTED', 'RETRY'].includes(status)) return 'bg-warning-50 text-warning-700 dark:bg-warning-500/15 dark:text-warning-400';
   return 'bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-300';
 }
 
@@ -77,7 +83,7 @@ export function cell(record: BillingRecord, key: string): string {
   if (key === 'outstanding') return record.status === 'DRAFT' ? '—' : money(openBalance(record), String(record.data['currency']));
   if (value == null || value === '') return '—';
   if (key === 'status') return statusLabel(String(value));
-  if (['amount', 'total', 'paid', 'credited', 'tax'].includes(key)) return money(String(value), String(record.data['currency'] ?? ''));
+  if (['amount', 'total', 'paid', 'credited', 'tax', 'allocated', 'availableToAllocate'].includes(key)) return money(String(value), String(record.data['currency'] ?? ''));
   if (key === 'basisPoints') return (Number(value) / 100).toFixed(2) + '%';
   if (key.endsWith('At') || key.startsWith('valid')) {
     const day = new Date(String(value));

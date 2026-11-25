@@ -1,0 +1,109 @@
+<div class="workspace-ui space-y-5">
+  <app-page-breadcrumb [pageTitle]="section.title" homeLink="/platform-operations/overview" />
+  @if (snapshot.isLoading()) {
+    <p role="status" class="text-sm text-gray-600 dark:text-gray-400">Loading operational data…</p>
+  } @else if (snapshot.error(); as error) {
+    <p class="feedback" role="alert">{{ errorMessage(error) }}</p>
+    <button type="button" class="action" (click)="snapshot.reload()">Retry</button>
+  } @else if (snapshot.hasValue()) {
+    @let view = snapshot.value();
+    <div class="flex flex-wrap items-center justify-between gap-3 text-sm text-gray-600 dark:text-gray-400">
+      <p>Snapshot taken {{ view.data.observedAt | date:'medium' }}</p>
+      <button type="button" class="action" (click)="snapshot.reload()">Refresh snapshot</button>
+    </div>
+    @if (view.endpoint === 'overview') {
+      @if (section.path === 'infrastructure') {
+        <app-component-card title="Current API instance" desc="Memory and uptime reported by this API process.">
+          <dl class="grid gap-3 text-sm sm:grid-cols-2 xl:grid-cols-4">
+            <div class="rounded-lg border border-gray-200 p-4 dark:border-gray-800"><dt class="text-gray-600 dark:text-gray-400">Uptime</dt><dd class="mt-2 text-lg font-semibold text-gray-900 dark:text-white">{{ view.data.process.uptimeSeconds | number }} s</dd></div>
+            <div class="rounded-lg border border-gray-200 p-4 dark:border-gray-800"><dt class="text-gray-600 dark:text-gray-400">Resident memory</dt><dd class="mt-2 text-lg font-semibold text-gray-900 dark:text-white">{{ mib(view.data.process.rssBytes) | number:'1.0-1' }} MiB</dd></div>
+            <div class="rounded-lg border border-gray-200 p-4 dark:border-gray-800"><dt class="text-gray-600 dark:text-gray-400">Heap used</dt><dd class="mt-2 text-lg font-semibold text-gray-900 dark:text-white">{{ mib(view.data.process.heapUsedBytes) | number:'1.0-1' }} MiB</dd></div>
+            <div class="rounded-lg border border-gray-200 p-4 dark:border-gray-800"><dt class="text-gray-600 dark:text-gray-400">Heap allocated</dt><dd class="mt-2 text-lg font-semibold text-gray-900 dark:text-white">{{ mib(view.data.process.heapTotalBytes) | number:'1.0-1' }} MiB</dd></div>
+          </dl>
+        </app-component-card>
+      } @else {
+        <app-component-card title="Platform readiness">
+          <dl class="mb-5 grid gap-3 sm:grid-cols-3">
+            <div class="rounded-lg border border-gray-200 p-4 dark:border-gray-800"><dt class="text-sm text-gray-600 dark:text-gray-400">Ready to serve</dt><dd class="mt-2 text-lg font-semibold text-gray-900 dark:text-white">{{ view.data.ready ? 'Ready' : 'Not ready' }}</dd></div>
+            <div class="rounded-lg border border-gray-200 p-4 dark:border-gray-800"><dt class="text-sm text-gray-600 dark:text-gray-400">Reported health</dt><dd class="mt-2 text-lg font-semibold text-gray-900 dark:text-white">{{ label(view.data.health) }}</dd></div>
+            <div class="rounded-lg border border-gray-200 p-4 dark:border-gray-800"><dt class="text-sm text-gray-600 dark:text-gray-400">Lifecycle</dt><dd class="mt-2 text-lg font-semibold capitalize text-gray-900 dark:text-white">{{ view.data.lifecycle }}</dd></div>
+          </dl>
+          <div class="custom-scrollbar overflow-x-auto">
+            <table class="w-full text-start text-sm text-gray-700 dark:text-gray-300">
+              <thead class="table-heading"><tr><th scope="col">Dependency</th><th scope="col">Recorded status</th><th scope="col">Critical for readiness</th></tr></thead>
+              <tbody>
+                @for (check of view.data.checks; track check.name) {
+                  <tr class="border-b border-gray-100 dark:border-gray-800">
+                    <td class="table-cell font-medium">{{ name(check.name) }}</td><td class="table-cell">{{ label(check.status) }}</td>
+                    <td class="table-cell">{{ check.critical ? 'Yes' : 'No' }}</td>
+                  </tr>
+                } @empty { <tr><td colspan="3" class="p-5 text-center">No health checks have reported to this instance.</td></tr> }
+              </tbody>
+            </table>
+          </div>
+        </app-component-card>
+      }
+      @if (section.path === 'overview') {
+        <app-component-card title="Operational workspaces">
+          <div class="flex flex-wrap gap-3">
+            @for (shortcut of shortcuts; track shortcut.path) {
+              <a [routerLink]="['/platform-operations', shortcut.path]" class="action">{{ shortcut.title }}</a>
+            }
+            <a routerLink="/integrations/catalogue" class="action">Integration inventory</a>
+          </div>
+        </app-component-card>
+      }
+    } @else if (view.endpoint === 'queues') {
+      @if (section.path === 'workers') {
+        <app-component-card title="Workers in this API instance" desc="Worker state reflects this process.">
+          <ul class="divide-y divide-gray-200 text-sm text-gray-700 dark:divide-gray-800 dark:text-gray-300">
+            @for (row of view.data.queues; track row.key) {
+              <li class="flex flex-wrap items-center justify-between gap-2 py-3">
+                <div><p class="font-medium">{{ name(row.key) }}</p>@if (row.name) { <p class="font-mono text-xs">{{ row.name }}</p> }</div>
+                <span>{{ label(row.localWorker) }}</span>
+              </li>
+            } @empty { <li class="py-3">No worker sources are registered on this instance.</li> }
+          </ul>
+        </app-component-card>
+      } @else {
+        <app-component-card title="BullMQ queue inventory" desc="Counts include jobs currently retained by BullMQ.">
+          <div class="custom-scrollbar overflow-x-auto">
+            <table class="w-full text-start text-sm text-gray-700 dark:text-gray-300">
+              <thead class="table-heading"><tr>
+                <th scope="col">Service</th><th scope="col">Queue status</th>
+                @for (state of queueStates; track state) { <th scope="col" class="capitalize">{{ state }}</th> }
+              </tr></thead>
+              <tbody>
+                @for (row of view.data.queues; track row.key) {
+                  <tr class="border-b border-gray-100 dark:border-gray-800">
+                    <td class="table-cell font-medium">{{ name(row.key) }} @if (row.name) { <span class="block font-mono text-xs text-gray-500 dark:text-gray-400">{{ row.name }}</span> }</td>
+                    <td class="table-cell">{{ label(row.status) }}</td>
+                    @for (state of queueStates; track state) {
+                      <td class="table-cell">{{ row.counts ? (row.counts[state] | number) : '—' }}</td>
+                    }
+                  </tr>
+                } @empty { <tr><td colspan="8" class="p-5 text-center">No queue sources are registered on this instance.</td></tr> }
+              </tbody>
+            </table>
+          </div>
+        </app-component-card>
+      }
+    } @else {
+      <app-component-card title="Scheduled jobs in this API instance">
+        <div class="custom-scrollbar overflow-x-auto">
+          <table class="w-full text-start text-sm text-gray-700 dark:text-gray-300">
+            <thead class="table-heading"><tr><th scope="col">Job</th><th scope="col">Status</th><th scope="col">Schedule time zone</th><th scope="col">Next run (UTC)</th></tr></thead>
+            <tbody>
+              @for (job of view.data.schedules; track job.key) {
+                <tr class="border-b border-gray-100 dark:border-gray-800">
+                  <td class="table-cell font-medium">{{ name(job.key) }}</td><td class="table-cell">{{ label(job.status) }}</td>
+                  <td class="table-cell">{{ job.timezone }}</td><td class="table-cell">{{ job.nextRunAt ? (job.nextRunAt | date:'medium':'UTC') : '—' }}</td>
+                </tr>
+              } @empty { <tr><td colspan="4" class="p-5 text-center">No scheduled jobs were reported.</td></tr> }
+            </tbody>
+          </table>
+        </div>
+      </app-component-card>
+    }
+  }
+</div>

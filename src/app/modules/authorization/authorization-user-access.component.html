@@ -1,0 +1,72 @@
+<app-page-breadcrumb [pageTitle]="title" homeLink="/authorization/overview" />
+<app-component-card [title]="title">
+  <form (ngSubmit)="lookupForm.valid && submit()" #lookupForm="ngForm" class="mb-5 grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+    <label class="text-sm font-medium text-gray-700 dark:text-gray-300">
+      User ID
+      <input type="number" name="userId" [(ngModel)]="userId" required min="1" step="1"
+        class="mt-1 block h-11 w-full rounded-lg border border-gray-300 bg-transparent px-3 dark:border-gray-700" />
+      <a routerLink="/identity/users" class="mt-1 block text-xs font-normal text-brand-600 hover:underline dark:text-brand-400">Browse identities</a>
+    </label>
+    <label class="text-sm font-medium text-gray-700 dark:text-gray-300">
+      Scope
+      <select name="scope" [(ngModel)]="scope" class="mt-1 block h-11 w-full rounded-lg border border-gray-300 bg-white px-3 dark:border-gray-700 dark:bg-gray-900">
+        <option value="PLATFORM">Platform</option>
+        <option value="TENANT">Company</option>
+      </select>
+    </label>
+    @if (scope === 'TENANT') {
+      <label class="text-sm font-medium text-gray-700 dark:text-gray-300">
+        Company ID
+        <input type="number" name="companyId" [(ngModel)]="companyId" required min="1" step="1"
+          class="mt-1 block h-11 w-full rounded-lg border border-gray-300 bg-transparent px-3 dark:border-gray-700" />
+        <a routerLink="/companies" class="mt-1 block text-xs font-normal text-brand-600 hover:underline dark:text-brand-400">Browse companies</a>
+      </label>
+    }
+    @if (simulator) {
+      <label class="text-sm font-medium text-gray-700 dark:text-gray-300">
+        Permission ID
+        <input type="number" name="permissionId" [(ngModel)]="permissionId" required min="1" step="1"
+          class="mt-1 block h-11 w-full rounded-lg border border-gray-300 bg-transparent px-3 dark:border-gray-700" />
+        <a routerLink="/authorization/permissions" class="mt-1 block text-xs font-normal text-brand-600 hover:underline dark:text-brand-400">Browse permissions</a>
+      </label>
+    }
+    <div class="sm:col-span-2 xl:col-span-4">
+      <button [disabled]="lookupForm.invalid || data.isLoading()" class="h-11 rounded-lg bg-brand-500 px-4 text-sm font-medium text-white disabled:opacity-50 dark:hover:bg-brand-400">
+        {{ simulator ? 'Evaluate permission' : 'Find assignments' }}
+      </button>
+    </div>
+  </form>
+
+  @if (data.isLoading()) {
+    <p role="status" class="text-sm text-gray-600 dark:text-gray-400">Running lookup…</p>
+  } @else if (data.error(); as error) {
+    <p role="alert" class="text-sm text-error-600 dark:text-error-400">{{ errorMessage(error) }}</p>
+  } @else if (data.hasValue()) {
+    @let entry = data.value();
+    @if (entry.kind === 'access') {
+      <div class="mb-4 rounded-lg border border-gray-200 p-4 text-sm text-gray-700 dark:border-gray-700 dark:text-gray-300">
+        <p class="font-medium text-gray-900 dark:text-white">{{ entry.result.user.name }} · #{{ entry.result.user.id }}</p>
+        <p>{{ entry.result.user.email }}</p>
+        <p class="mt-2">Account status: {{ entry.result.user.disabled ? 'Administratively disabled' : entry.result.user.status }}</p>
+        @if (entry.result.membershipStatus) {
+          <p>Membership status: {{ entry.result.membershipStatus }}</p>
+        }
+      </div>
+      <app-authorization-role-list [roles]="entry.result.roles" />
+    } @else {
+      <div role="status" class="rounded-lg border border-gray-200 p-4 text-sm text-gray-700 dark:border-gray-700 dark:text-gray-300">
+        @if (entry.result.allowed) {
+          <p class="font-semibold text-success-700 dark:text-success-400">Allowed</p>
+        } @else {
+          <p class="font-semibold text-error-700 dark:text-error-400">Denied</p>
+        }
+        <p class="mt-1"><span class="font-mono">{{ entry.result.permission }}</span> · {{ entry.result.scope }}</p>
+        @if (entry.result.reason === 'ACCOUNT_INACTIVE') {
+          <p class="mt-2">The selected account is inactive or administratively disabled.</p>
+        } @else if (entry.result.reason === 'DENIED_BY_POLICY') {
+          <p class="mt-2">The selected user does not pass the authorization check in this scope.</p>
+        }
+      </div>
+    }
+  }
+</app-component-card>

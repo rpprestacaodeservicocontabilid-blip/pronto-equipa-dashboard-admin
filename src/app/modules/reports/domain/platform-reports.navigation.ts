@@ -14,6 +14,7 @@ export const REPORT_SECTIONS: ReportSection[] = [
   { path: 'domain-usage', title: 'Usage by domain', group: 'Operational reports', view: 'analysis', code: 'DOMAIN_USAGE' },
   { path: 'payroll', title: 'Payroll operations', group: 'Operational reports', view: 'analysis', code: 'PAYROLL_ACTIVITY' },
   { path: 'payments', title: 'Payment operations', group: 'Operational reports', view: 'analysis', code: 'PAYMENT_ACTIVITY' },
+  { path: 'simulations', title: 'Simulation operations', group: 'Operational reports', view: 'analysis', code: 'SIMULATION_ACTIVITY' },
   { path: 'payslips', title: 'Payslip operations', group: 'Operational reports', view: 'analysis', code: 'PAYSLIP_ACTIVITY' },
   { path: 'onboarding', title: 'Company onboarding', group: 'Operational reports', view: 'analysis', code: 'ONBOARDING_ACTIVITY' },
   { path: 'executions', title: 'Execution history', group: 'Workspace', view: 'executions' },

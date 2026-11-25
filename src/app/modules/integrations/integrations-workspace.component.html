@@ -1,0 +1,63 @@
+<div class="workspace-ui space-y-5">
+  <app-page-breadcrumb [pageTitle]="section.title" homeLink="/integrations/overview" />
+  @if (catalogue.isLoading()) {
+    <p role="status" class="text-sm text-gray-600 dark:text-gray-400">Loading integration inventory…</p>
+  } @else if (catalogue.error(); as error) {
+    <p role="alert" class="feedback">{{ errorMessage(error) }}</p>
+    <button type="button" class="action" (click)="catalogue.reload()">Retry</button>
+  } @else if (catalogue.hasValue()) {
+    <div class="flex flex-wrap items-center justify-between gap-3 text-sm text-gray-600 dark:text-gray-400">
+      <p>Inventory read at {{ catalogue.value().observedAt | date:'medium' }}</p>
+      <button type="button" class="action" (click)="catalogue.reload()">Refresh inventory</button>
+    </div>
+    @if (section.path !== 'overview') {
+      <label class="field max-w-md">Search providers
+        <input type="search" class="control" maxlength="120" [ngModel]="search()" (ngModelChange)="search.set($event)"
+          placeholder="Name, identifier, type or status" />
+      </label>
+    }
+    <div [class]="section.path === 'overview' ? 'grid gap-4 sm:grid-cols-2 xl:grid-cols-3' : 'space-y-5'">
+      @for (source of inventory(); track source.source) {
+        @let config = sourceSection(source.source);
+        <app-component-card [title]="config.title">
+          @if (source.status === 'RESTRICTED') {
+            <p class="text-sm text-gray-600 dark:text-gray-400">This source requires its module-specific permission.</p>
+          } @else if (source.status === 'UNAVAILABLE') {
+            <p class="feedback" role="alert">This inventory source could not be loaded.</p>
+          } @else if (source.status === 'AVAILABLE') {
+            @if (source.readDurationMs !== undefined) {
+              <p class="mb-2 text-sm text-gray-600 dark:text-gray-400">Inventory read time: {{ source.readDurationMs }} ms</p>
+            }
+            @if (section.path === 'overview') {
+              <p class="mb-3 text-2xl font-semibold text-gray-900 dark:text-white">{{ source.total }}</p>
+              <a [routerLink]="['/integrations', config.path]" class="action">View inventory</a>
+            } @else {
+              @if (source.total > source.providers.length) {
+                <p class="mb-3 text-sm text-gray-600 dark:text-gray-400">Showing the latest {{ source.providers.length }} of {{ source.total }} entries.</p>
+              }
+              <div class="custom-scrollbar overflow-x-auto">
+                <table class="w-full text-start text-sm text-gray-700 dark:text-gray-300">
+                  <thead class="table-heading"><tr><th scope="col">Provider</th><th scope="col">Type</th><th scope="col">Configuration status</th><th scope="col">Capabilities</th></tr></thead>
+                  <tbody>
+                    @for (row of providerRows(source); track row.id) {
+                      <tr class="border-b border-gray-100 dark:border-gray-800">
+                        <td class="table-cell"><span class="font-medium">{{ row.name }}</span><span class="block text-xs text-gray-500 dark:text-gray-400">{{ row.id }}</span></td>
+                        <td class="table-cell">{{ row.type }}</td><td class="table-cell">{{ labels[row.state] }}</td>
+                        <td class="table-cell">{{ row.capabilities?.join(', ') || '—' }}</td>
+                      </tr>
+                    } @empty {
+                      <tr><td colspan="4" class="p-5 text-center">No providers match this view.</td></tr>
+                    }
+                  </tbody>
+                </table>
+              </div>
+              @if (canOpenOwner(config)) {
+                <a [routerLink]="config.ownerPath" class="action mt-4">Open source module</a>
+              }
+            }
+          }
+        </app-component-card>
+      }
+    </div>
+  }
+</div>

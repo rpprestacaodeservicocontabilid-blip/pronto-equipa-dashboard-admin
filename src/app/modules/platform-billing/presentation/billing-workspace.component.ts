@@ -10,11 +10,12 @@ import { ComponentCardComponent } from '../../../shared/components/common/compon
 import { PageBreadcrumbComponent } from '../../../shared/components/common/page-breadcrumb/page-breadcrumb.component';
 import { money } from '../../../shared/utils/format-money';
 import { actionBody, actionsFor, BillingAction, FormValues, mainActions, newBillingLine } from '../domain/billing-actions';
-import { BillingAccount, BillingCursor, BillingFilters, BillingLine, BillingOverview, BillingPage, BillingRecord } from '../domain/billing.models';
-import { BillingSection } from '../domain/billing-navigation';
+import { BillingAccount, BillingCursor, BillingFilters, BillingKind, BillingLine, BillingOverview, BillingPage, BillingRecord } from '../domain/billing.models';
+import { BILLING_SECTIONS, BillingSection, canReadBilling, canUseBilling } from '../domain/billing-navigation';
+import { downloadWorkbook, ReportCell } from '../../../shared/utils/report-documents';
 import { PlatformBillingApi } from '../infrastructure/billing-api.service';
 import { BillingDashboardComponent } from './billing-dashboard.component';
-import { cell, columns, detailColumns, statusLabel, statuses, statusTone } from './billing-display';
+import { ageingLabels, cell, columns, detailColumns, statusLabel, statuses, statusTone } from './billing-display';
 
 interface State<T> { loading?: boolean; error?: string; data?: T }
 type Result = BillingOverview | BillingPage | BillingAccount[];
@@ -53,7 +54,8 @@ export class BillingWorkspaceComponent {
   protected readonly kind = this.section.kind;
   protected readonly columns = this.kind ? columns[this.kind] : [];
   protected readonly details = this.kind ? [...this.columns, ...(detailColumns[this.kind] ?? [])] : [];
-  protected readonly statuses = this.kind && !this.section.preset?.overdue ? statuses[this.kind] ?? [] : [];
+  protected readonly statuses = this.kind && !this.section.preset?.overdue && !this.section.preset?.status && !this.section.preset?.unallocated
+    ? statuses[this.kind] ?? [] : [];
   protected readonly mainAction = mainActions[this.section.path];
   protected readonly money = money;
   protected readonly label = statusLabel;
@@ -90,13 +92,13 @@ export class BillingWorkspaceComponent {
   protected readonly selection = signal<Selection | null>(null);
   private readonly detailState = toSignal(toObservable(this.selection).pipe(
     switchMap(selection => selection && this.kind
-      ? toState(this.api.detail(selection.companyId, this.kind, selection.id)) : of(null)),
+      ? toState(this.api.detail(selection.companyId, this.kind, selection.id, this.section.preset?.overdue)) : of(null)),
   ), { initialValue: null as State<BillingRecord> | null });
   protected readonly detail = this.detailState;
   private readonly detailRegion = viewChild('billingRecord', { read: ElementRef });
   protected readonly rowActions = computed(() => {
     const record = this.detail()?.data;
-    return record ? actionsFor(record, this.auth.claims()?.sub) : [];
+    return record ? actionsFor(record, this.auth.claims()?.sub).filter(action => this.can(action.permission)) : [];
   });
 
   constructor() {
@@ -124,7 +126,7 @@ export class BillingWorkspaceComponent {
     }
     this.closeRecord();
     this.query.set({
-      filters: { ...this.section.preset, companyId: this.companyId ?? undefined, status: this.status || undefined,
+      filters: { ...this.section.preset, companyId: this.companyId ?? undefined, status: this.section.preset?.status ?? (this.status || undefined),
         reference: this.search.trim() || undefined, from: this.from || undefined, to: this.to || undefined },
       cursors: [undefined],
     });
@@ -163,7 +165,7 @@ export class BillingWorkspaceComponent {
   }
 
   protected open(action: BillingAction, record?: BillingRecord) {
-    if (this.busy()) return;
+    if (this.busy() || !this.can(action.permission)) return;
     this.notice.set('');
     this.actionError.set('');
     const companyId = record?.companyId ?? this.applied().filters.companyId ?? null;
@@ -176,7 +178,7 @@ export class BillingWorkspaceComponent {
   }
 
   protected async submit(form: ActionForm) {
-    if (this.busy()) return;
+    if (this.busy() || !this.can(form.action.permission)) return;
     this.actionError.set('');
     if (!form.companyId || !companyIdIsValid(form.companyId)) {
       this.actionError.set('Select the company affected by this operation.');
@@ -187,7 +189,8 @@ export class BillingWorkspaceComponent {
       const body = actionBody(form.action, form.values, form.lines, form.operationKey, form.record);
       await firstValueFrom(this.api.apply(form.companyId, form.action.method ?? 'POST', form.action.path(form.record), body));
       this.form = undefined;
-      this.notice.set('Operation recorded for company #' + form.companyId + '.');
+      this.notice.set(form.action.id === 'validate' ? 'The draft passed the account, series and tax checks.'
+        : 'Operation recorded for company #' + form.companyId + '.');
       this.refresh();
     } catch (error) { this.actionError.set(apiErrorMessage(error)); }
     finally { this.busy.set(false); }
@@ -198,11 +201,58 @@ export class BillingWorkspaceComponent {
   }
 
   protected pdfAvailable(record: BillingRecord) {
-    return ['INVOICE', 'RECEIPT', 'CREDIT_NOTE'].includes(record.kind) && record.status !== 'DRAFT';
+    const permissions: Partial<Record<BillingKind, string>> = {
+      INVOICE: 'invoices:download', RECEIPT: 'receipts:download', CREDIT_NOTE: 'credit-notes:download',
+    };
+    const permission = permissions[record.kind];
+    return !!permission && record.status !== 'DRAFT' && this.can(permission);
+  }
+
+  protected can(permission: string) {
+    return canUseBilling(permission, this.auth.claims()?.permissions ?? [], this.auth.isPlatformAdmin());
+  }
+
+  protected canOpenPath(path: string) {
+    const section = BILLING_SECTIONS.find(item => item.path === path);
+    return !!section && canReadBilling(section, this.auth.claims()?.permissions ?? [], this.auth.isPlatformAdmin());
+  }
+
+  protected async exportReport() {
+    if (this.busy() || !this.can('reports:export')) return;
+    const companyId = this.applied().filters.companyId;
+    this.busy.set(true);
+    this.actionError.set('');
+    try {
+      const report = await firstValueFrom(this.api.exportOverview(companyId));
+      const rows: ReportCell[][] = [];
+      for (const item of report.totals) {
+        const value = (amount: string) => ({ amount, currency: item.currency });
+        rows.push(
+          ['Totals', 'Invoiced', item.currency, value(item.invoiced)],
+          ['Totals', 'Payments received', item.currency, value(item.received)],
+          ['Totals', 'Outstanding', item.currency, value(item.outstanding)],
+          ['Totals', 'Unapplied funds', item.currency, value(item.unapplied ?? '0.00')],
+          ['Totals', 'Credit notes', item.currency, value(item.credits)],
+          ['Totals', 'Refunds', item.currency, value(item.refunded)],
+        );
+        report.months.forEach((month, index) => {
+          const trend = item.trend[index];
+          if (trend) rows.push([month, 'Invoiced', item.currency, value(trend.invoiced)], [month, 'Received', item.currency, value(trend.received)]);
+        });
+        item.ageing.forEach((balance, index) => rows.push(['Receivables ageing', ageingLabels[index], item.currency, value(balance)]));
+      }
+      for (const [status, count] of Object.entries(report.invoiceStatuses)) rows.push(['Invoice status', this.label(status), '', count]);
+      rows.push(['Reconciliation', 'Bank entries requiring review', '', report.alerts.unmatched]);
+      downloadWorkbook('prontoequipas-platform-billing', {
+        title: 'Platform billing report', company: companyId ? 'Company #' + companyId : 'All client companies',
+        headings: ['Section', 'Metric', 'Currency', 'Value'], rows,
+      });
+    } catch (error) { this.actionError.set(apiErrorMessage(error)); }
+    finally { this.busy.set(false); }
   }
 
   protected async download(record: BillingRecord) {
-    if (this.busy()) return;
+    if (this.busy() || !this.pdfAvailable(record)) return;
     this.busy.set(true);
     this.actionError.set('');
     try {

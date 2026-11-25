@@ -1,4 +1,4 @@
-export type BillingKind = 'ACCOUNT' | 'ACCOUNT_HISTORY' | 'INVOICE' | 'PAYMENT' | 'RECEIPT' | 'CREDIT_NOTE'
+export type BillingKind = 'ACCOUNT' | 'ACCOUNT_HISTORY' | 'INVOICE' | 'PAYMENT' | 'PAYMENT_ALLOCATION' | 'RECEIPT' | 'CREDIT_NOTE'
   | 'REFUND' | 'STATEMENT' | 'BANK_ENTRY' | 'RECONCILIATION' | 'SCHEDULE' | 'OUTBOX' | 'TAX_RULE' | 'SERIES' | 'AUDIT';
 export interface BillingRecord {
   id: string;
@@ -22,6 +22,7 @@ export interface BillingFilters {
   debit?: true;
   recurring?: true;
   overdue?: true;
+  unallocated?: true;
 }
 export interface BillingTotals {
   currency: string;
@@ -31,6 +32,7 @@ export interface BillingTotals {
   received: string;
   credits: string;
   refunded: string;
+  unapplied?: string;
   ageing: string[];
   trend: { invoiced: string; received: string }[];
 }

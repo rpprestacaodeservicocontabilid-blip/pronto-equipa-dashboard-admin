@@ -16,8 +16,8 @@ describe('Platform billing', () => {
     data: { requestedBy: 2, amount: '10.00', currency: 'AOA', provider: 'Bank' } };
   let http: HttpTestingController;
 
-  function signIn(roles: string[]) {
-    const payload = btoa(JSON.stringify({ sub: '2', sessionId: '54', roles, permissions: [], exp: 4102444800, type: 'access' }));
+  function signIn(roles: string[], permissions: string[] = []) {
+    const payload = btoa(JSON.stringify({ sub: '2', sessionId: '54', roles, permissions, exp: 4102444800, type: 'access' }));
     TestBed.inject(AuthSessionStore).accept({ accessToken: 'header.' + payload + '.signature' });
   }
 
@@ -77,5 +77,37 @@ describe('Platform billing', () => {
     expect(body).toEqual({ operationKey: 'operation-1', entries: [
       { reference: 'REF-91', amount: '120.00', currency: 'AOA', occurredAt: '2026-11-19T23:00:00.000Z' },
     ] });
+  });
+
+  it('opens billing for a delegated payments reader and limits the menu and operations', async () => {
+    signIn([], ['platform-billing:payments:read']);
+    const harness = await RouterTestingHarness.create('/platform-billing');
+    await harness.fixture.whenStable();
+    http.expectOne(request => request.url === api + '/records/PAYMENT').flush({ data: { items: [], next: null } });
+    harness.detectChanges();
+    const view = harness.routeNativeElement!;
+    expect(TestBed.inject(Router).url).toBe('/platform-billing/payments');
+    expect(view.querySelector('button[aria-label="Reorder Payment allocations"]')).not.toBeNull();
+    expect(view.querySelector('#sidebar-module-platform-billing a[href="/platform-billing/audit"]')).toBeNull();
+    expect(view.textContent).not.toContain('Register unallocated receipt');
+    await harness.navigateByUrl('/platform-billing/pending-payments');
+    await harness.fixture.whenStable();
+    const pending = http.expectOne(request => request.url === api + '/records/PAYMENT');
+    expect(pending.request.params.get('status')).toBe('PENDING');
+    pending.flush({ data: { items: [], next: null } });
+    await harness.navigateByUrl('/platform-billing/audit');
+    expect(TestBed.inject(Router).url).toContain('/access-denied');
+    http.expectNone(request => request.url === api + '/records/AUDIT');
+  });
+
+  it('sends a separate, idempotent allocation for an available confirmed receipt', () => {
+    const receipt = { ...record, status: 'CONFIRMED', data: { ...record.data, availableToAllocate: '10.00' } };
+    const action = actionsFor(receipt, '2').find(item => item.id === 'allocate')!;
+    expect(action.path(receipt)).toBe('payments/' + id + '/allocations');
+    expect(action.permission).toBe('payments:allocate');
+    const invoiceId = '7043ab07-5de6-43a1-9ac0-0b45170cdf20';
+    expect(actionBody(action, { invoiceId, amount: '8.25' }, [], 'allocation-key', receipt)).toEqual({
+      invoiceId, amount: '8.25', operationKey: 'allocation-key',
+    });
   });
 });

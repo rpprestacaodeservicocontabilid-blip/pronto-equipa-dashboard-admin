@@ -7,7 +7,7 @@ export function requireSignIn(auth: AuthService, router: Router, returnUrl: stri
   return router.createUrlTree([page], { queryParams: { returnUrl } });
 }
 
-export type AccessArea = 'companies' | 'payments' | 'legal-rules' | 'platform-billing' | 'onboarding' | 'payslips' | 'reports' | 'ai-assistant' | 'audit' | 'support';
+export type AccessArea = 'identity' | 'authorization' | 'integrations' | 'platform-operations' | 'companies' | 'payments' | 'legal-rules' | 'platform-billing' | 'onboarding' | 'payslips' | 'reports' | 'ai-assistant' | 'audit' | 'support' | 'notifications' | 'subscriptions';
 
 export function accessDeniedRoute(router: Router, area: AccessArea, returnUrl: string) {
   return router.createUrlTree(['/access-denied'], { queryParams: { area, returnUrl } });

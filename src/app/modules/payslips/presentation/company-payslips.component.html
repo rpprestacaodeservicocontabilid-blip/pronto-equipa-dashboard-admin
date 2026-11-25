@@ -1,0 +1,336 @@
+<app-page-breadcrumb [pageTitle]="section()?.title ?? 'Company payslips'" />
+<div class="space-y-5">
+  <div class="flex flex-wrap items-center justify-between gap-3">
+    @if (company(); as context) {
+      <h2 class="text-xl font-semibold text-gray-900 dark:text-white">{{ context.company.name }}</h2>
+    }
+    <a routerLink="/company-payslips" class="ps-secondary">Change company</a>
+  </div>
+  @if (denied()) {
+    <p class="ps-error" role="alert">{{ denied() }}</p>
+  } @else if (company(); as context) {
+    @if (error()) { <p class="ps-error" role="alert">{{ error() }}</p> }
+    @if (notice()) { <p class="ps-muted" role="status">{{ notice() }}</p> }
+    @if (busy()) { <p class="ps-muted" role="status">Loading payslip data…</p> }
+    @switch (section()?.view) {
+      @case ('summary') {
+        <app-component-card title="Issuance and publication">
+          @if (summary(); as indicators) {
+            <dl class="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+              <div class="ps-stat"><dt>Issued</dt><dd>{{ indicators.totalGenerated | number }}</dd></div>
+              <div class="ps-stat"><dt>Published</dt><dd>{{ indicators.published | number }}</dd></div>
+              <div class="ps-stat"><dt>Pending</dt><dd>{{ indicators.pending | number }}</dd></div>
+              <div class="ps-stat"><dt>Failed</dt><dd>{{ indicators.failed | number }}</dd></div>
+            </dl>
+          }
+          <button class="ps-secondary mt-4" type="button" (click)="refresh()" [disabled]="busy()">Refresh indicators</button>
+        </app-component-card>
+        @if (allowed('payslips:export', 'payslips:read-sensitive')) {
+          <app-component-card title="Export company reports">
+            <form class="flex flex-wrap items-end gap-2" (ngSubmit)="exportReport()">
+              <label class="ps-label">Report
+                <select name="report" class="ps-input" [(ngModel)]="reportType">
+                  <option value="summary">Summary</option><option value="emissions">Issuance</option>
+                  <option value="pending">Pending</option><option value="failed">Failed</option><option value="publication">Publication</option>
+                </select>
+              </label>
+              <label class="ps-label">File format
+                <select name="format" class="ps-input" [(ngModel)]="reportFormat">
+                  <option value="CSV">CSV</option><option value="XLSX">Excel</option><option value="PDF">PDF</option>
+                </select>
+              </label>
+              <button type="submit" class="ps-button" [disabled]="busy()">Download report</button>
+            </form>
+          </app-component-card>
+        }
+      }
+      @case ('directory') { <ng-container [ngTemplateOutlet]="receiptDirectory" /> }
+      @case ('portal') { <ng-container [ngTemplateOutlet]="receiptDirectory" /> }
+      @case ('issue') {
+        <app-component-card title="Issue from closed payroll">
+          @for (company of [context.company]; track company.id) {
+            <app-payslip-issuance [companyId]="company.id" [saving]="busy()" (issue)="issue($event)" />
+          }
+        </app-component-card>
+      }
+      @case ('batches') {
+        @if (allowed('payslips:generate-batch', 'payslips:read-sensitive')) {
+          <app-component-card title="Batch preparation">
+            <button type="button" class="ps-secondary" [disabled]="busy()" (click)="creatingBatch.set(!creatingBatch())">{{ creatingBatch() ? 'Close form' : 'New batch' }}</button>
+            @if (creatingBatch()) {
+              <div class="mt-4">
+                @for (company of [context.company]; track company.id) {
+                  <app-payslip-issuance [companyId]="company.id" [batch]="true" [saving]="busy()" (issue)="createBatch($event)" />
+                }
+              </div>
+            }
+          </app-component-card>
+        }
+        <app-component-card title="Issuance batches">
+          <button type="button" class="ps-secondary mb-3" (click)="refresh()" [disabled]="busy()">Refresh</button>
+          <div class="overflow-x-auto">
+            <table class="ps-table w-full">
+              <thead><tr><th scope="col">Batch</th><th scope="col">Type</th><th scope="col">Created</th><th scope="col">Status</th><th scope="col">Workers</th></tr></thead>
+              <tbody>
+                @for (row of batches(); track row.id) {
+                  <tr class="whitespace-nowrap"><td><button type="button" class="ps-link" [disabled]="busy()" (click)="openBatch(row.id)">{{ row.id.slice(0, 8) }}</button></td>
+                    <td>{{ label(row.type) }}</td><td>{{ row.createdAt | date:'medium':'+0100' }}</td>
+                    <td><span class="ps-badge" [attr.data-status]="row.status">{{ label(row.status) }}</span></td><td>{{ row.totalItems | number }}</td></tr>
+                } @empty { <tr><td colspan="5">{{ busy() ? 'Loading…' : 'No batches.' }}</td></tr> }
+              </tbody>
+            </table>
+          </div>
+        </app-component-card>
+        @if (batch(); as row) {
+          <app-component-card title="Batch progress">
+            <div class="space-y-3">
+              <p class="ps-label break-all">{{ row.id }}</p>
+              @if (progress(); as counts) {
+                <div class="flex flex-wrap items-center gap-3">
+                  <progress class="w-36 accent-brand-500" [value]="counts.completed + counts.failed" [max]="counts.total || 1" aria-label="Workers processed"></progress>
+                  <p class="ps-muted">{{ counts.completed }} generated · {{ counts.failed }} failed · {{ counts.pending }} remaining</p>
+                </div>
+              }
+              <div class="flex flex-wrap gap-2">
+                <button type="button" class="ps-secondary" (click)="openBatch(row.id)" [disabled]="busy()">Refresh progress</button>
+                @if (['PENDING', 'STARTED'].includes(row.status) && allowed('payslips:generate-batch')) {
+                  <button type="button" class="ps-button" (click)="batchAction(row, 'generate')" [disabled]="busy()">{{ row.status === 'PENDING' ? 'Start generation' : 'Resume generation' }}</button>
+                }
+                @if (row.failedItems && allowed('payslips:retry-generation')) {
+                  <button type="button" class="ps-secondary" (click)="batchAction(row, 'retry-failed')" [disabled]="busy()">Retry failures</button>
+                }
+                @if (row.completedItems && ['COMPLETED', 'PARTIALLY_COMPLETED'].includes(row.status) && allowed('payslips:publish-batch')) {
+                  <button type="button" class="ps-button" (click)="batchAction(row, 'publish')" [disabled]="busy()">Publish generated receipts</button>
+                }
+              </div>
+              <div class="max-h-72 overflow-auto">
+                <table class="ps-table w-full">
+                  <thead><tr><th scope="col">Worker ID</th><th scope="col">Status</th><th scope="col">Receipt</th></tr></thead>
+                  <tbody>
+                    @for (item of row.items ?? []; track item.id) {
+                      <tr><td>{{ item.employeeId }}</td><td>{{ label(item.errorCode || item.status) }}</td>
+                        <td>
+                          @if (item.payslipId && allowed('payslips:read-sensitive')) {
+                            <button class="ps-link" type="button" [disabled]="busy()" (click)="openReceipt(item.payslipId)">Open</button>
+                          } @else { — }
+                        </td></tr>
+                    }
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </app-component-card>
+        }
+      }
+      @case ('templates') {
+        <app-component-card title="Company templates">
+          @if (allowed('payslips:templates:create')) {
+            <form class="mb-4 flex flex-wrap items-end gap-3" (ngSubmit)="createTemplate()">
+              <label class="ps-label">Code<input name="code" class="ps-input" maxlength="60" required [(ngModel)]="templateCode"></label>
+              <label class="ps-label grow">Name<input name="name" class="ps-input" maxlength="120" required [(ngModel)]="templateName"></label>
+              <button type="submit" class="ps-button" [disabled]="busy() || !templateName.trim() || !templateCode.trim()">Create template</button>
+            </form>
+          }
+          <ul class="space-y-2">
+            @for (row of templates(); track row.id) {
+              <li><button type="button" class="ps-secondary w-full justify-between" (click)="openTemplate(row)" [disabled]="busy()"><span>{{ row.name }}</span><span>{{ row.code }}</span></button></li>
+            } @empty { @if (!busy()) { <li class="ps-muted">No company templates.</li> } }
+          </ul>
+          <button type="button" class="ps-secondary mt-3" (click)="refresh()" [disabled]="busy()">Refresh templates</button>
+        </app-component-card>
+        @if (template(); as row) {
+          <app-component-card [title]="row.name">
+            @if (allowed('payslips:templates:create')) {
+              <form class="mb-4 flex flex-wrap items-end gap-3" (ngSubmit)="createVersion(row)">
+                <label class="ps-label">Version<input name="version" class="ps-input" maxlength="40" required [(ngModel)]="version"></label>
+                <label class="ps-label grow">PDF title<input name="title" class="ps-input" maxlength="100" required [(ngModel)]="title"></label>
+                <button type="submit" class="ps-button" [disabled]="busy() || !version.trim() || !title.trim()">Save draft version</button>
+              </form>
+            }
+            <ul class="space-y-2">
+              @for (entry of row.versions ?? []; track entry.id) {
+                <li class="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-gray-200 p-3 dark:border-gray-800">
+                  <p class="ps-label">{{ entry.version }} · {{ label(entry.status) }}</p>
+                  <div class="flex gap-2">
+                    <button type="button" class="ps-secondary" (click)="templateAction(row, entry, 'preview')" [disabled]="busy()">View configuration</button>
+                    @if (entry.status === 'DRAFT' && allowed('payslips:templates:publish')) {
+                      <button type="button" class="ps-button" (click)="templateAction(row, entry, 'publish')" [disabled]="busy()">Publish version</button>
+                    }
+                  </div>
+                </li>
+              } @empty { <li class="ps-muted">No versions yet.</li> }
+            </ul>
+            @if (preview(); as config) {
+              <div class="mt-4 rounded-lg border border-gray-200 p-3 dark:border-gray-800">
+                <p class="ps-label">{{ config.layoutConfig.title || 'RECIBO DE VENCIMENTO' }}</p>
+                <p class="ps-muted">Configured PDF title for version {{ config.version }}</p>
+              </div>
+            }
+          </app-component-card>
+        }
+      }
+      @case ('policy') {
+        <app-component-card title="Employee downloads">
+          @if (policy(); as value) {
+            <form class="flex flex-wrap items-center gap-3" (ngSubmit)="updatePolicy()">
+              <span class="ps-muted">Policy version {{ value.version }}</span>
+              <label class="ps-label flex items-center gap-2">
+                <input type="checkbox" class="accent-brand-500" name="allowDownload" [(ngModel)]="allowDownload"> Allow workers to download published payslips
+              </label>
+              <button type="submit" class="ps-button" [disabled]="busy() || value.allowWorkerDownload === allowDownload">Save policy version</button>
+            </form>
+          } @else {
+            <button type="button" class="ps-secondary" (click)="refresh()" [disabled]="busy()">Load policy</button>
+          }
+        </app-component-card>
+      }
+      @case ('link') {
+        <app-component-card title="Link a worker to the employee portal">
+          <form class="flex flex-wrap items-end gap-3" (ngSubmit)="linkWorker()">
+            <label class="ps-label grow">Worker ID<input class="ps-input" name="worker" required [(ngModel)]="employee"></label>
+            <label class="ps-label">Company user ID<input class="ps-input" type="number" name="user" required min="1" [(ngModel)]="userId"></label>
+            <button type="submit" class="ps-button" [disabled]="busy() || !employee.trim() || !userId">Link account</button>
+          </form>
+        </app-component-card>
+      }
+    }
+
+    @if (receipt(); as row) {
+      <app-component-card [title]="row.number || 'Payslip details'">
+        <div class="space-y-4">
+          <div class="flex flex-wrap items-center gap-2">
+            <span class="ps-badge" [attr.data-status]="row.status">{{ label(row.status) }}</span>
+            <span class="ps-muted">{{ label(row.type) }} · Issued {{ row.issuedAt | date:'mediumDate' }}</span>
+            @if (!own() && row.originalPayslipId) {
+              <button type="button" class="ps-link" (click)="openReceipt(row.originalPayslipId)" [disabled]="busy()">Open original</button>
+            }
+            @if (!own() && row.supersededBy) {
+              <button type="button" class="ps-link" (click)="openReceipt(row.supersededBy)" [disabled]="busy()">Open replacement</button>
+            }
+          </div>
+          @if (row.snapshot; as details) {
+            <p class="ps-label">{{ details.employee.fullName }} · {{ details.employee.employeeCode }}</p>
+            <p class="ps-muted">{{ details.employer.name }} · {{ details.period.startDate }} to {{ details.period.endDate }}</p>
+          }
+          <dl class="grid gap-3 sm:grid-cols-3">
+            <div class="ps-stat"><dt>Gross</dt><dd>{{ row.grossAmount | currency:row.currency:'code' }}</dd></div>
+            <div class="ps-stat"><dt>Deductions</dt><dd>{{ row.totalDeductions | currency:row.currency:'code' }}</dd></div>
+            <div class="ps-stat"><dt>Net</dt><dd>{{ row.netAmount | currency:row.currency:'code' }}</dd></div>
+          </dl>
+          @if (row.snapshot; as details) {
+            <details class="rounded-lg border border-gray-200 p-3 dark:border-gray-800">
+              <summary class="ps-label cursor-pointer">Earnings and deductions</summary>
+              <div class="mt-3 grid gap-4 sm:grid-cols-2">
+                @for (group of [{ title: 'Earnings', lines: details.earnings }, { title: 'Deductions', lines: details.deductions }]; track group.title) {
+                  <section>
+                    <h3 class="ps-label mb-2">{{ group.title }}</h3>
+                    <dl class="space-y-1">
+                      @for (line of group.lines; track $index) {
+                        <div class="ps-muted flex flex-wrap justify-between gap-2"><dt>{{ line.description }}</dt>
+                          <dd>{{ line.amount | currency:row.currency:'code' }}</dd></div>
+                      } @empty { <p class="ps-muted">No lines.</p> }
+                    </dl>
+                  </section>
+                }
+              </div>
+            </details>
+          }
+          <div class="flex flex-wrap gap-2">
+            @if (ready(row) && (own() ? allowed('payslips:self:download') : allowed('payslips:download'))) {
+              <button type="button" class="ps-secondary" (click)="file(row, 'download')" [disabled]="busy()">Download PDF</button>
+            }
+            @if (!own()) {
+              @if (ready(row) && allowed('payslips:print')) { <button type="button" class="ps-secondary" (click)="file(row, 'print')" [disabled]="busy()">Open printable PDF</button> }
+              @if (row.status === 'VALIDATED' && (row.type !== 'CORRECTION' || row.originalPayslipId) && allowed('payslips:publish')) {
+                <button type="button" class="ps-button" (click)="receiptAction(row, 'publish')" [disabled]="busy()">Publish to employee portal</button>
+              }
+              @if (ready(row) && allowed('payslips:download')) { <button type="button" class="ps-secondary" (click)="receiptAction(row, 'copy')" [disabled]="busy()">Issue duplicate copy</button> }
+              @if (ready(row) && allowed('payslips:verification:read')) { <button type="button" class="ps-secondary" (click)="receiptAction(row, 'verify')" [disabled]="busy()">Verify document</button> }
+              @if (allowed('payslips:history:read')) { <button type="button" class="ps-secondary" (click)="receiptAction(row, 'history')" [disabled]="busy()">Issuance history</button> }
+              @if (allowed('payslips:corrections:read')) { <button type="button" class="ps-secondary" (click)="receiptAction(row, 'corrections')" [disabled]="busy()">Linked corrections</button> }
+              @if (correctable(row) && allowed('payslips:corrections:create')) {
+                <button type="button" class="ps-secondary" (click)="correcting.set(!correcting())" [disabled]="busy()">{{ correcting() ? 'Close correction form' : 'Create correction' }}</button>
+              }
+            }
+          </div>
+          @if (verification(); as checked) {
+            <p class="ps-muted break-all">{{ label(checked.status) }} · SHA-256 {{ checked.documentHash }} · {{ checked.verifiedAt | date:'medium':'+0100' }}</p>
+          }
+          @if (events(); as history) {
+            <section>
+              <h3 class="ps-label mb-2">Issuance and access history</h3>
+              <ul class="space-y-2">
+                @for (event of history; track $index) {
+                  <li class="ps-muted">{{ label(event.type || event.action || (event.publishedAt ? 'PUBLISHED' : 'CORRECTION')) }}
+                    · {{ (event.at || event.publishedAt || event.accessedAt || event.createdAt) | date:'medium':'+0100' }}</li>
+                } @empty { <li class="ps-muted">No activity recorded.</li> }
+              </ul>
+            </section>
+          }
+          @if (corrections(); as linked) {
+            <section>
+              <h3 class="ps-label mb-2">Linked corrections</h3>
+              <ul class="space-y-2">
+                @for (item of linked; track item.id) {
+                  <li class="ps-muted"><button type="button" class="ps-link" (click)="openReceipt(item.correctionPayslipId)" [disabled]="busy()">{{ item.correctionPayslipId.slice(0, 8) }}</button> · {{ item.reason }}</li>
+                } @empty { <li class="ps-muted">No linked corrections.</li> }
+              </ul>
+            </section>
+          }
+          @if (correcting()) {
+            <app-payslip-issuance [companyId]="context.company.id" [original]="row" [saving]="busy()" (issue)="correct(row, $event)" />
+          }
+        </div>
+      </app-component-card>
+    }
+  }
+</div>
+
+<ng-template #receiptDirectory>
+  <app-component-card [title]="own() ? 'My published payslips' : 'Payslips'">
+    @if (!own()) {
+      <form class="mb-4 flex flex-wrap items-end gap-3" (ngSubmit)="list(1)">
+        <label class="ps-label grow">Worker ID<input class="ps-input" name="employee" [(ngModel)]="employee"></label>
+        @if (!section()?.type) {
+          <label class="ps-label">Type
+            <select class="ps-input" name="type" [(ngModel)]="filterType">
+              <option value="">All types</option>
+              @for (type of types; track type) { <option [value]="type">{{ label(type) }}</option> }
+            </select>
+          </label>
+        }
+        @if (!section()?.status) {
+          <label class="ps-label">Status
+            <select class="ps-input" name="status" [(ngModel)]="filterStatus">
+              <option value="">All statuses</option>
+              @for (status of statuses; track status) { <option [value]="status">{{ label(status) }}</option> }
+            </select>
+          </label>
+        }
+        <button type="submit" class="ps-button" [disabled]="busy()">Apply filters</button>
+      </form>
+    } @else { <button type="button" class="ps-secondary mb-4" (click)="list(1)" [disabled]="busy()">Refresh</button> }
+    <div class="overflow-x-auto">
+      <table class="ps-table w-full">
+        <thead><tr><th scope="col">Receipt</th><th scope="col">Worker</th><th scope="col">Type</th><th scope="col">Status</th><th scope="col">Net pay</th><th scope="col">Issued</th></tr></thead>
+        <tbody>
+          @for (row of directory()?.data ?? []; track row.id) {
+            <tr><td><button type="button" class="ps-link" (click)="openReceipt(row.id)" [disabled]="busy()">{{ row.number }}</button></td>
+              <td>{{ row.snapshot?.employee?.fullName || row.employeeId }}</td><td>{{ label(row.type) }}</td>
+              <td><span class="ps-badge" [attr.data-status]="row.status">{{ label(row.status) }}</span></td>
+              <td class="whitespace-nowrap">{{ row.netAmount | currency:row.currency:'code' }}</td><td>{{ row.issuedAt | date:'mediumDate' }}</td></tr>
+          } @empty { <tr><td colspan="6">{{ busy() ? 'Loading…' : 'No payslips for this selection.' }}</td></tr> }
+        </tbody>
+      </table>
+    </div>
+    @if (directory(); as page) {
+      <div class="mt-4 flex flex-wrap items-center justify-between gap-2">
+        <span class="ps-muted">{{ page.total | number }} receipts · Page {{ page.page }}</span>
+        <div class="flex gap-2">
+          <button class="ps-secondary" type="button" (click)="list(page.page - 1)" [disabled]="busy() || page.page <= 1">Previous</button>
+          <button class="ps-secondary" type="button" (click)="list(page.page + 1)" [disabled]="busy() || page.page * page.limit >= page.total">Next</button>
+        </div>
+      </div>
+    }
+  </app-component-card>
+</ng-template>

@@ -1,0 +1,18 @@
+@reference "../../../../styles.css";
+
+.nt-label { @apply block text-sm font-medium text-gray-700 dark:text-gray-200; }
+.nt-input { @apply mt-1 block w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 outline-none focus:border-brand-500 focus:ring-2 focus:ring-brand-500/20 dark:border-gray-700 dark:bg-gray-900 dark:text-white; }
+.nt-button, .nt-secondary { @apply inline-flex min-h-10 items-center justify-center rounded-lg px-3 py-2 text-sm font-medium focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-500 disabled:cursor-not-allowed disabled:opacity-50; }
+.nt-button { @apply bg-brand-600 text-white hover:bg-brand-700 dark:bg-brand-500 dark:hover:bg-brand-600; }
+.nt-secondary { @apply border border-gray-300 bg-white text-gray-700 hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-200 dark:hover:bg-gray-800; }
+.nt-muted { @apply text-sm text-gray-600 dark:text-gray-400; }
+.nt-link { @apply text-sm font-medium text-brand-700 hover:underline dark:text-brand-300; }
+.nt-error { @apply rounded-lg border border-error-200 bg-error-50 p-3 text-sm text-error-700 dark:border-error-500/30 dark:bg-error-500/10 dark:text-error-300; }
+.nt-success { @apply rounded-lg border border-success-200 bg-success-50 p-3 text-sm text-success-700 dark:border-success-500/30 dark:bg-success-500/10 dark:text-success-300; }
+.nt-table { @apply w-full text-start text-sm text-gray-700 dark:text-gray-300; }
+.nt-table th { @apply bg-gray-50 px-3 py-3 text-start font-medium text-gray-700 dark:bg-gray-800 dark:text-gray-200; }
+.nt-table td { @apply border-b border-gray-100 px-3 py-3 dark:border-gray-800; }
+.nt-badge { @apply inline-flex rounded-full bg-gray-100 px-2.5 py-1 text-xs font-medium whitespace-nowrap text-gray-700 dark:bg-gray-700 dark:text-gray-200; }
+.nt-badge:is([data-status="UNREAD"],[data-status="SCHEDULED"],[data-status="QUEUED"]) { @apply bg-brand-50 text-brand-700 dark:bg-brand-500/15 dark:text-brand-300; }
+.nt-badge:is([data-status="DELIVERED"],[data-status="PUBLISHED"],[data-status="COMPLETED"]) { @apply bg-success-50 text-success-700 dark:bg-success-500/15 dark:text-success-300; }
+.nt-badge:is([data-status="FAILED_PERMANENT"],[data-status="UNKNOWN"],[data-status="PARTIALLY_COMPLETED"]) { @apply bg-error-50 text-error-700 dark:bg-error-500/15 dark:text-error-300; }

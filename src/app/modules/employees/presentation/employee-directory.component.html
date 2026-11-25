@@ -1,0 +1,90 @@
+<app-component-card [title]="view === 'overview' ? 'Workforce by status' : view === 'reports' ? 'Workforce report by admission period' : view === 'exports' ? 'Export employee records' : 'Employee directory'">
+  @if (view !== 'overview') {
+    @if (view === 'exports') {
+      <p class="mb-4 text-sm text-gray-600 dark:text-gray-400">Each CSV contains up to 100 matching records. Choose the page to download.</p>
+    }
+    <form (ngSubmit)="view === 'exports' ? download() : load(1, true)" class="mb-4 flex flex-wrap items-end gap-3">
+      <label class="field min-w-52 flex-1">Search
+        <input class="control" name="search" [(ngModel)]="search" maxlength="100" placeholder="Employee number or name" [disabled]="loading()" />
+      </label>
+      @if (!preset && view !== 'reports') {
+        <label class="field">Status
+          <select class="control" name="status" [(ngModel)]="status" [disabled]="loading()">
+            <option value="">All statuses</option>
+            @for (item of statuses; track item) { <option [value]="item">{{ labels[item] }}</option> }
+          </select>
+        </label>
+      }
+      <label class="field">Admitted from
+        <input class="control" type="date" name="admittedFrom" [(ngModel)]="admittedFrom" [disabled]="loading()" />
+      </label>
+      <label class="field">Admitted through
+        <input class="control" type="date" name="admittedTo" [(ngModel)]="admittedTo" [disabled]="loading()" />
+      </label>
+      <label class="field w-32">Department ID
+        <input class="control" type="number" name="departmentId" min="1" step="1" [(ngModel)]="departmentId" [disabled]="loading()" />
+      </label>
+      @if (view !== 'reports') {
+        <label class="field">Sort by
+          <select class="control" name="sort" [(ngModel)]="sort" [disabled]="loading()">
+            <option value="name">Name</option><option value="admission-desc">Newest admission</option>
+          </select>
+        </label>
+      }
+      @if (view === 'exports') {
+        <label class="field w-28">Page
+          <input type="number" min="1" step="1" name="page" class="control" [(ngModel)]="exportPage" [disabled]="loading()" />
+        </label>
+      }
+      <button [disabled]="loading()" class="action action-primary">{{ view === 'exports' ? 'Download CSV' : view === 'reports' ? 'Run report' : 'Search' }}</button>
+    </form>
+  }
+  @if (view === 'overview' || view === 'reports') {
+    <div class="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+      @for (metric of counts(); track metric.path) {
+        <div class="rounded-xl border border-gray-200 bg-gray-50 p-4 dark:border-gray-700 dark:bg-gray-900">
+          @if (view === 'overview') {
+            <a [routerLink]="['/employees', company, metric.path]" class="block text-sm font-medium text-brand-600 hover:underline dark:text-brand-400">{{ metric.title }}</a>
+          } @else {
+            <p class="text-sm text-gray-600 dark:text-gray-400">{{ metric.title }}</p>
+          }
+          <p class="mt-2 text-2xl font-semibold text-gray-900 dark:text-white">{{ metric.count }}</p>
+        </div>
+      }
+    </div>
+  }
+  @if (loading()) { <p role="status" class="py-3 text-sm text-gray-600 dark:text-gray-400">Loading employee data…</p> }
+  @if (error()) {
+    <p class="feedback" role="alert">{{ error() }}</p>
+    @if (view !== 'exports') { <button type="button" class="action mt-3" (click)="load()">Retry</button> }
+  }
+  @if (view === 'directory' && page(); as result) {
+    <div class="custom-scrollbar overflow-x-auto">
+      <table class="w-full text-start text-sm text-gray-700 dark:text-gray-300">
+        <thead class="table-heading"><tr>
+          <th scope="col">Employee</th><th scope="col">Job title</th><th scope="col">Department ID</th>
+          <th scope="col">Admission date</th><th scope="col">Status</th>
+        </tr></thead>
+        <tbody>
+          @for (row of result.data; track row.id) {
+            <tr class="border-b border-gray-100 dark:border-gray-800">
+              <td class="table-cell">
+                <a [routerLink]="['/employees', company, 'details', row.id]" class="font-medium text-brand-600 hover:underline dark:text-brand-400">{{ row.firstName }} {{ row.lastName }}</a>
+                <span class="block text-xs text-gray-500 dark:text-gray-400">{{ row.employeeNumber }}</span>
+              </td>
+              <td class="table-cell">{{ row.jobTitle || '—' }}</td><td class="table-cell">{{ row.departmentId ?? '—' }}</td>
+              <td class="table-cell">{{ row.admissionDate | date:'mediumDate':'UTC' }}</td><td class="table-cell">{{ labels[row.status] }}</td>
+            </tr>
+          } @empty { <tr><td colspan="5" class="p-6 text-center">No employees found.</td></tr> }
+        </tbody>
+      </table>
+    </div>
+    <div class="mt-4 flex flex-wrap items-center justify-between gap-3 text-sm text-gray-600 dark:text-gray-400">
+      <span>{{ result.pagination.total }} employees · Page {{ result.pagination.page }}</span>
+      <div class="flex gap-3">
+        <button type="button" class="action" [disabled]="loading() || result.pagination.page <= 1" (click)="load(result.pagination.page - 1)">Previous</button>
+        <button type="button" class="action" [disabled]="loading() || result.pagination.page >= result.pagination.totalPages" (click)="load(result.pagination.page + 1)">Next</button>
+      </div>
+    </div>
+  }
+</app-component-card>

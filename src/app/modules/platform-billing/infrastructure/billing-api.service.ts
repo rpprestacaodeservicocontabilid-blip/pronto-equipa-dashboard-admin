@@ -15,6 +15,10 @@ export class PlatformBillingApi {
     return this.get<BillingOverview>('overview', companyId ? { companyId } : {});
   }
 
+  exportOverview(companyId?: number) {
+    return this.get<BillingOverview>('reports/export', companyId ? { companyId } : {});
+  }
+
   accounts(companyId?: number, search?: string) {
     return this.get<BillingAccount[]>('accounts', { ...(companyId ? { companyId } : {}), ...(search ? { search } : {}) });
   }
@@ -26,8 +30,8 @@ export class PlatformBillingApi {
     return this.get<BillingPage>('records/' + kind, params);
   }
 
-  detail(companyId: number, kind: BillingKind, id: string) {
-    return this.get<BillingRecord>('tenants/' + companyId + '/records/' + kind + '/' + encodeURIComponent(id));
+  detail(companyId: number, kind: BillingKind, id: string, overdue?: true) {
+    return this.get<BillingRecord>('tenants/' + companyId + '/records/' + kind + '/' + encodeURIComponent(id), overdue ? { overdue } : {});
   }
 
   pdf(record: BillingRecord) {

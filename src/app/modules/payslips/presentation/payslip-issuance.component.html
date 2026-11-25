@@ -1,0 +1,67 @@
+<form class="space-y-4" (ngSubmit)="submit()">
+  @if (errors()) { <p class="ps-error" role="alert">{{ errors() }}</p> }
+  @if (busy()) { <p class="ps-muted" role="status">Loading payroll references…</p> }
+  <div class="grid gap-3 sm:grid-cols-2">
+    <label class="ps-label">{{ original ? 'Linked correction payroll' : 'Closed payroll run' }}
+      <select name="run" class="ps-input" [ngModel]="run()?.id ?? ''" (ngModelChange)="selectRun($event)" [disabled]="busy() || saving">
+        <option value="">Choose a closed run</option>
+        @for (row of runs().items; track row.id) {
+          <option [value]="row.id">{{ label(row.runType) }} · {{ row.period?.startDate ?? '—' }} · {{ row.id.slice(0, 8) }}</option>
+        }
+      </select>
+    </label>
+    <label class="ps-label">Published template version
+      <select name="template" class="ps-input" [(ngModel)]="templateId" [disabled]="busy() || saving">
+        <option value="">Choose a version</option>
+        @for (version of templates(); track version.id) {
+          <option [value]="version.id">{{ version.name }} · {{ version.version }}</option>
+        }
+      </select>
+    </label>
+  </div>
+  <div class="flex flex-wrap items-center gap-2">
+    <button type="button" class="ps-secondary" (click)="pageRuns(runsPage - 1)" [disabled]="busy() || saving || runsPage === 1">Previous payroll page</button>
+    <button type="button" class="ps-secondary" (click)="pageRuns(runsPage + 1)" [disabled]="busy() || saving || !runs().more">Next payroll page</button>
+    <button type="button" class="ps-secondary" (click)="load()" [disabled]="busy() || saving">Refresh references</button>
+  </div>
+  @if (!busy() && !templates().length) { <p class="ps-muted">Publish a template version before issuing payslips.</p> }
+  @if (run(); as current) {
+    <div class="space-y-3 rounded-lg border border-gray-200 p-3 dark:border-gray-800">
+      <h3 class="ps-label">Payroll results · {{ current.id }}</h3>
+      @if (!original) {
+        <div class="flex flex-wrap items-end gap-2">
+          <label class="ps-label grow">Filter by worker ID
+            <input name="employeeId" class="ps-input" [(ngModel)]="employeeId" [disabled]="busy() || saving">
+          </label>
+          <button type="button" class="ps-secondary" (click)="pageResults(1)" [disabled]="busy() || saving">Find worker</button>
+        </div>
+      }
+      <ul class="grid gap-2 sm:grid-cols-2">
+        @for (row of results().items; track row.id) {
+          <li><label class="ps-label flex items-center gap-2 rounded-md border border-gray-200 p-2 dark:border-gray-800">
+            <input #choice [type]="batch ? 'checkbox' : 'radio'" name="workerResult" class="accent-brand-500"
+              [checked]="includes(row.id)" (change)="toggle(row, choice.checked)" [disabled]="busy() || saving">
+            <span class="break-all">{{ row.name || row.employeeId }} @if (row.employeeCode) { <span class="ps-muted">· {{ row.employeeCode }}</span> }</span>
+          </label></li>
+        } @empty { @if (!busy()) { <li class="ps-muted">No payroll results for this selection.</li> } }
+      </ul>
+      <div class="flex flex-wrap items-center gap-2">
+        <button type="button" class="ps-secondary" (click)="pageResults(resultsPage - 1)" [disabled]="busy() || saving || resultsPage === 1">Previous workers</button>
+        <button type="button" class="ps-secondary" (click)="pageResults(resultsPage + 1)" [disabled]="busy() || saving || !results().more">Next workers</button>
+        @if (batch) {
+          <button type="button" class="ps-secondary" (click)="selectPage()" [disabled]="busy() || saving || !results().items.length">Select page</button>
+          <button type="button" class="ps-secondary" (click)="selected.set([])" [disabled]="busy() || saving || !selected().length">Clear selection</button>
+          <span class="ps-muted" aria-live="polite">{{ selected().length }} selected (maximum 500)</span>
+        }
+      </div>
+    </div>
+  }
+  @if (original) {
+    <label class="ps-label">Correction reason
+      <textarea name="reason" class="ps-input" rows="2" required maxlength="1000" [(ngModel)]="reason"></textarea>
+    </label>
+  }
+  <button type="submit" class="ps-button" [disabled]="busy() || saving || !run() || !templateId || !selected().length || (!!original && !reason.trim())">
+    {{ original ? 'Issue correction' : batch ? 'Create batch' : 'Issue payslip' }}
+  </button>
+</form>

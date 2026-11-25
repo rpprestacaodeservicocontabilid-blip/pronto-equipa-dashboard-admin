@@ -65,6 +65,12 @@
                 </li>
               }
             </ol>
+            @if (row.status !== 'COMPLETED' && detail.approvalBlockers?.length) {
+              <h3 class="ob-label mt-5">Requirements before approval</h3>
+              <ul class="ob-muted mt-2 list-disc space-y-1 ps-5">
+                @for (code of detail.approvalBlockers; track code) { <li>{{ requirementLabel(code) }}</li> }
+              </ul>
+            }
           </app-component-card>
           <app-component-card title="Case management">
             <dl class="ob-facts grid grid-cols-2 gap-4">
@@ -81,10 +87,16 @@
             @if (row.status === 'PENDING_REVIEW') {
               @if (differentReviewer(detail)) {
                 <div class="mt-5 flex flex-wrap gap-2">
-                  <button type="button" class="ob-button" [disabled]="saving()" (click)="startAction({ title: 'Approve application', path: 'approve', success: 'Application approved.' })">Approve</button>
-                  <button type="button" class="ob-secondary" [disabled]="saving()" (click)="startAction({ title: 'Request information', path: 'request-info', success: 'Additional information requested.' })">Request information</button>
-                  <button type="button" class="ob-secondary" [disabled]="saving()" (click)="startAction({ title: 'Reject application', path: 'reject', success: 'Application rejected.' })">Reject</button>
+                  <button type="button" class="ob-button" [disabled]="saving() || !!detail.approvalBlockers?.length"
+                    (click)="startAction({ title: 'Approve application', path: 'approve', version: row.version, success: 'Application approved.' })">Approve</button>
+                  <button type="button" class="ob-secondary" [disabled]="saving()"
+                    (click)="startAction({ title: 'Request information', path: 'request-info', version: row.version, success: 'Additional information requested.' })">Request information</button>
+                  <button type="button" class="ob-secondary" [disabled]="saving()"
+                    (click)="startAction({ title: 'Reject application', path: 'reject', version: row.version, success: 'Application rejected.' })">Reject</button>
                 </div>
+                @if (detail.approvalBlockers?.includes('company-verification')) {
+                  <a class="ob-link mt-3 inline-block text-sm" [routerLink]="[]" [queryParams]="{ tab: 'company' }">Review company details</a>
+                }
               } @else { <p class="ob-muted mt-4">An independent administrator must review this application.</p> }
             }
             <div class="mt-5 flex flex-wrap gap-2 border-t border-gray-100 pt-4 dark:border-gray-800">
@@ -137,7 +149,7 @@
                 } @else {
                   <p class="ob-muted">Company data is awaiting review.</p>
                 }
-                @if (differentReviewer(detail) && !row.companyId && row.status !== 'CANCELLED' && row.status !== 'COMPLETED') {
+                @if (detail.canVerifyCompany) {
                   <div class="mt-3 flex flex-wrap gap-2">
                     <button type="button" class="ob-button" [disabled]="saving()"
                       (click)="startAction({ title: 'Verify company data', path: 'company-verification', approved: true, version: row.version, success: 'Company data review recorded.' })">Verify data</button>
@@ -216,17 +228,49 @@
         </div>
       }
       @case ('provisioning') {
-        <app-component-card title="Provisioning activity">
+        <app-component-card title="Provisioning status">
           <dl class="ob-facts mb-4 grid gap-4 sm:grid-cols-3">
             <div><dt>Environment</dt><dd>{{ row.companyId ? 'Company #' + row.companyId : 'Pending creation' }}</dd></div>
             <div><dt>Application state</dt><dd>{{ label(row.status) }}</dd></div>
             <div><dt>Subscription</dt><dd>{{ label(detail.subscriptionStatus) }}</dd></div>
           </dl>
-          @if (row.recoverable) {
-            <p class="ob-muted mb-3">Retry uses the saved workflow and existing company environment.</p>
-            <button class="ob-button mb-4" type="button" [disabled]="saving()"
-              (click)="startAction({ title: 'Retry provisioning', path: 'retry', success: 'Provisioning attempt recorded. Check the current status and timeline.' })">Retry provisioning</button>
+          @if (row.status === 'APPROVED' || row.status === 'AWAITING_PAYMENT' || row.recoverable) {
+            @if (detail.activationBlockers?.length) {
+              <h3 class="ob-label">Requirements before activation</h3>
+              <ul class="ob-muted mb-4 mt-2 list-disc space-y-1 ps-5">
+                @for (code of detail.activationBlockers; track code) { <li>{{ requirementLabel(code) }}</li> }
+              </ul>
+            }
+            <div class="mb-4 flex flex-wrap gap-2">
+              @if (row.recoverable) {
+                <button class="ob-button" type="button" [disabled]="saving() || !!detail.activationBlockers?.length"
+                  (click)="startAction({ title: 'Retry provisioning', path: 'retry', success: 'Provisioning attempt recorded.' })">Retry provisioning</button>
+              } @else {
+                <button class="ob-button" type="button" [disabled]="saving() || !!detail.activationBlockers?.length"
+                  (click)="startAction({ title: 'Activate company', path: 'activate', success: 'Activation attempt recorded.' })">Activate company</button>
+              }
+              <button class="ob-secondary" type="button" [disabled]="saving()" (click)="refresh()">Refresh status</button>
+            </div>
           }
+          @if (detail.provisioning?.length) {
+            <div class="overflow-x-auto">
+              <table class="ob-table">
+                <thead><tr><th scope="col">Step</th><th scope="col">Status</th><th scope="col">Attempts</th><th scope="col">Last update</th></tr></thead>
+                <tbody>
+                  @for (item of detail.provisioning; track item.step) {
+                    <tr>
+                      <td>{{ label(item.step) }}</td>
+                      <td><span class="ob-badge" [attr.data-state]="item.status">{{ item.status === 'FAILED' ? 'Failed' : label(item.status) }}</span></td>
+                      <td>{{ item.attempts ?? '—' }}</td>
+                      <td>{{ (item.updatedAt | date:'medium') || '—' }}</td>
+                    </tr>
+                  }
+                </tbody>
+              </table>
+            </div>
+          }
+        </app-component-card>
+        <app-component-card title="Provisioning activity">
           <ol class="divide-y divide-gray-100 dark:divide-gray-800">
             @for (event of timeline(); track event.id) {
               <li class="flex flex-wrap justify-between gap-2 py-3 ob-muted">
@@ -258,7 +302,13 @@
             @for (item of invitations(); track item.id) {
               <li class="flex flex-wrap items-center justify-between gap-2 py-3">
                 <div><p class="ob-muted">{{ item.email }}</p><p class="ob-muted mt-0.5">Expires {{ item.expiresAt | date:'medium' }}</p></div>
-                <span class="ob-badge" [attr.data-state]="item.status">{{ label(item.status) }}</span>
+                <div class="flex flex-wrap items-center gap-2">
+                  <span class="ob-badge" [attr.data-state]="item.status">{{ label(item.status) }}</span>
+                  @if (item.status === 'PENDING') {
+                    <button type="button" class="ob-secondary" [disabled]="saving()"
+                      (click)="startAction({ title: 'Revoke invitation', path: 'invitations/' + item.id + '/revoke', success: 'Invitation revoked.' })">Revoke</button>
+                  }
+                </div>
               </li>
             } @empty { <li class="ob-muted">No invitations have been issued.</li> }
           </ul>

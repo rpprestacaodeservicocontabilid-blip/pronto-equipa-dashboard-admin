@@ -1,0 +1,390 @@
+<app-page-breadcrumb [pageTitle]="section()?.title ?? 'Company payments'" />
+<div class="space-y-5">
+  <div class="flex flex-wrap items-center justify-between gap-3">
+    @if (company(); as context) { <h2 class="text-xl font-semibold text-gray-900 dark:text-white">{{ context.company.name }}</h2> }
+    <a class="action" routerLink="/company-payments">Change company</a>
+  </div>
+  @if (denied()) {
+    <p class="error" role="alert">{{ denied() }}</p>
+  } @else if (company()) {
+    @if (error()) { <p class="error" role="alert">{{ error() }}</p> }
+    @if (notice()) { <p class="metric-caption" role="status">{{ notice() }}</p> }
+    @if (busy()) { <p class="metric-caption" role="status">Loading payment data…</p> }
+
+    @switch (section()?.view) {
+      @case ('overview') {
+        <app-component-card title="Financial indicators">
+          @if (summary(); as value) {
+            <dl class="mb-4 grid gap-3 sm:grid-cols-2">
+              <div class="inset"><dt class="metric-label">Pending instructions</dt><dd class="metric-value">{{ value.pendingPayments | number }}</dd></div>
+              <div class="inset"><dt class="metric-label">Failed or returned instructions</dt><dd class="metric-value">{{ value.failedPayments | number }}</dd></div>
+            </dl>
+            <div class="space-y-3">
+              @for (row of value.byCurrency; track row.currency) {
+                <dl class="grid gap-3 sm:grid-cols-2">
+                  <div class="inset"><dt class="metric-label">Authorized · {{ row.currency }}</dt><dd class="metric-value">{{ money(row.authorized, row.currency) }}</dd></div>
+                  <div class="inset"><dt class="metric-label">Confirmed · {{ row.currency }}</dt><dd class="metric-value">{{ money(row.confirmed, row.currency) }}</dd></div>
+                </dl>
+              } @empty { <p class="metric-caption">No authorized or confirmed amounts.</p> }
+            </div>
+          }
+          <button class="action mt-4" type="button" (click)="reload(1)" [disabled]="busy()">Refresh indicators</button>
+        </app-component-card>
+      }
+      @case ('instructions') {
+        @if (allowed('payments:instructions:create') && !detail()) {
+          <app-component-card title="Prepare an instruction from closed payroll">
+            <form class="flex flex-wrap items-end gap-3" (ngSubmit)="createInstruction()">
+              <label class="field-label grow">Payroll result ID<input name="payroll" class="field" required [(ngModel)]="form.payrollResultId"></label>
+              <label class="field-label grow">Worker ID<input name="employee" class="field" required [(ngModel)]="form.employeeId"></label>
+              <button type="submit" class="action primary" [disabled]="busy() || !form.payrollResultId.trim() || !form.employeeId.trim()">Prepare instruction</button>
+            </form>
+          </app-component-card>
+        }
+      }
+      @case ('batches') {
+        @if (!section()?.status && allowed('payments:batches:create', 'payments:bank-accounts:read') && !detail()) {
+          <app-component-card title="Create a draft batch">
+            <form class="flex flex-wrap items-end gap-3" (ngSubmit)="createBatch()">
+              <label class="field-label grow">Batch code<input name="code" class="field" required maxlength="80" [(ngModel)]="form.code"></label>
+              <label class="field-label grow">Verified debit account
+                <select name="source" class="field" [(ngModel)]="form.source" required>
+                  <option value="">Choose a company account</option>
+                  @for (account of accounts(); track account.id) {
+                    <option [value]="account.id">{{ account.accountName }} · {{ account.accountIdentifier }} · {{ account.currency }}</option>
+                  }
+                </select>
+              </label>
+              <button type="submit" class="action primary" [disabled]="busy() || !form.code.trim() || !form.source">Create batch</button>
+            </form>
+            @if (!busy() && !accounts().length) { <p class="metric-caption">Verify a company bank account before creating a batch.</p> }
+          </app-component-card>
+        }
+      }
+      @case ('bank-accounts') {
+        @if (!detail() && allowed('payments:bank-accounts:manage')) {
+          <app-component-card title="Register a company account">
+            <form class="space-y-3" (ngSubmit)="saveAccount()">
+              <ng-container [ngTemplateOutlet]="accountFields" />
+              <button type="submit" class="action primary" [disabled]="busy() || !form.identifier.trim()">Register account</button>
+            </form>
+          </app-component-card>
+        }
+      }
+      @case ('integrations') {
+        <app-component-card title="Installed payment providers">
+          <ul class="grid gap-3 sm:grid-cols-2">
+            @for (provider of providers(); track provider.id) {
+              <li class="inset"><p class="metric-label">{{ provider.name }}</p><p class="metric-caption">{{ label(provider.type) }} · {{ provider.capabilities.join(', ') || 'Transfer submission' }}</p></li>
+            } @empty { @if (!busy()) { <li class="metric-caption">No provider adapters are installed.</li> } }
+          </ul>
+          @if (allowed('payments:providers:manage') && providers().length) {
+            <form class="mt-4 flex flex-wrap items-end gap-3" (ngSubmit)="configureProvider()">
+              <label class="field-label grow">Provider
+                <select name="provider" class="field" [(ngModel)]="form.chosen" required>
+                  <option value="">Choose provider</option>@for (provider of providers(); track provider.id) { <option [value]="provider.id">{{ provider.name }}</option> }
+                </select>
+              </label>
+              <label class="field-label">Company status
+                <select name="providerStatus" class="field" [(ngModel)]="form.providerStatus">
+                  <option value="ACTIVE">Active</option><option value="INACTIVE">Inactive</option><option value="PENDING">Pending</option>
+                </select>
+              </label>
+              <button type="submit" class="action primary" [disabled]="busy() || !form.chosen">Save provider configuration</button>
+            </form>
+          }
+        </app-component-card>
+      }
+      @case ('statements') {
+        <app-component-card title="Import an extract for a verified account">
+          <form class="space-y-4" (ngSubmit)="importStatement()">
+            <div class="grid gap-3 sm:grid-cols-2">
+              <label class="field-label">Verified company account
+                <select class="field" name="statementAccount" [(ngModel)]="form.source" required>
+                  <option value="">Choose a company account</option>
+                  @for (account of accounts(); track account.id) {
+                    <option [value]="account.id">{{ account.accountName }} · {{ account.accountIdentifier }} · {{ account.currency }}</option>
+                  }
+                </select>
+              </label>
+              <label class="field-label">Statement JSON
+                <input #statementInput class="field" type="file" accept=".json,application/json" (change)="setStatementFile(statementInput.files?.item(0) ?? null)">
+              </label>
+            </div>
+            <p class="metric-caption">Provide a JSON array containing externalReference, transactionDate (ISO 8601 UTC), amount (decimal string), currency and direction (DEBIT or CREDIT).</p>
+            <button type="submit" class="action primary" [disabled]="busy() || !form.source || !statementFile()">Import statement</button>
+          </form>
+          @if (statement(); as result) {
+            <p class="metric-caption break-all">{{ label(result.status) }} · {{ result.rowCount }} entries · Import ID {{ result.id }}</p>
+          }
+        </app-component-card>
+      }
+      @case ('reconciliations') {
+        @if (allowed('payments:reconciliation:execute')) {
+          <app-component-card title="Reconcile an imported statement movement">
+            <form class="flex flex-wrap items-end gap-3" (ngSubmit)="reconcile()">
+              <label class="field-label grow">Bank movement reference<input class="field" name="reference" maxlength="180" required [(ngModel)]="reference"></label>
+              <button type="submit" class="action primary" [disabled]="busy() || !reference.trim()">Check matching transaction</button>
+            </form>
+          </app-component-card>
+        }
+      }
+      @case ('policies') {
+        <app-component-card title="Required approvals">
+          @if (currentPolicy()) {
+            <form class="grid items-end gap-3 lg:grid-cols-4" (ngSubmit)="updatePolicy()">
+              <label class="field-label">Base approvers<input class="field" name="base" type="number" min="1" max="10" [(ngModel)]="policy.baseApprovals" [disabled]="busy() || !allowed('payments:policies:manage')"></label>
+              <label class="field-label">High-value threshold<input class="field" name="threshold" inputmode="decimal" [(ngModel)]="policy.highValueThreshold" [disabled]="busy() || !allowed('payments:policies:manage')"></label>
+              <label class="field-label">High-value approvers<input class="field" name="high" type="number" min="2" max="10" [(ngModel)]="policy.highValueApprovals" [disabled]="busy() || !allowed('payments:policies:manage')"></label>
+              @if (allowed('payments:policies:manage')) {
+                <button type="submit" class="action primary" [disabled]="busy()">Save approval policy</button>
+              }
+            </form>
+          } @else { <button type="button" class="action" (click)="reload(1)" [disabled]="busy()">Load policy</button> }
+        </app-component-card>
+      }
+      @case ('reports') {
+        <app-component-card title="Export a payment report">
+          @if (allowed('payments:export')) {
+            <form class="flex flex-wrap items-end gap-3" (ngSubmit)="exportReport()">
+              <label class="field-label grow">Report
+                <select class="field" name="report" [(ngModel)]="reportType">
+                  <option value="summary">Summary</option><option value="settlements">Settlements</option><option value="failed">Failures</option>
+                  <option value="returns">Returns</option><option value="reconciliation">Reconciliation</option>
+                </select>
+              </label>
+              <button type="submit" class="action primary" [disabled]="busy()">Download CSV</button>
+            </form>
+          } @else { <p class="metric-caption">The company export permission is required to download reports.</p> }
+        </app-component-card>
+      }
+    }
+
+    @if (directory(); as view) {
+      <app-component-card [title]="section()?.title ?? 'Payment records'">
+        <form class="mb-4 flex flex-wrap items-end gap-3" (ngSubmit)="reload(1)">
+          @if (states().length && !section()?.status) {
+            <label class="field-label">Status
+              <select class="field" name="status" [(ngModel)]="status" [disabled]="busy()">
+                <option value="">All statuses</option>
+                @for (value of states(); track value) { <option [value]="value">{{ label(value) }}</option> }
+              </select>
+            </label>
+          }
+          <button class="action" type="submit" [disabled]="busy()">Refresh records</button>
+        </form>
+        <div class="overflow-x-auto">
+          <table class="payment-table">
+            <thead><tr>
+              @for (column of columns(); track column.key) { <th scope="col">{{ column.label }}</th> }
+              @if (canOpen(view)) { <th scope="col">Details</th> }
+            </tr></thead>
+            <tbody>
+              @for (row of page()?.data ?? []; track row.id) {
+                <tr>
+                  @for (column of columns(); track column.key) {
+                    <td [class.whitespace-nowrap]="column.key !== 'id'">
+                      @if (column.key === 'status' && row.status) {
+                        <span class="badge" [class]="'badge ' + statusTone(row.status)">{{ label(row.status) }}</span>
+                      } @else { {{ display(row, column.key) }} }
+                    </td>
+                  }
+                  @if (canOpen(view)) { <td><button type="button" class="text-link" (click)="open(view, row)" [disabled]="busy()">Open</button></td> }
+                </tr>
+              } @empty { <tr><td [attr.colspan]="columns().length + (canOpen(view) ? 1 : 0)">{{ busy() ? 'Loading…' : 'No records for this selection.' }}</td></tr> }
+            </tbody>
+          </table>
+        </div>
+        @if (page(); as result) {
+          <div class="mt-4 flex flex-wrap items-center justify-between gap-2">
+            <span class="metric-caption">{{ result.total | number }} records · Page {{ result.page }}</span>
+            <div class="flex gap-2">
+              <button type="button" class="action" (click)="reload(result.page - 1)" [disabled]="busy() || result.page <= 1">Previous</button>
+              <button type="button" class="action" (click)="reload(result.page + 1)" [disabled]="busy() || result.page * result.limit >= result.total">Next</button>
+            </div>
+          </div>
+        }
+      </app-component-card>
+    }
+
+    @if (detail(); as row) {
+      <app-component-card [title]="row.code || row.accountName || 'Payment details'">
+        <div class="space-y-4">
+          <div class="flex flex-wrap items-center gap-3">
+            <p class="metric-label break-all">{{ row.id }}</p>
+            @if (row.status) { <span [class]="'badge ' + statusTone(row.status)">{{ label(row.status) }}</span> }
+            <button type="button" class="action" [disabled]="busy()" (click)="closeDetails()">Close</button>
+          </div>
+          @if (columns().length) {
+            <dl class="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
+              @for (column of columns(); track column.key) {
+                @if (column.key !== 'id' && column.key !== 'status') {
+                  <div class="inset"><dt class="metric-label">{{ column.label }}</dt><dd class="metric-caption break-all">{{ display(row, column.key) }}</dd></div>
+                }
+              }
+            </dl>
+          }
+          @switch (directory()) {
+            @case ('instructions') {
+              @if (row.beneficiary; as beneficiary) {
+                <p class="metric-caption">Beneficiary {{ beneficiary.name }} · {{ beneficiary.bankCode }} · {{ beneficiary.accountNumber }}</p>
+              }
+              <div class="flex flex-wrap items-center gap-2">
+                @if (allowed('payments:history:read')) { <button class="action" type="button" (click)="history(row, 'instructions')" [disabled]="busy()">Instruction history</button> }
+                @if (canPrepare(row) && allowed('payments:beneficiaries:manage')) { <button class="action" type="button" (click)="setPanel('beneficiary')" [disabled]="busy()">Update beneficiary</button> }
+                @if (canPrepare(row) && allowed('payments:instructions:cancel')) {
+                  <label class="field-label flex items-center gap-2"><input type="checkbox" [(ngModel)]="form.acknowledged"> Confirm cancellation</label>
+                  <button class="action" type="button" (click)="cancelInstruction(row)" [disabled]="busy() || !form.acknowledged">Cancel instruction</button>
+                }
+              </div>
+              @if (panel() === 'beneficiary') {
+                <form class="grid items-end gap-3 lg:grid-cols-4" (ngSubmit)="changeBeneficiary(row)">
+                  <label class="field-label">Beneficiary name<input name="beneficiary" class="field" maxlength="180" required [(ngModel)]="form.accountName"></label>
+                  <label class="field-label">Bank code<input name="bank" class="field" maxlength="40" required [(ngModel)]="form.bankCode"></label>
+                  <label class="field-label">New account number<input name="identifier" class="field" type="password" autocomplete="off" maxlength="80" required [(ngModel)]="form.identifier"></label>
+                  <button class="action primary" type="submit" [disabled]="busy()">Save beneficiary</button>
+                </form>
+              }
+            }
+            @case ('batches') {
+              <div class="flex flex-wrap gap-2">
+                @if (row.status === 'DRAFT' && allowed('payments:batches:update')) { <button class="action" type="button" (click)="setPanel('add')" [disabled]="busy()">Add instruction</button> }
+                @if (row.status === 'DRAFT' && row.items?.length && allowed('payments:batches:validate')) { <button class="action" type="button" (click)="batchAction(row, 'validate')" [disabled]="busy()">Validate batch</button> }
+                @if (row.status === 'VALIDATED' && allowed('payments:batches:submit')) { <button class="action primary" type="button" (click)="batchAction(row, 'submit')" [disabled]="busy()">Submit for approval</button> }
+                @if (row.status === 'SUBMITTED' && !ownBatch(row) && (allowed('payments:batches:approve') || allowed('payments:batches:reject'))) {
+                  <button class="action" type="button" (click)="setPanel('decision')" [disabled]="busy()">Review batch decision</button>
+                }
+                @if (row.status === 'APPROVED' && allowed('payments:batches:execute', 'payments:providers:read')) {
+                  <button class="action" type="button" (click)="setPanel('execute')" [disabled]="busy()">Review transfer submission</button>
+                }
+              </div>
+              @switch (panel()) {
+                @case ('add') {
+                  <form class="flex flex-wrap items-end gap-2" (ngSubmit)="addItem(row)">
+                    <label class="field-label grow">Pending instruction in {{ row.currency }}
+                      <select class="field" name="instruction" [(ngModel)]="form.chosen">
+                        <option value="">Select an instruction</option>
+                        @for (item of chosenInstruction(); track item.id) {
+                          @if (item.currency === row.currency) { <option [value]="item.id">{{ item.id.slice(0, 8) }} · {{ display(item, 'amount') }}</option> }
+                        }
+                      </select>
+                    </label>
+                    <button class="action" type="button" [disabled]="busy() || (instructions()?.page ?? 1) <= 1" (click)="loadInstructions((instructions()?.page ?? 1) - 1)">Previous instructions</button>
+                    <button class="action" type="button" [disabled]="busy() || (instructions()?.page ?? 1) * (instructions()?.limit ?? 25) >= (instructions()?.total ?? 0)" (click)="loadInstructions((instructions()?.page ?? 1) + 1)">Next instructions</button>
+                    <button class="action primary" type="submit" [disabled]="busy() || !form.chosen">Add at recorded amount</button>
+                  </form>
+                }
+                @case ('decision') {
+                  <div class="space-y-2">
+                    <label class="field-label">Decision reason<textarea class="field min-h-20 py-2" maxlength="1000" [(ngModel)]="form.reason"></textarea></label>
+                    <div class="flex gap-2">
+                      @if (allowed('payments:batches:approve')) { <button type="button" class="action primary" (click)="batchAction(row, 'approve')" [disabled]="busy()">Approve</button> }
+                      @if (allowed('payments:batches:reject')) { <button type="button" class="action" (click)="batchAction(row, 'reject')" [disabled]="busy() || !form.reason.trim()">Reject</button> }
+                    </div>
+                  </div>
+                }
+                @case ('execute') {
+                  <form class="inset space-y-3" (ngSubmit)="batchAction(row, 'execute')">
+                    <p class="metric-label">Submit {{ display(row, 'totalAmount') }} from the approved debit account</p>
+                    @if (providers().length) {
+                      <label class="field-label">Active provider
+                        <select class="field" name="executionProvider" [(ngModel)]="form.chosen">
+                          <option value="">Choose provider</option>
+                          @for (provider of providers(); track provider.id) { <option [value]="provider.id">{{ provider.name }}</option> }
+                        </select>
+                      </label>
+                      <label class="field-label flex items-center gap-2"><input name="ack" type="checkbox" [(ngModel)]="form.acknowledged"> Confirm submission of this approved batch</label>
+                      <button type="submit" class="action primary" [disabled]="busy() || !form.chosen || !form.acknowledged">Submit to provider</button>
+                    } @else if (!busy()) { <p class="metric-caption">An installed and active company provider is required for submission.</p> }
+                  </form>
+                }
+              }
+              <div class="max-h-72 overflow-auto">
+                <table class="payment-table">
+                  <thead><tr><th scope="col">Instruction</th><th scope="col">Amount</th><th scope="col">Status</th></tr></thead>
+                  <tbody>
+                    @for (item of row.items ?? []; track item.id) {
+                      <tr><td>{{ item.instructionId }}</td><td>{{ money(item.amount ?? '', row.currency ?? 'AOA') }}</td><td>{{ label(item.status ?? '') }}</td></tr>
+                    } @empty { <tr><td colspan="3">No instructions in this batch.</td></tr> }
+                  </tbody>
+                </table>
+              </div>
+            }
+            @case ('orders') {
+              <div class="flex flex-wrap gap-2">
+                <button type="button" class="action" (click)="history(row, 'orders')" [disabled]="busy()">View provider attempts</button>
+                @if (canQuery(row) && allowed('payments:orders:status')) {
+                  <button type="button" class="action" (click)="refreshOrder(row)" [disabled]="busy()">Query provider status</button>
+                }
+              </div>
+            }
+            @case ('transactions') {
+              @if (row.status && ['SETTLED', 'RECONCILED'].includes(row.status) && row['settledAt'] && allowed('payments:export')) {
+                <button class="action" type="button" (click)="downloadReceipt(row)" [disabled]="busy()">Download internal payment receipt</button>
+              }
+            }
+            @case ('bank-accounts') {
+              <div class="flex flex-wrap items-center gap-2">
+                @if (allowed('payments:bank-accounts:manage')) { <button type="button" class="action" (click)="setPanel('account')" [disabled]="busy()">Edit account</button> }
+                @if (row.status !== 'VERIFIED' && panel() !== 'account' && allowed('payments:bank-accounts:verify')) {
+                  <label class="field-label flex items-center gap-2"><input type="checkbox" [(ngModel)]="form.acknowledged"> I checked the account evidence</label>
+                  <button type="button" class="action" (click)="verifyAccount(row)" [disabled]="busy() || !form.acknowledged">Record verification</button>
+                }
+              </div>
+              @if (panel() === 'account') {
+                <form class="space-y-3" (ngSubmit)="saveAccount(row)">
+                  <ng-container [ngTemplateOutlet]="accountFields" />
+                  <button class="action primary" type="submit" [disabled]="busy()">Save account changes</button>
+                </form>
+              }
+            }
+            @case ('reconciliations') {
+              @if (row.status === 'RECONCILIATION_EXCEPTION' && allowed('payments:reconciliation:resolve')) {
+                <button class="action" type="button" [disabled]="busy()" (click)="setPanel('resolve')">Review exception resolution</button>
+              }
+              @if (panel() === 'resolve') {
+                <form class="space-y-3" (ngSubmit)="resolve(row)">
+                  <label class="field-label">Resolution note<textarea class="field min-h-20 py-2" name="notes" maxlength="2000" required [(ngModel)]="form.reason"></textarea></label>
+                  <label class="field-label">Evidence references (comma or line separated)<textarea class="field min-h-20 py-2" name="evidence" required [(ngModel)]="form.evidence"></textarea></label>
+                  <button type="submit" class="action primary" [disabled]="busy() || !form.reason.trim() || !form.evidence.trim()">Record resolution</button>
+                </form>
+              }
+            }
+          }
+          @if (activity(); as rows) {
+            <div class="overflow-x-auto">
+              <table class="payment-table">
+                <thead><tr>
+                  @if (directory() === 'orders') {
+                    @for (column of attemptColumns; track column.key) { <th scope="col">{{ column.label }}</th> }
+                  } @else { <th scope="col">Operation</th><th scope="col">Actor</th><th scope="col">Date</th> }
+                </tr></thead>
+                <tbody>
+                  @for (entry of rows; track $index) {
+                    <tr>
+                      @if (directory() === 'orders') {
+                        @for (column of attemptColumns; track column.key) { <td>{{ display(entry, column.key) }}</td> }
+                      } @else { <td>{{ display(entry, 'type') }}</td><td>{{ display(entry, 'actorUserId') }}</td><td>{{ display(entry, 'at') }}</td> }
+                    </tr>
+                  } @empty { <tr><td [attr.colspan]="directory() === 'orders' ? attemptColumns.length : 3">No recorded activity.</td></tr> }
+                </tbody>
+              </table>
+            </div>
+          }
+        </div>
+      </app-component-card>
+    }
+  }
+</div>
+
+<ng-template #accountFields>
+  <div class="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+    <label class="field-label">Account name<input class="field" name="accountName" maxlength="180" required [(ngModel)]="form.accountName"></label>
+    <label class="field-label">Bank code<input class="field" name="bankCode" maxlength="40" required [(ngModel)]="form.bankCode"></label>
+    <label class="field-label">{{ detail() ? 'Replacement identifier (optional)' : 'Bank account identifier' }}
+      <input class="field" name="accountIdentifier" type="password" autocomplete="off" maxlength="80" [(ngModel)]="form.identifier">
+    </label>
+    <label class="field-label">Currency<input class="field" name="currency" maxlength="3" required [(ngModel)]="form.currency"></label>
+    <label class="field-label flex items-center gap-2"><input name="primary" type="checkbox" [(ngModel)]="form.primary"> Primary account</label>
+  </div>
+</ng-template>
