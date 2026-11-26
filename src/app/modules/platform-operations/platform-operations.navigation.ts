@@ -1,5 +1,5 @@
 export const OPERATIONS_SECTIONS = [
-  { path: 'overview', title: 'Overview', endpoint: 'overview' },
+  { path: 'overview', title: $localize`:@@ui-thnxru:Overview`, endpoint: 'overview' },
   { path: 'services', title: 'Service health', endpoint: 'overview' },
   { path: 'infrastructure', title: 'API process', endpoint: 'overview' },
   { path: 'queues', title: 'Queues and job counts', endpoint: 'queues' },

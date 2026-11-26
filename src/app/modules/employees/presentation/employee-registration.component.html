@@ -1,11 +1,11 @@
-<app-component-card [title]="mode === 'new' ? 'Register an employee' : 'Employee file import'">
+<app-component-card [title]="mode === 'new' ? copy.register : copy.fileImport">
   @if (error()) { <p class="feedback mb-4" role="alert">{{ error() }}</p> }
   @if (mode === 'new') {
     @if (created(); as employee) {
       <p class="notice mb-4" role="status">
-        {{ employee.firstName }} {{ employee.lastName }} was registered.
+        <ng-container i18n="@@employees-registration-success">{{ employee.firstName }} {{ employee.lastName }} was registered.</ng-container>
         @if (canRead) {
-          <a [routerLink]="['/employees', company, 'details', employee.id]" class="font-medium underline">Open profile</a>
+          <a [routerLink]="['/employees', company, 'details', employee.id]" class="font-medium underline"><ng-container i18n="@@employees-open-profile">Open profile</ng-container></a>
         }
       </p>
     }
@@ -16,38 +16,38 @@
             [required]="field.required" [email]="field.type === 'email'" [(ngModel)]="draft[field.key]" [disabled]="busy()" />
         </label>
       }
-      <label class="field">Department ID
+      <label class="field"><ng-container i18n="@@employees-department-id">Department ID</ng-container>
         <input class="control" type="number" name="departmentId" min="1" step="1" [(ngModel)]="draft.departmentId" [disabled]="busy()" />
       </label>
       <div class="sm:col-span-2 xl:col-span-3">
-        <button class="action action-primary" [disabled]="busy() || registration.invalid">Register employee</button>
+        <button class="action action-primary" [disabled]="busy() || registration.invalid"><ng-container i18n="@@employees-register-employee">Register employee</ng-container></button>
       </div>
     </form>
   } @else {
-    <p class="mb-4 text-sm text-gray-600 dark:text-gray-400">Use the template headers in a CSV file or the first worksheet of an XLSX workbook. Import up to 500 employees per file.</p>
+    <p class="mb-4 text-sm text-gray-600 dark:text-gray-400"><ng-container i18n="@@employees-use-the-template-headers-in-a-csv-file-or-the-first-worksheet-of-an-xlsx-workbook-import-up-to-500-employees-per-file">Use the template headers in a CSV file or the first worksheet of an XLSX workbook. Import up to 500 employees per file.</ng-container></p>
     <div class="mb-4 flex flex-wrap items-end gap-4">
-      <button type="button" class="action" (click)="template()">Download template</button>
-      <label class="field">CSV or Excel workbook
+      <button type="button" class="action" (click)="template()"><ng-container i18n="@@employees-download-template">Download template</ng-container></button>
+      <label class="field"><ng-container i18n="@@employees-csv-or-excel-workbook">CSV or Excel workbook</ng-container>
         <input class="control" #file type="file" accept=".csv,.xlsx,text/csv,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" (change)="chooseFile(file)" [disabled]="busy()" />
       </label>
     </div>
-    @if (busy()) { <p role="status" class="text-sm text-gray-600 dark:text-gray-400">Processing file…</p> }
+    @if (busy()) { <p role="status" class="text-sm text-gray-600 dark:text-gray-400"><ng-container i18n="@@employees-processing-file">Processing file…</ng-container></p> }
     @if (preview(); as selection) {
-      <p class="mb-3 text-sm text-gray-700 dark:text-gray-300">{{ selection.employees.length }} valid records · {{ selection.errors.length }} errors</p>
+      <p class="mb-3 text-sm text-gray-700 dark:text-gray-300"><ng-container i18n="@@employees-import-preview">{{ selection.employees.length }} valid records · {{ selection.errors.length }} errors</ng-container></p>
       @if (selection.errors.length) {
-        <ul class="feedback max-h-60 overflow-auto" aria-label="Import validation errors">
-          @for (item of selection.errors; track item.record) { <li>Record {{ item.record }} · {{ item.message }}</li> }
+        <ul i18n-aria-label="@@employees-import-validation-errors" class="feedback max-h-60 overflow-auto" aria-label="Import validation errors">
+          @for (item of selection.errors; track item.record) { <li><ng-container i18n="@@employees-import-record-error">Record {{ item.record }} · {{ item.message }}</ng-container></li> }
         </ul>
       } @else {
-        <button type="button" class="action action-primary" (click)="submitImport()" [disabled]="busy()">Confirm import</button>
+        <button type="button" class="action action-primary" (click)="submitImport()" [disabled]="busy()"><ng-container i18n="@@employees-confirm-import">Confirm import</ng-container></button>
       }
     }
     @if (imported(); as report) {
-      <p class="notice mb-3" role="status">{{ report.succeeded }} registered · {{ report.failed }} failed · {{ report.total }} total</p>
+      <p class="notice mb-3" role="status"><ng-container i18n="@@employees-import-result">{{ report.succeeded }} registered · {{ report.failed }} failed · {{ report.total }} total</ng-container></p>
       @if (report.failed) {
-        <ul class="feedback max-h-60 overflow-auto" aria-label="Failed records">
+        <ul i18n-aria-label="@@employees-failed-records" class="feedback max-h-60 overflow-auto" aria-label="Failed records">
           @for (row of report.results; track row.index) {
-            @if (!row.success) { <li>{{ row.employeeNumber }} · {{ row.error }}</li> }
+            @if (!row.success) { <li>{{ row.employeeNumber }} · {{ importError(row.error) }}</li> }
           }
         </ul>
       }

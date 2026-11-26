@@ -2,7 +2,7 @@
   <div class="space-y-5">
     <dl class="grid gap-3 text-sm text-gray-700 sm:grid-cols-2 xl:grid-cols-3 dark:text-gray-300">
       @if (current.employeeId) {
-        <div><dt class="font-semibold">Employee</dt><dd class="break-all">{{ current.employeeId }}</dd></div>
+        <div><dt class="font-semibold"><ng-container i18n="@@ui-1fak8xt">Employee</ng-container></dt><dd class="break-all">{{ current.employeeId }}</dd></div>
       }
       @if (current.trace.engineVersion) {
         <div><dt class="font-semibold">Engine version</dt><dd>{{ current.trace.engineVersion }}</dd></div>
@@ -57,7 +57,7 @@
       <table class="w-full text-start text-sm text-gray-700 dark:text-gray-300">
         <caption class="mb-2 text-start font-semibold text-gray-900 dark:text-white">Payroll lines</caption>
         <thead class="table-heading">
-          <tr><th scope="col">Pay item</th><th scope="col">Type</th><th scope="col">Amount</th><th scope="col">Source and formula</th></tr>
+          <tr><th scope="col">Pay item</th><th scope="col">Type</th><th scope="col"><ng-container i18n="@@ui-a2ky21">Amount</ng-container></th><th scope="col">Source and formula</th></tr>
         </thead>
         <tbody class="divide-y divide-gray-200 dark:divide-gray-800">
           @for (line of current.lines; track $index) {

@@ -230,7 +230,7 @@
       <label class="pr-label">Department ID<input class="pr-input" type="number" min="1" [(ngModel)]="filters.departmentId" [ngModelOptions]="{ standalone: true }"></label>
     }
     @if (keys.includes('status')) {
-      <label class="pr-label">Status<input class="pr-input" maxlength="30" [(ngModel)]="filters.status" [ngModelOptions]="{ standalone: true }"></label>
+      <label class="pr-label"><ng-container i18n="@@ui-3pd73">Status</ng-container><input class="pr-input" maxlength="30" [(ngModel)]="filters.status" [ngModelOptions]="{ standalone: true }"></label>
     }
     <label class="pr-label">Row limit<input class="pr-input" type="number" min="1" max="5000" [(ngModel)]="filters.limit" [ngModelOptions]="{ standalone: true }"></label>
   </div>

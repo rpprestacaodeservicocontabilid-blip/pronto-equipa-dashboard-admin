@@ -1,40 +1,40 @@
 <div class="space-y-4">
   @if (error()) { <p role="alert" class="feedback">{{ error() }}</p> }
   @if (loading()) {
-    <p role="status" class="text-sm text-gray-600 dark:text-gray-400">Loading linked documents…</p>
+    <p role="status" class="text-sm text-gray-600 dark:text-gray-400"><ng-container i18n="@@contracts-loading-linked-documents">Loading linked documents…</ng-container></p>
   } @else if (context.permissions.includes('contracts.documents.read')) {
     <ul class="divide-y divide-gray-200 dark:divide-gray-800">
       @for (record of records(); track record.id) {
         <li class="flex flex-wrap items-center justify-between gap-3 py-3">
           <div class="min-w-0 text-sm text-gray-700 dark:text-gray-300">
-            <p class="font-medium">{{ record.payload.documentType }}</p>
+            <p class="font-medium">{{ documentType(record.payload.documentType) }}</p>
             <p class="break-all text-gray-600 dark:text-gray-400">{{ documentId(record) }} · {{ date(record.createdAt) }}</p>
           </div>
           @if (documentId(record); as document) {
             <div class="flex flex-wrap gap-2">
-              @if (canOpen('preview')) { <button class="action" type="button" [disabled]="busy()" (click)="prepare(document, 'preview')">Preview</button> }
-              @if (canOpen('download')) { <button class="action" type="button" [disabled]="busy()" (click)="prepare(document, 'download')">Get download link</button> }
+              @if (canOpen('preview')) { <button class="action" type="button" [disabled]="busy()" (click)="prepare(document, 'preview')"><ng-container i18n="@@contracts-preview">Preview</ng-container></button> }
+              @if (canOpen('download')) { <button class="action" type="button" [disabled]="busy()" (click)="prepare(document, 'download')"><ng-container i18n="@@contracts-get-download-link">Get download link</ng-container></button> }
               @if (access(); as link) {
                 @if (link.id === document) {
                   <a class="action action-primary" [href]="link.url" target="_blank" rel="noopener noreferrer"
-                     [attr.download]="link.purpose === 'download' ? '' : null">{{ link.purpose === 'preview' ? 'Open preview' : 'Download document' }}</a>
+                     [attr.download]="link.purpose === 'download' ? '' : null">@if (link.purpose === 'preview') { <ng-container i18n="@@contracts-open-preview">Open preview</ng-container> } @else { <ng-container i18n="@@contracts-download-document">Download document</ng-container> }</a>
                 }
               }
             </div>
           }
         </li>
       } @empty {
-        <li class="text-sm text-gray-600 dark:text-gray-400">No linked documents.</li>
+        <li class="text-sm text-gray-600 dark:text-gray-400"><ng-container i18n="@@contracts-no-linked-documents">No linked documents.</ng-container></li>
       }
     </ul>
   }
   @if (canLink) {
     <div class="grid items-end gap-3 border-t border-gray-200 pt-4 dark:border-gray-800 sm:grid-cols-[1fr_minmax(8rem,auto)]">
       <app-contract-document-picker [companyId]="context.company.id" [(selected)]="selected" />
-      <label class="field">Document type<select class="control" [(ngModel)]="type">
-        <option value="CONTRACT">Contract</option><option value="ATTACHMENT">Attachment</option><option value="SUPPORTING">Supporting document</option>
+      <label class="field"><ng-container i18n="@@contracts-document-type">Document type</ng-container><select class="control" [(ngModel)]="type">
+        <option value="CONTRACT"><ng-container i18n="@@contracts-contract">Contract</ng-container></option><option value="ATTACHMENT"><ng-container i18n="@@contracts-attachment">Attachment</ng-container></option><option value="SUPPORTING"><ng-container i18n="@@contracts-supporting-document">Supporting document</ng-container></option>
       </select></label>
-      <button class="action action-primary justify-self-start" type="button" (click)="link()" [disabled]="!selected || busy()">Link document</button>
+      <button class="action action-primary justify-self-start" type="button" (click)="link()" [disabled]="!selected || busy()"><ng-container i18n="@@contracts-link-document">Link document</ng-container></button>
     </div>
   }
 </div>

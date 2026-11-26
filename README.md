@@ -20,7 +20,7 @@ Consulte o [guia de Férias e Licenças](docs/leave-integration.md).
 
 1. Iniciar o backend com as suas dependências e configuração habituais.
 2. Confirmar a porta HTTP do backend. O proxy deste projecto aponta para
-   `http://localhost:3333`; ajustar `proxy.conf.json` se a porta efectiva for outra.
+   `http://127.0.0.1:3333`; ajustar `proxy.conf.json` se a porta efectiva for outra.
 3. Com as dependências existentes do frontend instaladas, executar `npm start`
    e abrir `http://localhost:4200`.
 4. Entrar e verificar o OTP. A gestão global de empresas exige `SUPER_ADMIN`.

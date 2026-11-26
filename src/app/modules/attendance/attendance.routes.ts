@@ -20,7 +20,7 @@ const workspace = () => import('./presentation/attendance-workspace.component').
 export const ATTENDANCE_ROUTES: Routes = [
   {
     path: '', pathMatch: 'full', title: 'Select company | Attendance',
-    data: { workspace: { label: 'Attendance', path: '/attendance' } },
+    data: { workspace: { label: $localize`:@@ui-1eavko2:Attendance`, path: '/attendance' } },
     loadComponent: () => import('../../shared/components/common/company-workspace/company-workspace-picker.component')
       .then(module => module.CompanyWorkspacePickerComponent),
   },

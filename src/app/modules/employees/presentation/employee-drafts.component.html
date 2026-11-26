@@ -1,39 +1,39 @@
 <div class="space-y-5">
-  <app-component-card title="Registration queue">
+  <app-component-card i18n-title="@@employees-registration-queue" title="Registration queue">
     <form (ngSubmit)="list(1, true)" class="mb-4 flex flex-wrap items-end gap-3">
-      <label class="field">Status
+      <label class="field"><ng-container i18n="@@employees-status">Status</ng-container>
         <select class="control" name="status" [(ngModel)]="status">
-          <option value="">All statuses</option>
+          <option value=""><ng-container i18n="@@employees-all-statuses">All statuses</ng-container></option>
           @for (item of statuses; track item) { <option [value]="item">{{ labels[item] }}</option> }
         </select>
       </label>
-      <button class="action" [disabled]="loading()">Filter</button>
-      @if (canDraft) { <button type="button" class="action action-primary" (click)="newDraft()" [disabled]="busy()">New draft</button> }
+      <button class="action" [disabled]="loading()"><ng-container i18n="@@employees-filter">Filter</ng-container></button>
+      @if (canDraft) { <button type="button" class="action action-primary" (click)="newDraft()" [disabled]="busy()"><ng-container i18n="@@employees-new-draft">New draft</ng-container></button> }
     </form>
-    @if (loading()) { <p role="status" class="text-sm text-gray-600 dark:text-gray-400">Loading registrations…</p> }
+    @if (loading()) { <p role="status" class="text-sm text-gray-600 dark:text-gray-400"><ng-container i18n="@@employees-loading-registrations">Loading registrations…</ng-container></p> }
     @if (result(); as page) {
       <ul class="divide-y divide-gray-200 dark:divide-gray-800">
         @for (item of page.items; track item.id) {
           <li class="flex flex-wrap items-center justify-between gap-2 py-3 text-sm text-gray-700 dark:text-gray-300">
             <div>
               <p class="font-medium">{{ item.firstName || '' }} {{ item.lastName || '' }} {{ item.firstName || item.lastName ? '' : 'Unnamed worker' }}</p>
-              <p>{{ item.employeeNumber || 'No employee number' }} · {{ labels[item.status] }} · {{ item.updatedAt | date:'mediumDate' }}</p>
+              <p>{{ item.employeeNumber || copy.noNumber }} · {{ labels[item.status] }} · {{ item.updatedAt | date:'mediumDate' }}</p>
             </div>
-            <button type="button" class="action" (click)="inspect(item.id)" [disabled]="busy()">Open</button>
+            <button type="button" class="action" (click)="inspect(item.id)" [disabled]="busy()"><ng-container i18n="@@employees-open">Open</ng-container></button>
           </li>
-        } @empty { <li class="py-4 text-sm text-gray-600 dark:text-gray-400">No registrations found.</li> }
+        } @empty { <li class="py-4 text-sm text-gray-600 dark:text-gray-400"><ng-container i18n="@@employees-no-registrations-found">No registrations found.</ng-container></li> }
       </ul>
       <div class="mt-4 flex items-center gap-3 text-sm text-gray-700 dark:text-gray-300">
-        <button type="button" class="action" (click)="list(page.page - 1)" [disabled]="loading() || page.page <= 1">Previous</button>
-        <button type="button" class="action" (click)="list(page.page + 1)" [disabled]="loading() || page.page * page.limit >= page.total">Next</button>
-        <span>{{ page.total }} registrations · Page {{ page.page }}</span>
+        <button type="button" class="action" (click)="list(page.page - 1)" [disabled]="loading() || page.page <= 1"><ng-container i18n="@@employees-previous">Previous</ng-container></button>
+        <button type="button" class="action" (click)="list(page.page + 1)" [disabled]="loading() || page.page * page.limit >= page.total"><ng-container i18n="@@employees-next">Next</ng-container></button>
+        <span><ng-container i18n="@@employees-registrations-page">{{ page.total }} registrations · Page {{ page.page }}</ng-container></span>
       </div>
     }
   </app-component-card>
   @if (error()) { <p role="alert" class="feedback">{{ error() }}</p> }
   @if (notice()) { <p role="status" class="notice">{{ notice() }}</p> }
   @if (open()) {
-    <app-component-card [title]="selected() ? labels[selected()!.status] : 'New draft'">
+    <app-component-card [title]="selected() ? labels[selected()!.status] : copy.newDraft">
       <form #form="ngForm" (ngSubmit)="save()" class="space-y-4">
         <fieldset [disabled]="!canEdit || busy()" class="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
           @for (field of fields; track field.key) {
@@ -42,15 +42,15 @@
                 [email]="field.type === 'email'" [(ngModel)]="draft[field.key]" />
             </label>
           }
-          <label class="field">Department ID
+          <label class="field"><ng-container i18n="@@employees-department-id">Department ID</ng-container>
             <input class="control" type="number" name="departmentId" min="1" step="1" [(ngModel)]="draft.departmentId" />
           </label>
         </fieldset>
         @if (canEdit) {
           <div class="flex flex-wrap gap-3">
-            <button class="action action-primary" [disabled]="busy() || form.invalid">Save draft</button>
+            <button class="action action-primary" [disabled]="busy() || form.invalid"><ng-container i18n="@@employees-save-draft">Save draft</ng-container></button>
             @if (selected()) {
-              <button type="button" class="action" (click)="save(true)" [disabled]="busy() || form.invalid">Submit for review</button>
+              <button type="button" class="action" (click)="save(true)" [disabled]="busy() || form.invalid"><ng-container i18n="@@employees-submit-for-review">Submit for review</ng-container></button>
             }
           </div>
         }
@@ -58,19 +58,19 @@
       @if (selected(); as data) {
         @if (data.decisionReason) { <p class="mt-4 text-sm text-gray-700 dark:text-gray-300">{{ data.decisionReason }}</p> }
         @if (data.employeeId) {
-          <a class="action mt-4" [routerLink]="['/employees', company, 'details', data.employeeId]">Open employee profile</a>
+          <a class="action mt-4" [routerLink]="['/employees', company, 'details', data.employeeId]"><ng-container i18n="@@employees-open-employee-profile">Open employee profile</ng-container></a>
         }
         @if (canReview) {
           <form class="mt-5 space-y-3">
-            <label class="field">Review reason
+            <label class="field"><ng-container i18n="@@employees-review-reason">Review reason</ng-container>
               <textarea class="control" name="reason" [(ngModel)]="reason" maxlength="500" rows="2"></textarea>
             </label>
             <label class="flex items-center gap-2 text-sm text-gray-700 dark:text-gray-300">
-              <input type="checkbox" name="confirmed" [(ngModel)]="confirmed" /> I confirm this review decision.
+              <input type="checkbox" name="confirmed" [(ngModel)]="confirmed" /> <ng-container i18n="@@employees-i-confirm-this-review-decision">I confirm this review decision.</ng-container>
             </label>
             <div class="flex flex-wrap gap-3">
-              <button type="button" class="action action-primary" (click)="decide('approve')" [disabled]="busy() || !confirmed">Approve and activate</button>
-              <button type="button" class="action" (click)="decide('reject')" [disabled]="busy() || !confirmed || reason.trim().length < 3">Reject registration</button>
+              <button type="button" class="action action-primary" (click)="decide('approve')" [disabled]="busy() || !confirmed"><ng-container i18n="@@employees-approve-and-activate">Approve and activate</ng-container></button>
+              <button type="button" class="action" (click)="decide('reject')" [disabled]="busy() || !confirmed || reason.trim().length < 3"><ng-container i18n="@@employees-reject-registration">Reject registration</ng-container></button>
             </div>
           </form>
         }

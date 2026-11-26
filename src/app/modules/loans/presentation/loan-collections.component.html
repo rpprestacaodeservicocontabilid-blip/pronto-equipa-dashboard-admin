@@ -5,7 +5,7 @@
     (cancelled)="pending.set(null)" (saved)="confirmed($event)" />
 }
 
-<app-component-card title="Filters">
+<app-component-card i18n-title="@@ui-345x4c" title="Filters">
   <form (ngSubmit)="apply()" class="space-y-4">
     @if (mode === 'reports') {
       <label class="field max-w-sm">Report
@@ -20,7 +20,7 @@
           <label class="field">Loan ID <input class="control" name="loan" [(ngModel)]="filters.loanId" maxlength="36" /></label>
         }
         @if (report === 'deductions') {
-          <label class="field">Status<select class="control" name="status" [(ngModel)]="filters.status">
+          <label class="field"><ng-container i18n="@@ui-3pd73">Status</ng-container><select class="control" name="status" [(ngModel)]="filters.status">
             <option value="">All statuses</option>
             <option value="APPLIED">Confirmed and partial</option>
             @for (status of states; track status) { <option [value]="status">{{ label(status) }}</option> }
@@ -41,7 +41,7 @@
           <app-organization-filter [company]="company" [disabled]="exporting()" (scopeChange)="scope = $event" />
         }
       }
-      <button type="submit" class="action action-primary" [disabled]="busy() || exporting()">Apply filters</button>
+      <button type="submit" class="action action-primary" [disabled]="busy() || exporting()"><ng-container i18n="@@ui-1ml4h1c">Apply filters</ng-container></button>
     }
     @if (filterError()) { <p class="feedback" role="alert">{{ filterError() }}</p> }
   </form>
@@ -71,11 +71,11 @@
       <div class="overflow-x-auto rounded-lg border border-gray-200 dark:border-gray-800">
         <table class="w-full min-w-[40rem] text-start text-sm text-gray-700 dark:text-gray-300">
           <thead class="table-heading"><tr>
-            <th scope="col">Loan</th><th scope="col">{{ byEmployee ? 'Employee ID' : 'Installment' }}</th><th scope="col">Status</th>
+            <th scope="col">Loan</th><th scope="col">{{ byEmployee ? 'Employee ID' : 'Installment' }}</th><th scope="col"><ng-container i18n="@@ui-3pd73">Status</ng-container></th>
             <th scope="col">{{ report === 'deductions' ? 'Requested' : report === 'overdue' ? 'Scheduled' : 'Granted' }}</th>
             <th scope="col">{{ report === 'deductions' ? 'Confirmed' : report === 'overdue' ? 'Days overdue' : 'Balance' }}</th>
             <th scope="col">{{ report === 'deductions' ? 'Payroll run' : report === 'overdue' ? 'Due date' : 'Record date' }}</th>
-            @if (report === 'deductions' && can('deductions.confirm')) { <th scope="col"><span class="sr-only">Actions</span></th> }
+            @if (report === 'deductions' && can('deductions.confirm')) { <th scope="col"><span class="sr-only"><ng-container i18n="@@ui-1rx51qc">Actions</ng-container></span></th> }
           </tr></thead>
           <tbody class="divide-y divide-gray-100 dark:divide-gray-800">
             @for (row of visible(view); track row.id) {
@@ -120,8 +120,8 @@
       <div class="flex flex-wrap items-center justify-between gap-2">
         <p class="text-sm text-gray-600 dark:text-gray-400">{{ view.total }} records · Page {{ page }}</p>
         <div class="flex gap-2">
-          <button class="action" type="button" [disabled]="page <= 1 || exporting()" (click)="go(page - 1)">Previous</button>
-          <button class="action" type="button" [disabled]="page * pageSize >= view.total || exporting()" (click)="go(page + 1)">Next</button>
+          <button class="action" type="button" [disabled]="page <= 1 || exporting()" (click)="go(page - 1)"><ng-container i18n="@@ui-1t5jxvs">Previous</ng-container></button>
+          <button class="action" type="button" [disabled]="page * pageSize >= view.total || exporting()" (click)="go(page + 1)"><ng-container i18n="@@ui-1padbm0">Next</ng-container></button>
         </div>
       </div>
     }

@@ -22,7 +22,7 @@ const provider = column('providerId', 'Provider', 'reference');
 const model = column('modelId', 'Model', 'reference');
 
 export const AI_SECTIONS: readonly AiSection[] = [
-  { path: 'overview', title: 'Overview', group: 'Overview', endpoint: 'dashboard', scope: 'optional', month: true, columns: [] },
+  { path: 'overview', title: $localize`:@@ui-thnxru:Overview`, group: 'Overview', endpoint: 'dashboard', scope: 'optional', month: true, columns: [] },
   { path: 'conversations', title: 'Conversations', group: 'Assistant', endpoint: 'conversations', scope: 'company', columns: [reference, status, created, column('lastMessageAt', 'Last message', 'date')] },
   { path: 'sessions', title: 'Session history', group: 'Assistant', endpoint: 'sessions', scope: 'company', columns: [reference, column('conversationId', 'Conversation', 'reference'), status, model, column('citationCount', 'Citations', 'number'), created] },
   { path: 'providers', title: 'Providers', group: 'AI models', endpoint: 'providers', columns: [column('name', 'Provider'), column('code', 'Code'), status, column('timeoutMs', 'Timeout (ms)', 'number'), column('priority', 'Priority', 'number')] },

@@ -59,11 +59,11 @@ export class SignInFormFieldsComponent {
     if (!control || !control.errors) return '';
 
     if (fieldName === 'email') {
-      return 'Enter your email or phone.';
+      return $localize`:@@auth-message-3:Enter your email or phone.`;
     }
 
     if (fieldName === 'password') {
-      if (control.errors['required']) return 'Password is required';
+      if (control.errors['required']) return $localize`:@@auth-message-4:Password is required`;
     }
 
     return '';

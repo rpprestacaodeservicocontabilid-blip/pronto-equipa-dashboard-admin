@@ -72,7 +72,7 @@
       }
     }
   } @else if (tab() === 'approvals') {
-    <app-component-card title="Approvals"><p class="text-sm text-gray-600 dark:text-gray-400">Available approval actions appear above. Viewing previous decisions requires payroll history access.</p></app-component-card>
+    <app-component-card i18n-title="@@ui-1m405m7" title="Approvals"><p class="text-sm text-gray-600 dark:text-gray-400">Available approval actions appear above. Viewing previous decisions requires payroll history access.</p></app-component-card>
   } @else if (tab() === 'closing') {
     <app-component-card title="Closing"><p class="text-sm text-gray-600 dark:text-gray-400">Available closing actions appear above. Viewing closing evidence requires access to sensitive payroll results.</p></app-component-card>
   } @else if (tab() === 'payments') {
@@ -84,7 +84,7 @@
   <app-component-card [title]="title">
     <div class="overflow-x-auto">
       <table class="w-full text-start text-sm text-gray-700 dark:text-gray-300">
-        <thead class="table-heading"><tr><th scope="col">Decision</th><th scope="col">Operator</th><th scope="col">Run version</th><th scope="col">Date</th><th scope="col">Details</th></tr></thead>
+        <thead class="table-heading"><tr><th scope="col">Decision</th><th scope="col">Operator</th><th scope="col">Run version</th><th scope="col"><ng-container i18n="@@ui-ggjuyh">Date</ng-container></th><th scope="col">Details</th></tr></thead>
         <tbody class="divide-y divide-gray-200 dark:divide-gray-800">
           @for (approval of approvals; track approval.id) {
             <tr><td class="table-cell">{{ label(approval.status) }}</td><td class="table-cell">#{{ approval.data.actorUserId }}</td>

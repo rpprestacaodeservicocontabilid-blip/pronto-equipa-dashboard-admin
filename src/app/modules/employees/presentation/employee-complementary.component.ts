@@ -1,7 +1,7 @@
 import { Component, DestroyRef, Input, OnInit, inject, signal } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { FormsModule } from '@angular/forms';
-import { apiErrorMessage } from '../../../core/api/api-error';
+import { employeeErrorMessage, employeeProfileOption } from './employee-display';
 import { ComponentCardComponent } from '../../../shared/components/common/component-card/component-card.component';
 import { employeeProfileSections, ProfileFields, ProfileSection, ProfileVersion } from '../domain/employee-administration';
 import { EmployeesApi } from '../infrastructure/employees-api.service';
@@ -13,10 +13,10 @@ import { EmployeesApi } from '../infrastructure/employees-api.service';
     <app-component-card [title]="schema.title">
       @if (error()) {
         <p role="alert" class="feedback mb-4">{{ error() }}</p>
-        <button type="button" class="action mb-4" (click)="load()" [disabled]="busy()">Reload section</button>
+        <button type="button" class="action mb-4" (click)="load()" [disabled]="busy()"><ng-container i18n="@@employees-reload-section">Reload section</ng-container></button>
       }
       @if (notice()) { <p role="status" class="notice mb-4">{{ notice() }}</p> }
-      @if (busy()) { <p role="status" class="mb-2 text-sm text-gray-600 dark:text-gray-400">Working…</p> }
+      @if (busy()) { <p role="status" class="mb-2 text-sm text-gray-600 dark:text-gray-400"><ng-container i18n="@@employees-working">Working…</ng-container></p> }
       @if (version() !== null) {
         <form #sectionForm="ngForm" (ngSubmit)="sectionForm.valid && save()" class="space-y-4">
           @for (row of fields; track row; let rowIndex = $index) {
@@ -25,8 +25,8 @@ import { EmployeesApi } from '../infrastructure/employees-api.service';
                 <label class="field">{{ field.label }}
                   @if (field.options) {
                     <select [name]="field.key + '-' + rowIndex" class="control" [required]="!!field.required" [(ngModel)]="row[field.key]">
-                      <option value="">Select</option>
-                      @for (entry of field.options; track entry) { <option [value]="entry">{{ entry.replaceAll('_', ' ') }}</option> }
+                      <option value=""><ng-container i18n="@@employees-select">Select</ng-container></option>
+                      @for (entry of field.options; track entry) { <option [value]="entry">{{ optionLabel(entry) }}</option> }
                     </select>
                   } @else {
                     <input [name]="field.key + '-' + rowIndex" class="control" [type]="field.type || 'text'" [email]="field.type === 'email'"
@@ -35,18 +35,18 @@ import { EmployeesApi } from '../infrastructure/employees-api.service';
                 </label>
               }
               @if (schema.multiple && editable) {
-                <button type="button" class="action justify-self-start sm:col-span-2 xl:col-span-3" (click)="remove(rowIndex)">Remove entry</button>
+                <button type="button" class="action justify-self-start sm:col-span-2 xl:col-span-3" (click)="remove(rowIndex)"><ng-container i18n="@@employees-remove-entry">Remove entry</ng-container></button>
               }
             </fieldset>
           } @empty {
-            <p class="text-sm text-gray-600 dark:text-gray-400">No entries recorded.</p>
+            <p class="text-sm text-gray-600 dark:text-gray-400"><ng-container i18n="@@employees-no-entries-recorded">No entries recorded.</ng-container></p>
           }
           @if (editable) {
             <div class="flex flex-wrap gap-2">
               @if (schema.multiple) {
-                <button type="button" class="action" (click)="add()" [disabled]="busy() || fields.length >= 30">Add entry</button>
+                <button type="button" class="action" (click)="add()" [disabled]="busy() || fields.length >= 30"><ng-container i18n="@@employees-add-entry">Add entry</ng-container></button>
               }
-              <button class="action action-primary" [disabled]="busy() || sectionForm.invalid">Save section</button>
+              <button class="action action-primary" [disabled]="busy() || sectionForm.invalid"><ng-container i18n="@@employees-save-section">Save section</ng-container></button>
             </div>
           }
         </form>
@@ -65,6 +65,7 @@ export class EmployeeComplementaryComponent implements OnInit {
   protected readonly error = signal('');
   protected readonly notice = signal('');
   protected readonly busy = signal(false);
+  protected readonly optionLabel = employeeProfileOption;
   protected fields: ProfileFields[] = [];
   protected get schema() { return employeeProfileSections[this.section]; }
   protected get editable() { return this.permissions.includes(this.schema.manage); }
@@ -96,7 +97,7 @@ export class EmployeeComplementaryComponent implements OnInit {
     this.busy.set(true);
     this.api.saveProfileSection(this.company, this.employee, this.section, version,
       this.schema.multiple ? { entries } : entries[0]).pipe(takeUntilDestroyed(this.destroy)).subscribe({
-      next: data => { this.apply(data); this.notice.set('Profile section updated.'); },
+      next: data => { this.apply(data); this.notice.set($localize`:@@employees-profile-section-updated:Profile section updated.`); },
       error: error => this.fail(error),
     });
   }
@@ -108,7 +109,7 @@ export class EmployeeComplementaryComponent implements OnInit {
     this.busy.set(false);
   }
   private fail(error: unknown) {
-    this.error.set(apiErrorMessage(error));
+    this.error.set(employeeErrorMessage(error));
     this.busy.set(false);
   }
 }

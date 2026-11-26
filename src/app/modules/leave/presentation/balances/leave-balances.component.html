@@ -6,11 +6,11 @@
       <div class="space-y-4">
         <form (ngSubmit)="list(1)" class="flex flex-wrap items-end gap-2">
           @if (directory.employees().length) {
-            <label class="field flex-1">Employee<select class="control" name="employee" [(ngModel)]="employee">
-              <option value="">All employees</option>
+            <label class="field flex-1"><ng-container i18n="@@ui-1fak8xt">Employee</ng-container><select class="control" name="employee" [(ngModel)]="employee">
+              <option value=""><ng-container i18n="@@ui-3jqtdp">All employees</ng-container></option>
               @for (worker of directory.employees(); track worker.id) { <option [value]="worker.id">{{ directory.name(worker.id) }}</option> }
             </select></label>
-            <button type="submit" class="action" [disabled]="loading()">Filter</button>
+            <button type="submit" class="action" [disabled]="loading()"><ng-container i18n="@@ui-1vvvdef">Filter</ng-container></button>
           } @else { <button type="submit" class="action" [disabled]="loading()">Refresh accounts</button> }
           @if (has('leave.accounts.manage') && has('employees.read')) {
             <button type="button" class="action action-primary" (click)="create.set(!create())">New leave account</button>
@@ -18,7 +18,7 @@
         </form>
         @if (create()) {
           <form (ngSubmit)="createAccount()" class="flex flex-wrap items-end gap-2 rounded-lg border border-gray-200 p-3 dark:border-gray-800">
-            <label class="field flex-1">Employee<select class="control" name="newEmployee" [(ngModel)]="newEmployee" required [disabled]="saving()">
+            <label class="field flex-1"><ng-container i18n="@@ui-1fak8xt">Employee</ng-container><select class="control" name="newEmployee" [(ngModel)]="newEmployee" required [disabled]="saving()">
               <option value="">Select employee</option>
               @for (worker of directory.employees(); track worker.id) { <option [value]="worker.id">{{ directory.name(worker.id) }} · {{ worker.employeeNumber }}</option> }
             </select></label>
@@ -29,7 +29,7 @@
         @else if (rows(); as page) {
           <div class="overflow-x-auto rounded-lg border border-gray-200 dark:border-gray-800">
             <table class="w-full min-w-[38rem] text-start text-sm text-gray-700 dark:text-gray-300">
-              <thead class="table-heading"><tr><th scope="col">Employee</th><th scope="col">Entitled</th><th scope="col">Used</th><th scope="col">Reserved</th><th scope="col">Adjustments</th><th scope="col">Available</th></tr></thead>
+              <thead class="table-heading"><tr><th scope="col"><ng-container i18n="@@ui-1fak8xt">Employee</ng-container></th><th scope="col">Entitled</th><th scope="col">Used</th><th scope="col">Reserved</th><th scope="col">Adjustments</th><th scope="col">Available</th></tr></thead>
               <tbody class="divide-y divide-gray-200 dark:divide-gray-800">
                 @for (row of page.data; track row.id) {
                   @let item = balances().get(row.id);
@@ -45,8 +45,8 @@
           <div class="flex flex-wrap justify-between gap-2">
             <p class="text-sm text-gray-600 dark:text-gray-400">{{ page.pagination.total }} accounts</p>
             <div class="flex gap-2">
-              <button class="action" type="button" [disabled]="page.pagination.page <= 1" (click)="list(page.pagination.page - 1)">Previous</button>
-              <button class="action" type="button" [disabled]="page.pagination.page >= page.pagination.totalPages" (click)="list(page.pagination.page + 1)">Next</button>
+              <button class="action" type="button" [disabled]="page.pagination.page <= 1" (click)="list(page.pagination.page - 1)"><ng-container i18n="@@ui-1t5jxvs">Previous</ng-container></button>
+              <button class="action" type="button" [disabled]="page.pagination.page >= page.pagination.totalPages" (click)="list(page.pagination.page + 1)"><ng-container i18n="@@ui-1padbm0">Next</ng-container></button>
             </div>
           </div>
         }
@@ -90,7 +90,7 @@
                 <label class="field">Accrual period end<input class="control" type="date" name="to" [(ngModel)]="to" [attr.min]="from" required /></label>
               }
               <div class="flex gap-2"><button class="action action-primary" type="submit">{{ saving() ? 'Saving…' : 'Confirm' }}</button>
-                <button class="action" type="button" (click)="operation.set(null)">Cancel</button></div>
+                <button class="action" type="button" (click)="operation.set(null)"><ng-container i18n="@@ui-ew9em3">Cancel</ng-container></button></div>
             </fieldset>
           </form>
         }
@@ -124,8 +124,8 @@
             } @empty { <li class="text-sm text-gray-600 dark:text-gray-400">No movements found.</li> }
           </ul>
           <div class="flex gap-2">
-            <button class="action" type="button" [disabled]="page.pagination.page <= 1" (click)="loadMovements(page.pagination.page - 1)">Previous</button>
-            <button class="action" type="button" [disabled]="page.pagination.page >= page.pagination.totalPages" (click)="loadMovements(page.pagination.page + 1)">Next</button>
+            <button class="action" type="button" [disabled]="page.pagination.page <= 1" (click)="loadMovements(page.pagination.page - 1)"><ng-container i18n="@@ui-1t5jxvs">Previous</ng-container></button>
+            <button class="action" type="button" [disabled]="page.pagination.page >= page.pagination.totalPages" (click)="loadMovements(page.pagination.page + 1)"><ng-container i18n="@@ui-1padbm0">Next</ng-container></button>
           </div>
         }
       </app-component-card>

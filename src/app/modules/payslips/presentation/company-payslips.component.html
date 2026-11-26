@@ -300,19 +300,19 @@
           </label>
         }
         @if (!section()?.status) {
-          <label class="ps-label">Status
+          <label class="ps-label"><ng-container i18n="@@ui-3pd73">Status</ng-container>
             <select class="ps-input" name="status" [(ngModel)]="filterStatus">
               <option value="">All statuses</option>
               @for (status of statuses; track status) { <option [value]="status">{{ label(status) }}</option> }
             </select>
           </label>
         }
-        <button type="submit" class="ps-button" [disabled]="busy()">Apply filters</button>
+        <button type="submit" class="ps-button" [disabled]="busy()"><ng-container i18n="@@ui-1ml4h1c">Apply filters</ng-container></button>
       </form>
-    } @else { <button type="button" class="ps-secondary mb-4" (click)="list(1)" [disabled]="busy()">Refresh</button> }
+    } @else { <button type="button" class="ps-secondary mb-4" (click)="list(1)" [disabled]="busy()"><ng-container i18n="@@ui-28r6qc">Refresh</ng-container></button> }
     <div class="overflow-x-auto">
       <table class="ps-table w-full">
-        <thead><tr><th scope="col">Receipt</th><th scope="col">Worker</th><th scope="col">Type</th><th scope="col">Status</th><th scope="col">Net pay</th><th scope="col">Issued</th></tr></thead>
+        <thead><tr><th scope="col">Receipt</th><th scope="col">Worker</th><th scope="col">Type</th><th scope="col"><ng-container i18n="@@ui-3pd73">Status</ng-container></th><th scope="col">Net pay</th><th scope="col">Issued</th></tr></thead>
         <tbody>
           @for (row of directory()?.data ?? []; track row.id) {
             <tr><td><button type="button" class="ps-link" (click)="openReceipt(row.id)" [disabled]="busy()">{{ row.number }}</button></td>
@@ -327,8 +327,8 @@
       <div class="mt-4 flex flex-wrap items-center justify-between gap-2">
         <span class="ps-muted">{{ page.total | number }} receipts · Page {{ page.page }}</span>
         <div class="flex gap-2">
-          <button class="ps-secondary" type="button" (click)="list(page.page - 1)" [disabled]="busy() || page.page <= 1">Previous</button>
-          <button class="ps-secondary" type="button" (click)="list(page.page + 1)" [disabled]="busy() || page.page * page.limit >= page.total">Next</button>
+          <button class="ps-secondary" type="button" (click)="list(page.page - 1)" [disabled]="busy() || page.page <= 1"><ng-container i18n="@@ui-1t5jxvs">Previous</ng-container></button>
+          <button class="ps-secondary" type="button" (click)="list(page.page + 1)" [disabled]="busy() || page.page * page.limit >= page.total"><ng-container i18n="@@ui-1padbm0">Next</ng-container></button>
         </div>
       </div>
     }

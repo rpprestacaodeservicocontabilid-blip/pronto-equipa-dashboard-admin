@@ -32,10 +32,10 @@
             <label class="field">From<input class="control" type="date" name="from" [(ngModel)]="from" /></label>
             <label class="field">To<input class="control" type="date" name="to" [(ngModel)]="to" /></label>
             @if (hasEmployeeScope) {
-              <label class="field">Employee
+              <label class="field"><ng-container i18n="@@ui-1fak8xt">Employee</ng-container>
               @if (employeeList().length) {
                 <select class="control" name="employee" [(ngModel)]="employee">
-                  <option value="">All employees</option>
+                  <option value=""><ng-container i18n="@@ui-3jqtdp">All employees</ng-container></option>
                   @for (person of employeeList(); track person.id) {
                     <option [value]="person.id">{{ person.firstName }} {{ person.lastName }} · {{ person.employeeNumber }}</option>
                   }
@@ -46,7 +46,7 @@
               </label>
             }
             @if (hasEmployeeScope && organizationReady() && departments().length) {
-              <label class="field">Department
+              <label class="field"><ng-container i18n="@@ui-1430r53">Department</ng-container>
                 <select class="control" name="department" [(ngModel)]="department">
                   <option value="">All departments</option>
                   @for (item of departments(); track item.id) { <option [value]="item.id">{{ item.name }}</option> }
@@ -70,9 +70,9 @@
               </label>
             }
           </div>
-          <button class="action action-primary" type="submit">Apply filters</button>
+          <button class="action action-primary" type="submit"><ng-container i18n="@@ui-1ml4h1c">Apply filters</ng-container></button>
         } @else {
-          <button class="action" type="button" (click)="retry()" [disabled]="loading()">Refresh</button>
+          <button class="action" type="button" (click)="retry()" [disabled]="loading()"><ng-container i18n="@@ui-28r6qc">Refresh</ng-container></button>
         }
         @if (inputError()) { <p class="feedback" role="alert">{{ inputError() }}</p> }
         @if (organizationError()) { <p class="text-sm text-gray-600 dark:text-gray-400">{{ organizationError() }}</p> }
@@ -137,8 +137,8 @@
         <dl class="grid gap-x-6 gap-y-4 text-sm text-gray-700 sm:grid-cols-2 dark:text-gray-300">
           <div class="min-w-0"><dt class="font-semibold">Record ID</dt><dd class="break-all">{{ row.id }}</dd></div>
           @if (row.employeeId) {
-            <div class="min-w-0"><dt class="font-semibold">Employee</dt><dd class="break-all">{{ employeeName(row.employeeId) }}</dd></div>
-            <div><dt class="font-semibold">Department</dt><dd>{{ departmentName(row) }}</dd></div>
+            <div class="min-w-0"><dt class="font-semibold"><ng-container i18n="@@ui-1fak8xt">Employee</ng-container></dt><dd class="break-all">{{ employeeName(row.employeeId) }}</dd></div>
+            <div><dt class="font-semibold"><ng-container i18n="@@ui-1430r53">Department</ng-container></dt><dd>{{ departmentName(row) }}</dd></div>
           }
           <div><dt class="font-semibold">{{ isEntity(row) ? 'Status' : 'Source' }}</dt><dd>{{ statusText(row) }}</dd></div>
           @if (row.workDate) { <div><dt class="font-semibold">Work date</dt><dd>{{ row.workDate }}</dd></div> }
@@ -282,7 +282,7 @@
     <app-component-card title="Attendance map">
       <div class="overflow-x-auto rounded-xl border border-gray-200 dark:border-gray-800">
         <table class="w-full text-start text-sm text-gray-700 dark:text-gray-300">
-          <thead class="table-heading"><tr><th scope="col">Employee</th>
+          <thead class="table-heading"><tr><th scope="col"><ng-container i18n="@@ui-1fak8xt">Employee</ng-container></th>
             @for (date of grid.dates; track date) { <th scope="col" class="whitespace-nowrap">{{ date | date:'EEE d':'UTC' }}</th> }
           </tr></thead>
           <tbody class="divide-y divide-gray-100 dark:divide-gray-800">
@@ -319,8 +319,8 @@
         <div class="overflow-x-auto rounded-lg border border-gray-200 dark:border-gray-800">
           <table class="w-full min-w-[42rem] text-start text-sm text-gray-700 dark:text-gray-300">
             <thead class="table-heading">
-              <tr><th scope="col">Employee</th><th scope="col">Date</th><th scope="col">{{ resource === 'punches' ? 'Source' : 'Status' }}</th>
-                <th scope="col">{{ resource === 'days' ? 'Worked / expected' : 'Details' }}</th><th scope="col"><span class="sr-only">Actions</span></th></tr>
+              <tr><th scope="col"><ng-container i18n="@@ui-1fak8xt">Employee</ng-container></th><th scope="col"><ng-container i18n="@@ui-ggjuyh">Date</ng-container></th><th scope="col">{{ resource === 'punches' ? 'Source' : 'Status' }}</th>
+                <th scope="col">{{ resource === 'days' ? 'Worked / expected' : 'Details' }}</th><th scope="col"><span class="sr-only"><ng-container i18n="@@ui-1rx51qc">Actions</ng-container></span></th></tr>
             </thead>
             <tbody class="divide-y divide-gray-100 dark:divide-gray-800">
               @for (item of displayedRows(data); track item.id) {
@@ -337,7 +337,7 @@
                     @if (!isEntity(item) && item.deviceId) { <p class="text-xs text-gray-500 dark:text-gray-400">{{ item.deviceId }}</p> }
                   </td>
                   <td class="table-cell">
-                    <a [routerLink]="['/attendance', company, rowPath, item.id]" class="text-brand-700 underline dark:text-brand-300" [attr.aria-label]="'View details for ' + employeeName(item.employeeId) + ' ' + (item.workDate ?? '')">View details</a>
+                    <a [routerLink]="['/attendance', company, rowPath, item.id]" class="text-brand-700 underline dark:text-brand-300" [attr.aria-label]="'View details for ' + employeeName(item.employeeId) + ' ' + (item.workDate ?? '')"><ng-container i18n="@@ui-5dxh2m">View details</ng-container></a>
                   </td>
                 </tr>
               } @empty { <tr><td class="table-cell" colspan="5">No records match this selection.</td></tr> }
@@ -351,8 +351,8 @@
           <div class="flex flex-wrap items-center justify-between gap-2">
             <p class="text-sm text-gray-600 dark:text-gray-400">{{ data.total }} records · Page {{ page }}</p>
             <div class="flex gap-2">
-              <button class="action" type="button" [disabled]="page === 1" (click)="go(page - 1)">Previous</button>
-              <button class="action" type="button" [disabled]="page * pageSize >= data.total" (click)="go(page + 1)">Next</button>
+              <button class="action" type="button" [disabled]="page === 1" (click)="go(page - 1)"><ng-container i18n="@@ui-1t5jxvs">Previous</ng-container></button>
+              <button class="action" type="button" [disabled]="page * pageSize >= data.total" (click)="go(page + 1)"><ng-container i18n="@@ui-1padbm0">Next</ng-container></button>
             </div>
           </div>
         }

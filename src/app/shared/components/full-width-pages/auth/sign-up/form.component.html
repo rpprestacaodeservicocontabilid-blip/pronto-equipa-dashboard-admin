@@ -73,7 +73,7 @@
     [attr.data-invalid]="isFieldInvalid('email') ? 'true' : null"
   >
     <label class="group/field-label peer/field-label flex w-fit gap-2 text-sm leading-snug font-medium text-gray-700 select-none dark:text-gray-400 mb-1.5 block">
-      Email <span class="text-red-500">*</span>
+      <ng-container i18n="@@ui-inbfc7">Email</ng-container> <span class="text-red-500">*</span>
     </label>
     <input app-input unstyled
       formControlName="email"
@@ -100,7 +100,7 @@
     [attr.data-invalid]="isFieldInvalid('password') ? 'true' : null"
   >
     <label class="group/field-label peer/field-label flex w-fit gap-2 text-sm leading-snug font-medium text-gray-700 select-none dark:text-gray-400 mb-1.5 block">
-      Password <span class="text-red-500">*</span>
+      <ng-container i18n="@@ui-cf437c">Password</ng-container> <span class="text-red-500">*</span>
     </label>
     <div
       class="group/input-group relative flex h-11 w-full min-w-0 items-center rounded-[10px] border border-gray-300 bg-white shadow-theme-xs outline-hidden transition-colors focus-within:border-brand-300 focus-within:ring-3 focus-within:ring-brand-500/20 dark:border-gray-700 dark:bg-gray-900 dark:focus-within:border-brand-500/40"
@@ -108,7 +108,7 @@
       [class.ring-3]="isFieldInvalid('password')"
       [class.ring-red-500/20]="isFieldInvalid('password')"
     >
-      <input
+      <input i18n-placeholder="@@ui-y81xq5"
         formControlName="password"
         [type]="showPassword ? 'text' : 'password'"
         placeholder="Enter your password"

@@ -14,8 +14,8 @@ const resolveCompany: ResolveFn<Access> = route => {
 };
 const workspace = () => import('./documents-workspace.component').then(module => module.DocumentsWorkspaceComponent);
 export const DOCUMENTS_ROUTES: Routes = [
-  { path: '', pathMatch: 'full', title: 'Select company | PRONTOEQUIPAS',
-    data: { workspace: { label: 'Documents', path: '/documents' } },
+  { path: '', pathMatch: 'full', title: $localize`:@@ui-dgxfdq:Select company` + ' | PRONTOEQUIPAS',
+    data: { workspace: { label: $localize`:@@ui-oz47lx:Documents`, path: '/documents' } },
     loadComponent: () => import('../../shared/components/common/company-workspace/company-workspace-picker.component')
       .then(module => module.CompanyWorkspacePickerComponent) },
   { path: ':companyId', pathMatch: 'full', redirectTo: ':companyId/library' },

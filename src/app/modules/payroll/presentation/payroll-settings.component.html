@@ -19,7 +19,7 @@
         </div>
         <div class="flex flex-wrap gap-2">
           <button type="submit" class="action action-primary" [disabled]="busy() || form.invalid">Publish policy</button>
-          <button type="button" class="action" [disabled]="busy()" (click)="editing.set(false)">Cancel</button>
+          <button type="button" class="action" [disabled]="busy()" (click)="editing.set(false)"><ng-container i18n="@@ui-ew9em3">Cancel</ng-container></button>
         </div>
       </form>
     } @else {
@@ -27,7 +27,7 @@
     }
     <div class="overflow-x-auto">
       <table class="w-full text-start text-sm text-gray-700 dark:text-gray-300">
-        <thead class="table-heading"><tr><th scope="col">Code</th><th scope="col">Required approvals</th><th scope="col">Status</th><th scope="col">Published</th></tr></thead>
+        <thead class="table-heading"><tr><th scope="col">Code</th><th scope="col">Required approvals</th><th scope="col"><ng-container i18n="@@ui-3pd73">Status</ng-container></th><th scope="col">Published</th></tr></thead>
         <tbody class="divide-y divide-gray-200 dark:divide-gray-800">
           @for (policy of response.data; track policy.id) {
             <tr><td class="table-cell">{{ policy.data.code }}</td><td class="table-cell">{{ policy.data.requiredApprovals }}</td>

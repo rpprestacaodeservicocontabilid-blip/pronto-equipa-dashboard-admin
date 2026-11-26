@@ -8,11 +8,11 @@
       <label class="field-label grow sm:max-w-sm">Search by name or email
         <input class="field" name="search" type="search" maxlength="150" [(ngModel)]="search">
       </label>
-      <button class="action primary" type="submit" [disabled]="busy()">Search</button>
+      <button class="action primary" type="submit" [disabled]="busy()"><ng-container i18n="@@ui-1j0itop">Search</ng-container></button>
     </form>
     <div class="overflow-x-auto">
       <table class="directory w-full text-sm text-gray-800 dark:text-gray-200">
-        <thead class="bg-gray-50 dark:bg-gray-800"><tr><th scope="col">Name</th><th scope="col">Email</th><th scope="col">Account status</th><th scope="col">Email verified</th></tr></thead>
+        <thead class="bg-gray-50 dark:bg-gray-800"><tr><th scope="col"><ng-container i18n="@@ui-4el6o6">Name</ng-container></th><th scope="col"><ng-container i18n="@@ui-inbfc7">Email</ng-container></th><th scope="col">Account status</th><th scope="col">Email verified</th></tr></thead>
         <tbody>
           @for (row of page()?.data ?? []; track row.id) {
             <tr>
@@ -29,8 +29,8 @@
       <div class="mt-4 flex flex-wrap items-center justify-between gap-2">
         <p class="muted">{{ result.total }} identities · Page {{ result.page }}</p>
         <div class="flex gap-2">
-          <button type="button" class="action" [disabled]="busy() || result.page <= 1" (click)="list(result.page - 1)">Previous</button>
-          <button type="button" class="action" [disabled]="busy() || result.page * result.limit >= result.total" (click)="list(result.page + 1)">Next</button>
+          <button type="button" class="action" [disabled]="busy() || result.page <= 1" (click)="list(result.page - 1)"><ng-container i18n="@@ui-1t5jxvs">Previous</ng-container></button>
+          <button type="button" class="action" [disabled]="busy() || result.page * result.limit >= result.total" (click)="list(result.page + 1)"><ng-container i18n="@@ui-1padbm0">Next</ng-container></button>
         </div>
       </div>
     }
@@ -39,7 +39,7 @@
     <app-component-card title="Identity details">
       <div class="space-y-4">
         <dl class="grid gap-3 break-words sm:grid-cols-2 lg:grid-cols-4">
-          <div><dt class="field-label">Email</dt><dd class="muted">{{ row.email }}</dd></div>
+          <div><dt class="field-label"><ng-container i18n="@@ui-inbfc7">Email</ng-container></dt><dd class="muted">{{ row.email }}</dd></div>
           <div><dt class="field-label">Identity ID</dt><dd class="muted">{{ row.id }}</dd></div>
           <div><dt class="field-label">Created</dt><dd class="muted">{{ row.createdAt | date:'mediumDate' }}</dd></div>
           <div><dt class="field-label">Active sessions</dt><dd class="muted">{{ row.activeSessions }}</dd></div>
@@ -70,7 +70,7 @@
               <label class="field-label">Audit reason<textarea class="field" name="reason" rows="2" maxlength="500" required [(ngModel)]="reason"></textarea></label>
               <div class="flex flex-wrap gap-2">
                 <button type="submit" class="action primary" [disabled]="busy() || reason.trim().length < 5">Confirm {{ actionNames[command].toLowerCase() }}</button>
-                <button type="button" class="action" [disabled]="busy()" (click)="action.set(null)">Cancel</button>
+                <button type="button" class="action" [disabled]="busy()" (click)="action.set(null)"><ng-container i18n="@@ui-ew9em3">Cancel</ng-container></button>
               </div>
             </form>
           }

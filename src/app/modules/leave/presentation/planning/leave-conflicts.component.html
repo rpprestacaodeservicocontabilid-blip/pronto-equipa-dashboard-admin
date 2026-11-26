@@ -1,7 +1,7 @@
 <div class="space-y-5">
   <app-component-card title="Blocking overlaps" desc="Check whether an employee already has a conflicting leave request.">
     <form class="grid gap-3 lg:grid-cols-3" (ngSubmit)="check()">
-      <label class="field">Employee<select class="control" name="employee" [(ngModel)]="employeeId" [disabled]="checking()" required>
+      <label class="field"><ng-container i18n="@@ui-1fak8xt">Employee</ng-container><select class="control" name="employee" [(ngModel)]="employeeId" [disabled]="checking()" required>
         <option value="">Select employee</option>@for (entry of directory.employees(); track entry.id) { <option [value]="entry.id">{{ directory.name(entry.id) }}</option> }
       </select></label>
       <label class="field">From<input class="control" type="date" name="from" [(ngModel)]="from" [disabled]="checking()" required /></label>
@@ -24,9 +24,9 @@
   </app-component-card>
   <app-component-card title="Team availability" desc="Review simultaneous leave. This view does not apply staffing limits.">
     <form class="flex flex-wrap items-end gap-3" (ngSubmit)="inspectAvailability()">
-      <label class="field">Date<input class="control" type="date" name="date" [(ngModel)]="date" [disabled]="loading()" required /></label>
+      <label class="field"><ng-container i18n="@@ui-ggjuyh">Date</ng-container><input class="control" type="date" name="date" [(ngModel)]="date" [disabled]="loading()" required /></label>
       @if (directory.departments().length) {
-        <label class="field">Department<select class="control" name="department" [ngModel]="department()" (ngModelChange)="department.set($event)">
+        <label class="field"><ng-container i18n="@@ui-1430r53">Department</ng-container><select class="control" name="department" [ngModel]="department()" (ngModelChange)="department.set($event)">
           <option value="">All departments</option>@for (entry of directory.departments(); track entry.id) { <option [value]="entry.id">{{ entry.name }}</option> }
         </select></label>
       }

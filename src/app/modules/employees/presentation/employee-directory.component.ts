@@ -4,7 +4,7 @@ import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { FormsModule } from '@angular/forms';
 import { RouterLink } from '@angular/router';
 import { forkJoin, map } from 'rxjs';
-import { apiErrorMessage } from '../../../core/api/api-error';
+import { employeeErrorMessage } from './employee-display';
 import { ApiPage } from '../../../core/api/company-workspace-api';
 import { ComponentCardComponent } from '../../../shared/components/common/component-card/component-card.component';
 import { Employee, EmployeeFilter, EmployeeStatus, employeeStatuses, statusOptions } from '../domain/employee.models';
@@ -27,6 +27,16 @@ function currentAdmissionPeriod() {
   templateUrl: './employee-directory.component.html',
 })
 export class EmployeeDirectoryComponent implements OnInit {
+  protected readonly copy = {
+    download: $localize`:@@employees-download-csv:Download CSV`,
+    runReport: $localize`:@@employees-run-report:Run report`,
+    search: $localize`:@@employees-search:Search`,
+    workforce: $localize`:@@employees-workforce-by-status:Workforce by status`,
+    report: $localize`:@@employees-workforce-report-by-admission-period:Workforce report by admission period`,
+    export: $localize`:@@employees-export-employee-records:Export employee records`,
+    directory: $localize`:@@employees-employee-directory:Employee directory`,
+  };
+
   @Input({ required: true }) company = 0;
   @Input() view: 'overview' | 'directory' | 'exports' | 'reports' = 'directory';
   @Input() preset?: EmployeeStatus;
@@ -67,9 +77,9 @@ export class EmployeeDirectoryComponent implements OnInit {
       const criteria = this.view === 'reports' ? this.filter(1, 1) : { page: 1, limit: 1 };
       if (!criteria) { this.loading.set(false); return; }
       const metrics = [
-        { title: 'Total employees', path: 'all', filter: {} },
+        { title: $localize`:@@employees-total-employees:Total employees`, path: 'all', filter: {} },
         ...statusOptions.map(status => ({ title: employeeStatuses[status], path: paths[status], filter: { status } })),
-        ...(this.view === 'overview' ? [{ title: 'Admissions this month', path: 'admissions', filter: currentAdmissionPeriod() }] : []),
+        ...(this.view === 'overview' ? [{ title: $localize`:@@employees-admissions-this-month:Admissions this month`, path: 'admissions', filter: currentAdmissionPeriod() }] : []),
       ];
       this.counts.set([]);
       forkJoin(metrics.map(({ title, path, filter }) => this.api.list(this.company, { ...criteria, ...filter })
@@ -115,11 +125,11 @@ export class EmployeeDirectoryComponent implements OnInit {
 
   private filter(page: number, limit: number): EmployeeFilter | undefined {
     if (this.admittedFrom && this.admittedTo && this.admittedFrom > this.admittedTo) {
-      this.error.set('End date must be on or after start date.');
+      this.error.set($localize`:@@employees-end-date-must-be-on-or-after-start-date:End date must be on or after start date.`);
       return undefined;
     }
     if (this.departmentId !== null && (!Number.isSafeInteger(this.departmentId) || this.departmentId < 1 || this.departmentId > 2147483647)) {
-      this.error.set('Enter a valid department ID.');
+      this.error.set($localize`:@@employees-enter-a-valid-department-id:Enter a valid department ID.`);
       return undefined;
     }
     return {
@@ -130,7 +140,7 @@ export class EmployeeDirectoryComponent implements OnInit {
   }
 
   private fail(error: unknown) {
-    this.error.set(apiErrorMessage(error));
+    this.error.set(employeeErrorMessage(error));
     this.loading.set(false);
   }
 }

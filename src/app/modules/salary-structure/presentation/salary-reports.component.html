@@ -6,7 +6,7 @@
       </select></label>
       @if (report === 'components') { <label class="field">Exact component code<input class="control" name="code" maxlength="50" [(ngModel)]="filter.code" /></label> }
       @if (employeeReport) { <label class="field">Employee ID<input class="control" name="employee" maxlength="36" [(ngModel)]="filter.employeeId" /></label> }
-      <label class="field">Status<select class="control" name="status" [(ngModel)]="filter.status">
+      <label class="field"><ng-container i18n="@@ui-3pd73">Status</ng-container><select class="control" name="status" [(ngModel)]="filter.status">
         <option value="">All statuses</option>
         @for (status of report === 'revisions' ? ['DRAFT', 'PENDING_APPROVAL', 'APPROVED', 'APPLIED', 'REJECTED'] : ['ACTIVE', 'INACTIVE']; track status) {
           <option [value]="status">{{ human(status) }}</option>
@@ -15,7 +15,7 @@
       <label class="field">{{ employeeReport ? 'Effective from' : 'Created from' }}<input class="control" type="date" name="from" [(ngModel)]="filter.from" /></label>
       <label class="field">Through<input class="control" type="date" name="to" [(ngModel)]="filter.to" /></label>
     </fieldset>
-    <button type="submit" class="action action-primary" [disabled]="busy() || exporting()">Apply filters</button>
+    <button type="submit" class="action action-primary" [disabled]="busy() || exporting()"><ng-container i18n="@@ui-1ml4h1c">Apply filters</ng-container></button>
     @if (inputError()) { <p class="feedback" role="alert">{{ inputError() }}</p> }
   </form>
 </app-component-card>
@@ -45,7 +45,7 @@
                 <td class="table-cell">{{ human(row.status) }}</td><td class="table-cell">{{ row.version }}</td>
               }
               <td class="table-cell">@if (employeeReport || can('read')) {
-                <a class="text-brand-700 underline dark:text-brand-300" [routerLink]="['/salary-structure', company, report, row.id]">View details</a>
+                <a class="text-brand-700 underline dark:text-brand-300" [routerLink]="['/salary-structure', company, report, row.id]"><ng-container i18n="@@ui-5dxh2m">View details</ng-container></a>
               }</td>
             </tr>
           } @empty { <tr><td class="table-cell" colspan="5">No records match this report.</td></tr> }
@@ -54,8 +54,8 @@
     </div>
     <div class="flex flex-wrap items-center justify-between gap-3">
       <p class="text-sm text-gray-600 dark:text-gray-400">{{ data.total }} records · Page {{ page }}</p>
-      <div class="flex gap-2"><button class="action" type="button" [disabled]="page <= 1 || exporting()" (click)="go(page - 1)">Previous</button>
-        <button class="action" type="button" [disabled]="page * 20 >= data.total || exporting()" (click)="go(page + 1)">Next</button></div>
+      <div class="flex gap-2"><button class="action" type="button" [disabled]="page <= 1 || exporting()" (click)="go(page - 1)"><ng-container i18n="@@ui-1t5jxvs">Previous</ng-container></button>
+        <button class="action" type="button" [disabled]="page * 20 >= data.total || exporting()" (click)="go(page + 1)"><ng-container i18n="@@ui-1padbm0">Next</ng-container></button></div>
     </div>
     @if (can('export') && data.total) {
       <div class="flex flex-wrap gap-2">

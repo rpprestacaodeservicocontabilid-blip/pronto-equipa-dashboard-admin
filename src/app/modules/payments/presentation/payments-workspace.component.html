@@ -4,7 +4,7 @@
     <p class="max-w-3xl text-sm text-gray-600 dark:text-gray-400">{{ section.description }}</p>
     @if (view === 'overview') { <a class="action" routerLink="/company-payments">Open company payments</a> }
     @if (view !== 'settings' && (view !== 'audit' || applied().purpose)) {
-      <button class="action" type="button" (click)="refresh()" [disabled]="result().loading">Refresh</button>
+      <button class="action" type="button" (click)="refresh()" [disabled]="result().loading"><ng-container i18n="@@ui-28r6qc">Refresh</ng-container></button>
     }
   </div>
 
@@ -13,7 +13,7 @@
       <form class="space-y-4" (ngSubmit)="search()" novalidate>
         <div class="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
           <label class="field-label">Company ID
-            <input class="field" name="companyId" type="number" min="1" max="2147483647" [(ngModel)]="companyId" placeholder="All companies">
+            <input i18n-placeholder="@@ui-i4yiur" class="field" name="companyId" type="number" min="1" max="2147483647" [(ngModel)]="companyId" placeholder="All companies">
           </label>
           <label class="field-label">From
             <input class="field" name="from" type="date" [(ngModel)]="from">
@@ -28,7 +28,7 @@
             </label>
           }
           @if (states.length) {
-            <label class="field-label">Status
+            <label class="field-label"><ng-container i18n="@@ui-3pd73">Status</ng-container>
               <select class="field" name="status" [(ngModel)]="status">
                 <option value="">All statuses</option>
                 @for (state of states; track state) {
@@ -40,8 +40,8 @@
           @if (view === 'reports') {
             <label class="field-label">Group by
               <select class="field" name="breakdown" [(ngModel)]="breakdown">
-                <option value="status">Status</option>
-                <option value="company">Company</option>
+                <option value="status"><ng-container i18n="@@ui-3pd73">Status</ng-container></option>
+                <option value="company"><ng-container i18n="@@ui-1hra0d8">Company</ng-container></option>
                 <option value="provider">Provider</option>
               </select>
             </label>
@@ -56,7 +56,7 @@
         @if (filterError()) { <p class="error" role="alert">{{ filterError() }}</p> }
         <div class="flex flex-wrap items-center gap-3">
           <button class="action primary" type="submit">{{ view === 'audit' ? 'View financial audit' : 'Apply filters' }}</button>
-          <button class="action" type="button" (click)="clear()">Clear</button>
+          <button class="action" type="button" (click)="clear()"><ng-container i18n="@@ui-1aeugy">Clear</ng-container></button>
           <span class="text-xs text-gray-500 dark:text-gray-400">Dates use Africa/Luanda time.</span>
         </div>
       </form>
@@ -83,7 +83,7 @@
           <p class="metric-caption">Settled or reconciled instructions</p>
         </article>
         <article class="panel">
-          <h2 class="metric-label">Pending</h2><p class="metric-value">{{ data.pending }}</p>
+          <h2 class="metric-label"><ng-container i18n="@@ui-e8nfto">Pending</ng-container></h2><p class="metric-value">{{ data.pending }}</p>
           <a class="text-link" routerLink="/payments/pending">Review pending orders</a>
         </article>
         <article class="panel">
@@ -144,8 +144,8 @@
       <div class="overflow-x-auto">
         <table class="payment-table" aria-label="Payment volume">
           <thead><tr>
-            <th scope="col">{{ label(applied().breakdown) }}</th><th scope="col">Currency</th>
-            <th scope="col">Operations</th><th scope="col">Amount</th>
+            <th scope="col">{{ label(applied().breakdown) }}</th><th scope="col"><ng-container i18n="@@ui-5o3zh2">Currency</ng-container></th>
+            <th scope="col"><ng-container i18n="@@ui-1ahoaq7">Operations</ng-container></th><th scope="col"><ng-container i18n="@@ui-a2ky21">Amount</ng-container></th>
           </tr></thead>
           <tbody>
             @for (row of data.items; track $index) {
@@ -252,9 +252,9 @@
 <ng-template #pagination let-page="page" let-next="next">
   @if (page > 1 || next) {
     <nav aria-label="Payment results pages" class="mt-2 flex flex-wrap items-center gap-2 text-sm text-gray-700 dark:text-gray-300">
-      <button type="button" class="action" (click)="changePage(page - 1)" [disabled]="page <= 1">Previous</button>
+      <button type="button" class="action" (click)="changePage(page - 1)" [disabled]="page <= 1"><ng-container i18n="@@ui-1t5jxvs">Previous</ng-container></button>
       <span aria-live="polite">Page {{ page }}</span>
-      <button type="button" class="action" (click)="changePage(page + 1)" [disabled]="!next">Next</button>
+      <button type="button" class="action" (click)="changePage(page + 1)" [disabled]="!next"><ng-container i18n="@@ui-1padbm0">Next</ng-container></button>
     </nav>
   }
 </ng-template>

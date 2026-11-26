@@ -7,7 +7,7 @@
       <button type="button" class="aud-button" [disabled]="writing() || loading()" (click)="open(newCommand)">{{ newCommand.title }}</button>
     }
     @if (section.path === 'exports' && canFindRecords()) { <a class="aud-secondary" routerLink="/audit/records">Find records to export</a> }
-    <button type="button" class="aud-secondary ms-auto" [disabled]="writing() || loading()" (click)="load()">Refresh</button>
+    <button type="button" class="aud-secondary ms-auto" [disabled]="writing() || loading()" (click)="load()"><ng-container i18n="@@ui-28r6qc">Refresh</ng-container></button>
   </div>
 }
 
@@ -71,7 +71,7 @@
       <table class="aud-table">
         <caption class="sr-only">{{ section.title }}</caption>
         <thead><tr>
-          <th scope="col">Reference</th><th scope="col">Status</th>
+          <th scope="col">Reference</th><th scope="col"><ng-container i18n="@@ui-3pd73">Status</ng-container></th>
           @for (column of section.columns; track column.key) { <th scope="col">{{ column.label }}</th> }
           <th scope="col">Created (Luanda)</th><th scope="col">Details</th>
         </tr></thead>
@@ -92,8 +92,8 @@
       <div class="mt-4 flex flex-wrap items-center justify-between gap-2">
         <p class="aud-muted">{{ result.total | number }} records · Page {{ offset() / pageSize + 1 }}</p>
         <div class="flex gap-2">
-          <button type="button" class="aud-secondary" [disabled]="offset() === 0 || writing()" (click)="load(offset() - pageSize)">Previous</button>
-          <button type="button" class="aud-secondary" [disabled]="offset() + pageSize >= result.total || writing()" (click)="load(offset() + pageSize)">Next</button>
+          <button type="button" class="aud-secondary" [disabled]="offset() === 0 || writing()" (click)="load(offset() - pageSize)"><ng-container i18n="@@ui-1t5jxvs">Previous</ng-container></button>
+          <button type="button" class="aud-secondary" [disabled]="offset() + pageSize >= result.total || writing()" (click)="load(offset() + pageSize)"><ng-container i18n="@@ui-1padbm0">Next</ng-container></button>
         </div>
       </div>
     }

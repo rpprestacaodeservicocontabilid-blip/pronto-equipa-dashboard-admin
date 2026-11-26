@@ -1,32 +1,32 @@
 <div class="workspace-ui space-y-5">
-  <app-page-breadcrumb pageTitle="Contract management" homeLink="/contracts" />
+  <app-page-breadcrumb i18n-pageTitle="@@contracts-contract-management" pageTitle="Contract management" homeLink="/contracts" />
   @let state = access();
   @if ('error' in state) {
     <p role="alert" class="feedback">{{ state.error }}</p>
-    <a class="action" routerLink="/contracts">Select another company</a>
+    <a class="action" routerLink="/contracts"><ng-container i18n="@@contracts-select-another-company">Select another company</ng-container></a>
   } @else {
     @let context = state.context;
     @let companyId = context.company.id;
     <div class="flex flex-wrap items-center justify-between gap-3">
       <div>
         <h2 class="text-lg font-semibold text-gray-900 dark:text-gray-100">{{ context.company.name }}</h2>
-        <p class="text-sm text-gray-600 dark:text-gray-400">HR · Employment contracts</p>
+        <p class="text-sm text-gray-600 dark:text-gray-400"><ng-container i18n="@@contracts-hr-employment-contracts">HR · Employment contracts</ng-container></p>
       </div>
       <div class="flex flex-wrap gap-2">
         @if (context.permissions.includes('organization:read')) {
-          <a class="action" [routerLink]="['/organization', companyId]">Organization</a>
+          <a class="action" [routerLink]="['/organization', companyId]"><ng-container i18n="@@ui-725tl6">Organization</ng-container></a>
         }
-        <a class="action" routerLink="/contracts">Switch company</a>
+        <a class="action" routerLink="/contracts"><ng-container i18n="@@contracts-switch-company">Switch company</ng-container></a>
         @if (context.permissions.includes('contracts.read') && context.permissions.includes('contracts.create') && mode() !== 'create') {
-          <a class="action action-primary" [routerLink]="['/contracts', companyId, 'new']">New contract</a>
+          <a class="action action-primary" [routerLink]="['/contracts', companyId, 'new']"><ng-container i18n="@@ui-1i4a7n1">New contract</ng-container></a>
         }
       </div>
     </div>
     @if (!context.permissions.includes('contracts.read')) {
-      <p role="alert" class="feedback">Your company role does not include access to contracts.</p>
+      <p role="alert" class="feedback"><ng-container i18n="@@contracts-your-company-role-does-not-include-access-to-contracts">Your company role does not include access to contracts.</ng-container></p>
     } @else {
       @if (context.readOnlyFallback) {
-        <p role="status" class="text-sm text-gray-600 dark:text-gray-400">Contracts are available in read-only mode. Company access is required to load the full set of permissions.</p>
+        <p role="status" class="text-sm text-gray-600 dark:text-gray-400"><ng-container i18n="@@contracts-contracts-are-available-in-read-only-mode-company-access-is-required-to-load-the-full-set-of-permissions">Contracts are available in read-only mode. Company access is required to load the full set of permissions.</ng-container></p>
       }
       @for (key of [companyId + ':' + mode() + ':' + section() + ':' + id()]; track key) {
         @switch (mode()) {
@@ -39,7 +39,7 @@
             } @else if (section(); as view) {
               <app-contracts-list [context]="context" [view]="view" />
             } @else {
-              <p role="alert" class="feedback">This contracts section does not exist.</p>
+              <p role="alert" class="feedback"><ng-container i18n="@@contracts-this-contracts-section-does-not-exist">This contracts section does not exist.</ng-container></p>
             }
           }
         }

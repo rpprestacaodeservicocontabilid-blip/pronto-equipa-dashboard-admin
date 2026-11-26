@@ -1,22 +1,22 @@
 <div class="space-y-5">
   @if (notice()) { <p role="status" class="notice">{{ notice() }}</p> }
   @if (loading()) {
-    <p role="status" class="text-sm text-gray-600 dark:text-gray-400">Loading contract…</p>
+    <p role="status" class="text-sm text-gray-600 dark:text-gray-400"><ng-container i18n="@@contracts-loading-contract">Loading contract…</ng-container></p>
   } @else if (error()) {
     <p role="alert" class="feedback">{{ error() }}</p>
-    <button type="button" class="action" (click)="load()">Try again</button>
+    <button type="button" class="action" (click)="load()"><ng-container i18n="@@contracts-try-again">Try again</ng-container></button>
   } @else if (contract(); as current) {
     <app-component-card [title]="current.contractNumber">
       <div class="flex flex-wrap items-start justify-between gap-4">
         <div>
           <p class="font-semibold text-gray-900 dark:text-gray-100">{{ type()?.name ?? current.typeCode }}</p>
-          <p class="text-sm text-gray-600 dark:text-gray-400">{{ name(employee()) }} · Version {{ current.version }}</p>
+          <p class="text-sm text-gray-600 dark:text-gray-400"><ng-container i18n="@@contracts-employee-version">{{ name(employee()) }} · Version {{ current.version }}</ng-container></p>
         </div>
         <span class="rounded-full bg-brand-50 px-3 py-1 text-sm font-medium text-brand-700 dark:bg-brand-500/15 dark:text-brand-300">{{ statuses[current.status] }}</span>
       </div>
       <div class="mt-4 flex flex-wrap gap-2">
         @if (current.status === 'DRAFT' && allowed('contracts.update')) {
-          <a class="action" [routerLink]="['/contracts', context.company.id, 'details', id, 'edit']">Edit draft</a>
+          <a class="action" [routerLink]="['/contracts', context.company.id, 'details', id, 'edit']"><ng-container i18n="@@contracts-edit-draft">Edit draft</ng-container></a>
         }
         @for (key of actions(); track key) {
           <button type="button" class="action" (click)="selectAction(key)" [disabled]="!!action()">{{ actionLabels[key].label }}</button>
@@ -27,21 +27,21 @@
       <app-contract-action [companyId]="context.company.id" [contract]="current" [action]="selected"
         (completed)="finish($event)" (dismissed)="action.set(null)" (stale)="action.set(null); load()" />
     }
-    <nav aria-label="Contract details" class="flex flex-wrap gap-1 rounded-xl border border-gray-200 bg-white p-2 dark:border-gray-800 dark:bg-gray-900">
+    <nav i18n-aria-label="@@contracts-contract-details" aria-label="Contract details" class="flex flex-wrap gap-1 rounded-xl border border-gray-200 bg-white p-2 dark:border-gray-800 dark:bg-gray-900">
       @for (entry of tabs; track entry[0]) {
         <a class="section-link" [routerLink]="[]" [queryParams]="{tab: entry[0]}" [attr.aria-current]="tab() === entry[0] ? 'page' : null">{{ entry[1] }}</a>
       }
     </nav>
     @switch (tab()) {
       @case ('overview') {
-        <app-component-card title="Contract summary">
+        <app-component-card i18n-title="@@contracts-contract-summary" title="Contract summary">
           <dl class="grid gap-4 text-sm text-gray-700 dark:text-gray-300 sm:grid-cols-2 xl:grid-cols-4">
-            <div><dt>Start date</dt><dd class="font-semibold">{{ date(current.startDate) }}</dd></div>
-            <div><dt>End date</dt><dd class="font-semibold">{{ date(current.endDate) }}</dd></div>
-            <div><dt>Compensation</dt><dd class="font-semibold">{{ money(current.salaryAmount, current.currency) }}</dd></div>
-            <div><dt>Legal rule version</dt><dd class="break-all font-semibold">{{ current.legalRuleVersionId || '—' }}</dd></div>
+            <div><dt><ng-container i18n="@@contracts-start-date">Start date</ng-container></dt><dd class="font-semibold">{{ date(current.startDate) }}</dd></div>
+            <div><dt><ng-container i18n="@@contracts-end-date">End date</ng-container></dt><dd class="font-semibold">{{ date(current.endDate) }}</dd></div>
+            <div><dt><ng-container i18n="@@contracts-compensation">Compensation</ng-container></dt><dd class="font-semibold">{{ money(current.salaryAmount, current.currency) }}</dd></div>
+            <div><dt><ng-container i18n="@@contracts-legal-rule-version">Legal rule version</ng-container></dt><dd class="break-all font-semibold">{{ current.legalRuleVersionId || '—' }}</dd></div>
           </dl>
-          <h4 class="mt-5 text-sm font-semibold text-gray-800 dark:text-gray-200">Contract lifecycle</h4>
+          <h4 class="mt-5 text-sm font-semibold text-gray-800 dark:text-gray-200"><ng-container i18n="@@contracts-contract-lifecycle">Contract lifecycle</ng-container></h4>
           <ol class="mt-2 flex flex-wrap gap-2">
             @for (state of lifecycle(); track state) {
               <li [attr.aria-current]="state === current.status ? 'step' : null"
@@ -52,23 +52,23 @@
         </app-component-card>
       }
       @case ('employee') {
-        <app-component-card title="Employee record">
+        <app-component-card i18n-title="@@contracts-employee-record" title="Employee record">
           @if (employee(); as worker) {
             <dl class="grid gap-4 text-sm text-gray-700 dark:text-gray-300 sm:grid-cols-2">
-              <div><dt>Name</dt><dd class="font-semibold">{{ name(worker) }}</dd></div>
-              <div><dt>Employee number</dt><dd class="font-semibold">{{ worker.employeeNumber }}</dd></div>
-              <div><dt>Department</dt><dd class="font-semibold">{{ current.terms.department || worker.departmentId || '—' }}</dd></div>
-              <div><dt>Job title</dt><dd class="font-semibold">{{ worker.jobTitle || '—' }}</dd></div>
+              <div><dt><ng-container i18n="@@contracts-name">Name</ng-container></dt><dd class="font-semibold">{{ name(worker) }}</dd></div>
+              <div><dt><ng-container i18n="@@contracts-employee-number">Employee number</ng-container></dt><dd class="font-semibold">{{ worker.employeeNumber }}</dd></div>
+              <div><dt><ng-container i18n="@@contracts-department">Department</ng-container></dt><dd class="font-semibold">{{ current.terms.department || worker.departmentId || '—' }}</dd></div>
+              <div><dt><ng-container i18n="@@contracts-job-title">Job title</ng-container></dt><dd class="font-semibold">{{ worker.jobTitle || '—' }}</dd></div>
             </dl>
           } @else {
-            <p class="text-sm text-gray-600 dark:text-gray-400">{{ employeeError() || 'Employee information is unavailable.' }}</p>
+            <p class="text-sm text-gray-600 dark:text-gray-400">@if (employeeError()) { {{ employeeError() }} } @else { <ng-container i18n="@@contracts-employee-information-is-unavailable">Employee information is unavailable.</ng-container> }</p>
           }
         </app-component-card>
       }
       @case ('conditions') {
-        <app-component-card title="Compensation and working conditions">
+        <app-component-card i18n-title="@@contracts-compensation-and-working-conditions" title="Compensation and working conditions">
           <dl class="grid gap-4 text-sm text-gray-700 dark:text-gray-300 sm:grid-cols-2 xl:grid-cols-3">
-            <div><dt>Base salary</dt><dd class="font-semibold">{{ money(current.salaryAmount, current.currency) }}</dd></div>
+            <div><dt><ng-container i18n="@@contracts-base-salary">Base salary</ng-container></dt><dd class="font-semibold">{{ money(current.salaryAmount, current.currency) }}</dd></div>
             @for (term of terms(current.terms); track term.label) {
               <div class="min-w-0"><dt>{{ term.label }}</dt><dd class="whitespace-pre-wrap break-words font-semibold">{{ term.value }}</dd></div>
             }
@@ -79,17 +79,17 @@
         }
       }
       @case ('documents') {
-        <app-component-card title="Contract documents">
+        <app-component-card i18n-title="@@contracts-contract-documents" title="Contract documents">
           <app-contract-documents [context]="context" [id]="id" (attached)="finish()" />
         </app-component-card>
       }
       @default {
         <app-component-card [title]="tabLabel()">
           @if (!allowed('contracts.history.read')) {
-            <p class="text-sm text-gray-600 dark:text-gray-400">Your company role does not include access to historical records.</p>
+            <p class="text-sm text-gray-600 dark:text-gray-400"><ng-container i18n="@@contracts-your-company-role-does-not-include-access-to-historical-records">Your company role does not include access to historical records.</ng-container></p>
           } @else if (activityError()) {
             <p role="alert" class="feedback">{{ activityError() }}</p>
-            <button type="button" class="action mt-3" (click)="load()">Refresh history</button>
+            <button type="button" class="action mt-3" (click)="load()"><ng-container i18n="@@contracts-refresh-history">Refresh history</ng-container></button>
           } @else {
             <ol class="space-y-3">
               @for (record of events(); track record.id) {
@@ -100,20 +100,20 @@
                       <span class="ms-2 font-normal text-gray-600 dark:text-gray-400">{{ date(record.createdAt) }}</span>
                     </summary>
                     <div class="mt-3 space-y-2 text-sm text-gray-700 dark:text-gray-300">
-                      @if (record.actorUserId) { <p>Recorded by account #{{ record.actorUserId }}</p> }
-                      @if (record.payload.reason) { <p>Reason · {{ termText(record.payload.reason) }}</p> }
-                      @if (record.payload.reasonCode) { <p>Reason code · {{ termText(record.payload.reasonCode) }}</p> }
-                      @if (record.payload.effectiveDate) { <p>Effective date · {{ date(termText(record.payload.effectiveDate)) }}</p> }
-                      @if (record.payload.startDate) { <p>Starts · {{ date(termText(record.payload.startDate)) }} · Ends · {{ date(record.payload.endDate ? termText(record.payload.endDate) : null) }}</p> }
+                      @if (record.actorUserId) { <p><ng-container i18n="@@contracts-recorded-by">Recorded by account #{{ record.actorUserId }}</ng-container></p> }
+                      @if (record.payload.reason) { <p><ng-container i18n="@@contracts-record-reason">Reason · {{ termText(record.payload.reason) }}</ng-container></p> }
+                      @if (record.payload.reasonCode) { <p><ng-container i18n="@@contracts-record-reason-code">Reason code · {{ termText(record.payload.reasonCode) }}</ng-container></p> }
+                      @if (record.payload.effectiveDate) { <p><ng-container i18n="@@contracts-record-effective-date">Effective date · {{ date(termText(record.payload.effectiveDate)) }}</ng-container></p> }
+                      @if (record.payload.startDate) { <p><ng-container i18n="@@contracts-record-start-end">Starts · {{ date(termText(record.payload.startDate)) }} · Ends · {{ date(record.payload.endDate ? termText(record.payload.endDate) : null) }}</ng-container></p> }
                       @if (record.payload.snapshot; as snapshot) {
-                        <p>Version {{ snapshot.version }} · {{ statuses[snapshot.status] }} · {{ money(snapshot.salaryAmount, snapshot.currency) }}</p>
-                        <p>Term · {{ date(snapshot.startDate) }} – {{ date(snapshot.endDate) }}</p>
+                        <p><ng-container i18n="@@contracts-record-version">Version {{ snapshot.version }} · {{ statuses[snapshot.status] }} · {{ money(snapshot.salaryAmount, snapshot.currency) }}</ng-container></p>
+                        <p><ng-container i18n="@@contracts-record-term">Term · {{ date(snapshot.startDate) }} – {{ date(snapshot.endDate) }}</ng-container></p>
                       }
                       @if (trend(record); as comparison) {
                         @if (comparison.length) {
                           <div class="overflow-x-auto">
                             <table class="w-full text-start">
-                              <thead class="table-heading"><tr><th scope="col">Field</th><th scope="col">Before</th><th scope="col">After</th></tr></thead>
+                              <thead class="table-heading"><tr><th scope="col"><ng-container i18n="@@contracts-field">Field</ng-container></th><th scope="col"><ng-container i18n="@@contracts-before">Before</ng-container></th><th scope="col"><ng-container i18n="@@contracts-after">After</ng-container></th></tr></thead>
                               <tbody>
                                 @for (change of comparison; track change.label) {
                                   <tr><th class="table-cell text-start" scope="row">{{ change.label }}</th><td class="table-cell">{{ change.before }}</td><td class="table-cell">{{ change.after }}</td></tr>
@@ -127,7 +127,7 @@
                   </details>
                 </li>
               } @empty {
-                <li class="text-sm text-gray-600 dark:text-gray-400">No records in this section.</li>
+                <li class="text-sm text-gray-600 dark:text-gray-400"><ng-container i18n="@@contracts-no-records-in-this-section">No records in this section.</ng-container></li>
               }
             </ol>
           }

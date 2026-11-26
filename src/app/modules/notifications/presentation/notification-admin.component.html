@@ -4,7 +4,7 @@
   @if (!section.platformOnly) {
     <button type="button" class="nt-secondary" [disabled]="pickerBusy() || actionBusy()" (click)="picker() ? picker.set(false) : findCompanies()">Change scope</button>
   }
-  <button type="button" class="nt-secondary" [disabled]="busy() || actionBusy()" (click)="load()">Refresh</button>
+  <button type="button" class="nt-secondary" [disabled]="busy() || actionBusy()" (click)="load()"><ng-container i18n="@@ui-28r6qc">Refresh</ng-container></button>
   @if (section.path === 'campaigns' && can('bulk:send') && can('templates:read')) {
     <button type="button" class="nt-button" [disabled]="actionBusy()" (click)="start('campaign')">New campaign</button>
   }
@@ -25,7 +25,7 @@
       <label class="nt-label grow">Company name or ID
         <input class="nt-input" type="search" name="search" [(ngModel)]="search" maxlength="100" />
       </label>
-      <button type="submit" class="nt-button" [disabled]="pickerBusy() || actionBusy()">Search</button>
+      <button type="submit" class="nt-button" [disabled]="pickerBusy() || actionBusy()"><ng-container i18n="@@ui-1j0itop">Search</ng-container></button>
       <button type="button" class="nt-secondary" [disabled]="actionBusy()" (click)="choose(null)">Use platform scope</button>
     </form>
     @if (pickerError()) {
@@ -40,9 +40,9 @@
       </ul>
       @if (directory.total > directory.limit) {
         <div class="mt-2 flex items-center gap-3">
-          <button type="button" class="nt-secondary" [disabled]="directory.page <= 1" (click)="findCompanies(directory.page - 1)">Previous</button>
+          <button type="button" class="nt-secondary" [disabled]="directory.page <= 1" (click)="findCompanies(directory.page - 1)"><ng-container i18n="@@ui-1t5jxvs">Previous</ng-container></button>
           <span class="nt-muted">Page {{ directory.page }}</span>
-          <button type="button" class="nt-secondary" [disabled]="directory.page * directory.limit >= directory.total" (click)="findCompanies(directory.page + 1)">Next</button>
+          <button type="button" class="nt-secondary" [disabled]="directory.page * directory.limit >= directory.total" (click)="findCompanies(directory.page + 1)"><ng-container i18n="@@ui-1padbm0">Next</ng-container></button>
         </div>
       }
     }

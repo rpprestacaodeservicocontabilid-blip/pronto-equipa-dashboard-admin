@@ -37,12 +37,12 @@ const minute = (time: string) => {
 export function shiftValidation(shift: Shift, current: Shift[]): string {
   const time = /^([01]\d|2[0-3]):[0-5]\d$/;
   if (!time.test(shift.startTime) || !time.test(shift.endTime) || !Number.isInteger(shift.weekday) || shift.weekday < 0 || shift.weekday > 6) {
-    return 'Select a weekday and two valid times.';
+    return $localize`:@@organization-select-a-weekday-and-two-valid-times:Select a weekday and two valid times.`;
   }
   const duration = minute(shift.endTime) + (shift.crossesMidnight ? 1440 : 0) - minute(shift.startTime);
-  if (duration <= 0 || duration > 1440) return 'Enter a valid shift and mark overnight work when it ends on the next day.';
+  if (duration <= 0 || duration > 1440) return $localize`:@@organization-enter-a-valid-shift-and-mark-overnight-work-when-it-ends-on-the-next-day:Enter a valid shift and mark overnight work when it ends on the next day.`;
   if (!Number.isInteger(shift.breakMinutes) || shift.breakMinutes < 0 || shift.breakMinutes >= duration) {
-    return 'The break must be shorter than the shift.';
+    return $localize`:@@organization-the-break-must-be-shorter-than-the-shift:The break must be shorter than the shift.`;
   }
   const week = 7 * 1440;
   const start = shift.weekday * 1440 + minute(shift.startTime);
@@ -52,7 +52,7 @@ export function shiftValidation(shift: Shift, current: Shift[]): string {
     const itemEnd = item.weekday * 1440 + minute(item.endTime) + (item.crossesMidnight ? 1440 : 0);
     return [-week, 0, week].some(offset => start < itemEnd + offset && itemStart + offset < end);
   });
-  return overlap ? 'Shifts cannot overlap, including overnight and across the week boundary.' : '';
+  return overlap ? $localize`:@@organization-shifts-cannot-overlap-including-overnight-and-across-the-week-boundary:Shifts cannot overlap, including overnight and across the week boundary.` : '';
 }
 
 export function isoDate(date: Date) { return date.toISOString().slice(0, 10); }

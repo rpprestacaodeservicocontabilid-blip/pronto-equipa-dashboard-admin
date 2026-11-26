@@ -17,7 +17,7 @@
       @case ('tools') { <button type="button" class="ai-button" (click)="open('sync')">Sync tool catalogue</button> }
       @case ('evaluations') { <button type="button" class="ai-button" (click)="open('evaluation')">New evaluation version</button> }
     }
-    <button type="button" class="ai-secondary ms-auto" [disabled]="busy() || (section.scope === 'company' && !scope().companyId)" (click)="reload(page()?.page ?? 1)">Refresh</button>
+    <button type="button" class="ai-secondary ms-auto" [disabled]="busy() || (section.scope === 'company' && !scope().companyId)" (click)="reload(page()?.page ?? 1)"><ng-container i18n="@@ui-28r6qc">Refresh</ng-container></button>
   </div>
   @if (section.path === 'conversations' || section.path === 'sessions') {
     <p class="ai-muted mt-3">This view shows operational metadata. Message content is excluded.</p>
@@ -74,7 +74,7 @@
                 <th class="px-3 py-3 text-start font-medium" scope="col">{{ column.title }}</th>
               }
               @if (['providers', 'models', 'prompts', 'tools', 'incidents'].includes(section.path)) {
-                <th class="px-3 py-3 text-end font-medium" scope="col">Actions</th>
+                <th class="px-3 py-3 text-end font-medium" scope="col"><ng-container i18n="@@ui-1rx51qc">Actions</ng-container></th>
               }
             </tr>
           </thead>
@@ -120,8 +120,8 @@
       <div class="mt-4 flex flex-wrap items-center justify-between gap-2">
         <p class="ai-muted">Page {{ result.page }} · {{ result.total | number }} records</p>
         <div class="flex gap-2">
-          <button type="button" class="ai-secondary" [disabled]="result.page === 1" (click)="reload(result.page - 1)">Previous</button>
-          <button type="button" class="ai-secondary" [disabled]="result.page * result.limit >= result.total" (click)="reload(result.page + 1)">Next</button>
+          <button type="button" class="ai-secondary" [disabled]="result.page === 1" (click)="reload(result.page - 1)"><ng-container i18n="@@ui-1t5jxvs">Previous</ng-container></button>
+          <button type="button" class="ai-secondary" [disabled]="result.page * result.limit >= result.total" (click)="reload(result.page + 1)"><ng-container i18n="@@ui-1padbm0">Next</ng-container></button>
         </div>
       </div>
     }

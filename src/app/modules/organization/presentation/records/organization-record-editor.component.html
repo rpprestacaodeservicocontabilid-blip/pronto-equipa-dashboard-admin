@@ -1,16 +1,16 @@
 <form (ngSubmit)="form.valid && save()" #form="ngForm" class="space-y-4 rounded-lg border border-brand-200 p-4 dark:border-brand-800">
-  <h4 class="font-semibold text-gray-900 dark:text-gray-100">{{ record ? 'Edit ' + record.name : 'New record' }}</h4>
+  <h4 class="font-semibold text-gray-900 dark:text-gray-100">{{ record ? editLabel(record.name) : labels.newRecord }}</h4>
   @if (error()) { <p role="alert" class="feedback">{{ error() }}</p> }
   @if (referenceError()) {
     <p role="status" class="text-sm text-gray-700 dark:text-gray-300">{{ referenceError() }}</p>
-    <button class="action" type="button" (click)="loadReferences()" [disabled]="loading() || busy()">Refresh references</button>
+    <button class="action" type="button" (click)="loadReferences()" [disabled]="loading() || busy()"><ng-container i18n="@@organization-refresh-references">Refresh references</ng-container></button>
   }
   <fieldset [disabled]="busy()" class="grid gap-4 sm:grid-cols-2">
-    <label class="field">Code<input class="control" name="code" [(ngModel)]="code" required maxlength="50" /></label>
-    <label class="field">Name<input class="control" name="name" [(ngModel)]="name" required maxlength="150" /></label>
+    <label class="field"><ng-container i18n="@@organization-code">Code</ng-container><input class="control" name="code" [(ngModel)]="code" required maxlength="50" /></label>
+    <label class="field"><ng-container i18n="@@organization-name">Name</ng-container><input class="control" name="name" [(ngModel)]="name" required maxlength="150" /></label>
     @if (config.dated) {
-      <label class="field">Effective from<input class="control" type="date" name="effectiveFrom" [(ngModel)]="effectiveFrom" required /></label>
-      <label class="field">Effective to<input class="control" type="date" name="effectiveTo" [(ngModel)]="effectiveTo" [attr.min]="effectiveFrom" /></label>
+      <label class="field"><ng-container i18n="@@organization-effective-from">Effective from</ng-container><input class="control" type="date" name="effectiveFrom" [(ngModel)]="effectiveFrom" required /></label>
+      <label class="field"><ng-container i18n="@@organization-effective-to">Effective to</ng-container><input class="control" type="date" name="effectiveTo" [(ngModel)]="effectiveTo" [attr.min]="effectiveFrom" /></label>
     }
     @for (field of fields; track field.key) {
       @switch (field.kind) {
@@ -28,19 +28,19 @@
           <label class="field">{{ field.label }}
             <select class="control" [name]="field.key" [(ngModel)]="values[field.key]" [required]="!!field.required && !record" [disabled]="loading()">
               <option value="">
-                {{ field.topLevel && record && !values[field.key] && field.key === 'relatedId' ? 'Keep current association' : field.required ? 'Select a record' : 'None' }}
+                {{ field.topLevel && record && !values[field.key] && field.key === 'relatedId' ? labels.keepAssociation : field.required ? labels.selectRecord : labels.none }}
               </option>
               @if (field.topLevel && record && field.key === 'relatedId' && !field.required) {
-                <option value="clear">Remove association</option>
+                <option value="clear"><ng-container i18n="@@organization-remove-association">Remove association</ng-container></option>
               }
-              @if (values[field.key] !== 'clear' && currentChoiceMissing(field)) { <option [value]="values[field.key]">Current association</option> }
+              @if (values[field.key] !== 'clear' && currentChoiceMissing(field)) { <option [value]="values[field.key]"><ng-container i18n="@@organization-current-association">Current association</ng-container></option> }
               @for (option of choices(field); track option.value) { <option [value]="option.value">{{ option.label }}</option> }
             </select>
           </label>
         }
         @case ('select') {
           <label class="field">{{ field.label }}<select class="control" [name]="field.key" [(ngModel)]="values[field.key]" [required]="!!field.required">
-            <option value="">Select</option>
+            <option value=""><ng-container i18n="@@organization-select">Select</ng-container></option>
             @for (option of choices(field); track option.value) { <option [value]="option.value">{{ option.label }}</option> }
           </select></label>
         }
@@ -58,8 +58,8 @@
       }
     }
     <div class="flex flex-wrap gap-2 sm:col-span-2">
-      <button class="action action-primary" type="submit" [disabled]="form.invalid || loading()">{{ busy() ? 'Saving…' : 'Save record' }}</button>
-      <button class="action" type="button" (click)="dismissed.emit()">Cancel</button>
+      <button class="action action-primary" type="submit" [disabled]="form.invalid || loading()">{{ busy() ? labels.saving : labels.saveRecord }}</button>
+      <button class="action" type="button" (click)="dismissed.emit()"><ng-container i18n="@@organization-cancel">Cancel</ng-container></button>
     </div>
   </fieldset>
 </form>

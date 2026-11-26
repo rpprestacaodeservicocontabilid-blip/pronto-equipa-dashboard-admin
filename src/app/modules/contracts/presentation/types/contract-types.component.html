@@ -1,4 +1,4 @@
-<app-component-card title="Contract types">
+<app-component-card i18n-title="@@contracts-contract-types" title="Contract types">
   <div class="space-y-4">
     @if (error()) { <p role="alert" class="feedback">{{ error() }}</p> }
     @if (notice()) { <p role="status" class="notice">{{ notice() }}</p> }
@@ -6,37 +6,37 @@
       @if (showForm()) {
         <form #typeForm="ngForm" (ngSubmit)="typeForm.valid && create()" class="rounded-xl border border-gray-200 p-4 dark:border-gray-800">
           <fieldset [disabled]="saving()" class="grid gap-4 md:grid-cols-2">
-            <label class="field">Code<input class="control" name="code" [(ngModel)]="code" required maxlength="50" /></label>
-            <label class="field">Name<input class="control" name="name" [(ngModel)]="name" required maxlength="120" /></label>
-            <label class="field">Legal rule version ID<input class="control" name="ruleVersion" [(ngModel)]="ruleVersion" maxlength="120" /></label>
-            <label class="field">Maximum renewals<input class="control" name="maxRenewals" [(ngModel)]="maxRenewals" type="number" min="0" step="1" placeholder="Unlimited" /></label>
-            <label class="field flex-row items-center"><input type="checkbox" name="requiresEndDate" [(ngModel)]="requiresEndDate" class="accent-brand-500" /> Requires an end date</label>
+            <label class="field"><ng-container i18n="@@contracts-code">Code</ng-container><input class="control" name="code" [(ngModel)]="code" required maxlength="50" /></label>
+            <label class="field"><ng-container i18n="@@ui-4el6o6">Name</ng-container><input class="control" name="name" [(ngModel)]="name" required maxlength="120" /></label>
+            <label class="field"><ng-container i18n="@@contracts-legal-rule-version-id">Legal rule version ID</ng-container><input class="control" name="ruleVersion" [(ngModel)]="ruleVersion" maxlength="120" /></label>
+            <label class="field"><ng-container i18n="@@contracts-maximum-renewals">Maximum renewals</ng-container><input i18n-placeholder="@@contracts-unlimited" class="control" name="maxRenewals" [(ngModel)]="maxRenewals" type="number" min="0" step="1" placeholder="Unlimited" /></label>
+            <label class="field flex-row items-center"><input type="checkbox" name="requiresEndDate" [(ngModel)]="requiresEndDate" class="accent-brand-500" /> <ng-container i18n="@@contracts-requires-an-end-date">Requires an end date</ng-container></label>
             <div class="flex flex-wrap gap-2 md:col-span-2">
-              <button class="action action-primary" type="submit" [disabled]="typeForm.invalid || saving()">{{ saving() ? 'Saving…' : 'Create type' }}</button>
-              <button class="action" type="button" (click)="showForm.set(false); error.set('')">Cancel</button>
+              <button class="action action-primary" type="submit" [disabled]="typeForm.invalid || saving()">@if (saving()) { <ng-container i18n="@@contracts-saving">Saving…</ng-container> } @else { <ng-container i18n="@@contracts-create-type">Create type</ng-container> }</button>
+              <button class="action" type="button" (click)="showForm.set(false); error.set('')"><ng-container i18n="@@ui-ew9em3">Cancel</ng-container></button>
             </div>
           </fieldset>
         </form>
       } @else {
-        <button class="action action-primary" type="button" (click)="showForm.set(true); notice.set('')">New contract type</button>
+        <button class="action action-primary" type="button" (click)="showForm.set(true); notice.set('')"><ng-container i18n="@@contracts-new-contract-type">New contract type</ng-container></button>
       }
     }
     @if (loading()) {
-      <p role="status" class="text-sm text-gray-600 dark:text-gray-400">Loading contract types…</p>
+      <p role="status" class="text-sm text-gray-600 dark:text-gray-400"><ng-container i18n="@@contracts-loading-contract-types">Loading contract types…</ng-container></p>
     } @else {
       <ul class="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
         @for (type of types(); track type.id) {
           <li class="rounded-lg border border-gray-200 p-4 text-sm text-gray-600 dark:border-gray-800 dark:text-gray-400">
             <h4 class="font-semibold text-gray-900 dark:text-gray-100">{{ type.name }}</h4>
-            <p>{{ type.code }} · {{ type.companyId === null ? 'Shared' : 'Company' }}</p>
-            <p class="mt-2">{{ type.requiresEndDate ? 'End date required' : 'End date optional' }} · {{ type.maxRenewals === null ? 'Unlimited renewals' : 'Maximum renewals ' + type.maxRenewals }}</p>
-            @if (type.legalRuleVersionId) { <p class="mt-1 break-all">Legal rule version {{ type.legalRuleVersionId }}</p> }
+            <p>{{ type.code }} · @if (type.companyId === null) { <ng-container i18n="@@contracts-shared">Shared</ng-container> } @else { <ng-container i18n="@@contracts-company">Company</ng-container> }</p>
+            <p class="mt-2">@if (type.requiresEndDate) { <ng-container i18n="@@contracts-end-date-required">End date required</ng-container> } @else { <ng-container i18n="@@contracts-end-date-optional">End date optional</ng-container> } · @if (type.maxRenewals === null) { <ng-container i18n="@@contracts-unlimited-renewals">Unlimited renewals</ng-container> } @else { <ng-container i18n="@@contracts-type-renewal-limit">Maximum renewals: {{ type.maxRenewals }}</ng-container> }</p>
+            @if (type.legalRuleVersionId) { <p class="mt-1 break-all"><ng-container i18n="@@contracts-type-rule-version">Legal rule version {{ type.legalRuleVersionId }}</ng-container></p> }
           </li>
         } @empty {
-          <li class="text-sm text-gray-600 dark:text-gray-400">No active contract types were found.</li>
+          <li class="text-sm text-gray-600 dark:text-gray-400"><ng-container i18n="@@contracts-no-active-contract-types-were-found">No active contract types were found.</ng-container></li>
         }
       </ul>
-      @if (error() && !showForm()) { <button type="button" class="action" (click)="load()">Refresh types</button> }
+      @if (error() && !showForm()) { <button type="button" class="action" (click)="load()"><ng-container i18n="@@contracts-refresh-types">Refresh types</ng-container></button> }
     }
   </div>
 </app-component-card>

@@ -49,8 +49,8 @@ export class TenancyOverviewComponent {
   readonly summary = rxResource({ stream: () => this.companies.summary().pipe(map(response => response.data)) });
   readonly errorMessage = apiErrorMessage;
   readonly metrics = [
-    { path: '/companies', title: 'All companies', key: 'total' },
-    { path: '/companies/active', title: 'Active companies', key: 'active' },
-    { path: '/companies/suspended', title: 'Suspended companies', key: 'suspended' },
+    { path: '/companies', title: $localize`:@@ui-i4yiur:All companies`, key: 'total' },
+    { path: '/companies/active', title: $localize`:@@ui-1mljis0:Active companies`, key: 'active' },
+    { path: '/companies/suspended', title: $localize`:@@ui-134xxyp:Suspended companies`, key: 'suspended' },
   ] as const;
 }

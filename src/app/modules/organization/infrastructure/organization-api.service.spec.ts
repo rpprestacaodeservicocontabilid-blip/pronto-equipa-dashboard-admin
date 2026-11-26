@@ -20,6 +20,15 @@ describe('Organization API', () => {
 
   afterEach(() => requests.verify());
 
+  it('preserves a multilingual audit reason on the wire', () => {
+    const reason = 'Revisão da estrutura — 组织审计';
+    api.audit(17, reason).subscribe();
+    const request = requests.expectOne(req => req.url === '/api/v1/audit/records');
+    expect(request.request.headers.get('X-Company-Id')).toBe('17');
+    expect(request.request.headers.get('X-Audit-Purpose')).toBe('utf8:' + encodeURIComponent(reason));
+    request.flush({ data: { data: [], nextCursor: null, throughSequence: 0 } });
+  });
+
   it('uses the dedicated hierarchy endpoint with the current record version and tenant header', () => {
     api.move(17, department, null).subscribe(row => expect(row.version).toBe(5));
     const request = requests.expectOne('/api/v1/organization/departments/' + department.id + '/parent');

@@ -11,7 +11,7 @@ export interface BillingSection {
 export const BILLING_SECTIONS: readonly BillingSection[] = [
   { path: 'overview', title: 'Financial overview', group: '' },
   { path: 'accounts', title: 'Customers and balances', group: 'Customers and billing' },
-  { path: 'invoices', title: 'Invoices', group: 'Customers and billing', kind: 'INVOICE' },
+  { path: 'invoices', title: $localize`:@@ui-7b7gu1:Invoices`, group: 'Customers and billing', kind: 'INVOICE' },
   { path: 'drafts', title: 'Invoice drafts', group: 'Customers and billing', kind: 'INVOICE', preset: { status: 'DRAFT' } },
   { path: 'schedules', title: 'Billing schedules', group: 'Customers and billing', kind: 'SCHEDULE' },
   { path: 'cycles', title: 'Recurring invoices', group: 'Customers and billing', kind: 'INVOICE', preset: { recurring: true } },

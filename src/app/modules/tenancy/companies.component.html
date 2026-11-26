@@ -2,8 +2,8 @@
 <app-component-card [title]="title">
   <form (ngSubmit)="load(1, true)" class="mb-5 flex flex-wrap gap-3">
     <input name="search" [(ngModel)]="search" maxlength="150" aria-label="Search by name, slug or NIF" placeholder="Search by name, slug or NIF" class="h-11 flex-1 rounded-lg border border-gray-300 bg-transparent px-4 text-gray-800 dark:border-gray-700 dark:text-white/90" />
-    <button [disabled]="busy()" class="rounded-lg bg-brand-500 px-5 py-2 text-white disabled:opacity-50 dark:bg-brand-500">Search</button>
-    <button type="button" (click)="load(result()?.pagination?.page || 1)" [disabled]="busy()" class="rounded-lg border border-gray-300 px-5 py-2 text-gray-700 dark:border-gray-700 dark:text-gray-300">Refresh</button>
+    <button [disabled]="busy()" class="rounded-lg bg-brand-500 px-5 py-2 text-white disabled:opacity-50 dark:bg-brand-500"><ng-container i18n="@@ui-1j0itop">Search</ng-container></button>
+    <button type="button" (click)="load(result()?.pagination?.page || 1)" [disabled]="busy()" class="rounded-lg border border-gray-300 px-5 py-2 text-gray-700 dark:border-gray-700 dark:text-gray-300"><ng-container i18n="@@ui-28r6qc">Refresh</ng-container></button>
   </form>
   @if (error()) { <p role="alert" class="mb-4 text-error-600 dark:text-error-400">{{ error() }}</p> }
   @if (notice()) { <p role="status" class="mb-4 text-success-600 dark:text-success-400">{{ notice() }}</p> }
@@ -20,16 +20,16 @@
           class="mt-1 block w-full rounded-lg border border-gray-300 bg-white p-3 dark:border-gray-700 dark:bg-gray-900"></textarea>
       </label>
       <div class="mt-3 flex gap-3">
-        <button type="submit" [disabled]="busy() || reason.trim().length < 3" class="rounded-lg bg-brand-500 px-4 py-2 text-white disabled:opacity-50 dark:bg-brand-500">Confirm</button>
-        <button type="button" [disabled]="busy()" (click)="pending.set(null)" class="rounded-lg border border-gray-300 px-4 py-2 dark:border-gray-700">Cancel</button>
+        <button type="submit" [disabled]="busy() || reason.trim().length < 3" class="rounded-lg bg-brand-500 px-4 py-2 text-white disabled:opacity-50 dark:bg-brand-500"><ng-container i18n="@@ui-18tbqwf">Confirm</ng-container></button>
+        <button type="button" [disabled]="busy()" (click)="pending.set(null)" class="rounded-lg border border-gray-300 px-4 py-2 dark:border-gray-700"><ng-container i18n="@@ui-ew9em3">Cancel</ng-container></button>
       </div>
     </form>
   }
-  @if (busy()) { <p role="status" class="py-4 text-gray-500 dark:text-gray-400">Loading…</p> }
+  @if (busy()) { <p role="status" class="py-4 text-gray-500 dark:text-gray-400"><ng-container i18n="@@ui-cwepyb">Loading…</ng-container></p> }
   @if (result(); as result) {
     <div class="custom-scrollbar overflow-x-auto" [attr.aria-busy]="busy()">
       <table class="w-full text-start text-sm text-gray-700 dark:text-gray-300">
-        <thead class="border-b border-gray-200 text-gray-500 dark:border-gray-800 dark:text-gray-400"><tr><th class="p-3 text-start">Company</th><th class="p-3 text-start">NIF</th><th class="p-3 text-start">Email</th><th class="p-3 text-start">Status</th><th class="p-3 text-end">Actions</th></tr></thead>
+        <thead class="border-b border-gray-200 text-gray-500 dark:border-gray-800 dark:text-gray-400"><tr><th class="p-3 text-start"><ng-container i18n="@@ui-1hra0d8">Company</ng-container></th><th class="p-3 text-start">NIF</th><th class="p-3 text-start"><ng-container i18n="@@ui-inbfc7">Email</ng-container></th><th class="p-3 text-start"><ng-container i18n="@@ui-3pd73">Status</ng-container></th><th class="p-3 text-end"><ng-container i18n="@@ui-1rx51qc">Actions</ng-container></th></tr></thead>
         <tbody>
           @for (company of result.data; track company.id) {
             <tr class="border-b border-gray-100 dark:border-gray-800">
@@ -47,7 +47,7 @@
     </div>
     <div class="mt-5 flex flex-wrap items-center justify-between gap-3 text-sm text-gray-500 dark:text-gray-400">
       <p>{{ result.pagination.total }} companies · Page {{ result.pagination.page }} of {{ result.pagination.totalPages }}</p>
-      <div class="flex gap-4"><button [disabled]="busy() || result.pagination.page <= 1" (click)="load(result.pagination.page - 1)" class="disabled:opacity-40">Previous</button><button [disabled]="busy() || result.pagination.page >= result.pagination.totalPages" (click)="load(result.pagination.page + 1)" class="disabled:opacity-40">Next</button></div>
+      <div class="flex gap-4"><button [disabled]="busy() || result.pagination.page <= 1" (click)="load(result.pagination.page - 1)" class="disabled:opacity-40"><ng-container i18n="@@ui-1t5jxvs">Previous</ng-container></button><button [disabled]="busy() || result.pagination.page >= result.pagination.totalPages" (click)="load(result.pagination.page + 1)" class="disabled:opacity-40"><ng-container i18n="@@ui-1padbm0">Next</ng-container></button></div>
     </div>
   }
 </app-component-card>

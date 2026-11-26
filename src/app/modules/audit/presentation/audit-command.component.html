@@ -43,7 +43,7 @@
     </div>
     <div class="flex flex-wrap gap-2">
       <button type="submit" class="aud-button" [disabled]="busy">{{ busy ? 'Submitting…' : command.title }}</button>
-      <button type="button" class="aud-secondary" [disabled]="busy" (click)="closed.emit()">Cancel</button>
+      <button type="button" class="aud-secondary" [disabled]="busy" (click)="closed.emit()"><ng-container i18n="@@ui-ew9em3">Cancel</ng-container></button>
     </div>
   </form>
 </app-component-card>

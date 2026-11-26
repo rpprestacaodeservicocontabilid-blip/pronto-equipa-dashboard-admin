@@ -16,7 +16,7 @@ const workspace = () => import('./presentation/salary-workspace.component').then
 export const SALARY_STRUCTURE_ROUTES: Routes = [
   {
     path: '', pathMatch: 'full', title: 'Select company | Salary structure',
-    data: { workspace: { label: 'Salary structure', path: '/salary-structure' } },
+    data: { workspace: { label: $localize`:@@ui-hjlbyy:Salary structure`, path: '/salary-structure' } },
     loadComponent: () => import('../../shared/components/common/company-workspace/company-workspace-picker.component')
       .then(m => m.CompanyWorkspacePickerComponent),
   },

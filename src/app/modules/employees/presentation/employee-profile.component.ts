@@ -4,7 +4,7 @@ import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { FormsModule } from '@angular/forms';
 import { RouterLink } from '@angular/router';
 import { Observable, forkJoin, of } from 'rxjs';
-import { apiErrorMessage } from '../../../core/api/api-error';
+import { employeeErrorMessage, employeeDocumentStatus } from './employee-display';
 import { ComponentCardComponent } from '../../../shared/components/common/component-card/component-card.component';
 import { DocumentsApi, storageUrl } from '../../documents/documents-api.service';
 import { employeeGrants, EmployeeSection } from '../domain/employee-navigation';
@@ -23,6 +23,15 @@ const optional = (value: string | null | undefined) => value?.trim() || null;
   templateUrl: './employee-profile.component.html',
 })
 export class EmployeeProfileComponent implements OnInit {
+  protected readonly documentStatus = employeeDocumentStatus;
+  protected readonly copy = {
+    rehire: $localize`:@@employees-rehire:Rehire`,
+    uncategorised: $localize`:@@employees-uncategorised:Uncategorised`,
+    noJobTitle: $localize`:@@employees-no-job-title:No job title`,
+    noJobCategory: $localize`:@@employees-no-job-category:No job category`,
+    profile: $localize`:@@employees-employee-profile:Employee profile`,
+  };
+
   @Input({ required: true }) company = 0;
   @Input({ required: true }) employeeId = '';
   @Input() permissions: readonly string[] = [];
@@ -91,7 +100,7 @@ export class EmployeeProfileComponent implements OnInit {
         this.documentsPage = page;
         this.loading.set(false);
       },
-      error: error => { this.error.set(apiErrorMessage(error)); this.loading.set(false); },
+      error: error => { this.error.set(employeeErrorMessage(error)); this.loading.set(false); },
     });
   }
 
@@ -102,14 +111,14 @@ export class EmployeeProfileComponent implements OnInit {
   }
   protected saveNames() {
     if (!this.allowed(this.grants.update) || !this.firstName.trim() || !this.lastName.trim()) return;
-    this.save(this.api.rename(this.company, this.employeeId, { firstName: this.firstName.trim(), lastName: this.lastName.trim() }), 'Employee name updated.');
+    this.save(this.api.rename(this.company, this.employeeId, { firstName: this.firstName.trim(), lastName: this.lastName.trim() }), $localize`:@@employees-employee-name-updated:Employee name updated.`);
   }
   protected savePersonal() {
     if (!this.allowed(this.grants.personalManage)) return;
     this.save(this.api.updatePersonal(this.company, this.employeeId, {
       dateOfBirth: this.personal.dateOfBirth || null, nationality: optional(this.personal.nationality),
       email: optional(this.personal.email), phone: optional(this.personal.phone),
-    }), 'Personal data updated.');
+    }), $localize`:@@employees-personal-data-updated:Personal data updated.`);
   }
   protected saveTransfer() {
     if (!this.allowed(this.grants.transfer) || !this.effectiveDate || !this.reason.trim() ||
@@ -117,7 +126,7 @@ export class EmployeeProfileComponent implements OnInit {
     this.save(this.api.transfer(this.company, this.employeeId, {
       departmentId: this.job.departmentId, jobTitle: optional(this.job.jobTitle), jobCategory: optional(this.job.jobCategory),
       effectiveFrom: this.effectiveDate, reason: this.reason.trim(),
-    }), 'Transfer recorded.');
+    }), $localize`:@@employees-transfer-recorded:Transfer recorded.`);
   }
   protected saveStatus() {
     const employee = this.employee();
@@ -129,7 +138,7 @@ export class EmployeeProfileComponent implements OnInit {
       effectiveAt: this.effectiveDate, reason: this.reason.trim(),
       ...(action === 'status' ? { status } : {}),
       ...(action === 'termination' ? { terminationReason: this.terminationReason.trim() } : {}),
-    }), 'Employment status updated.');
+    }), $localize`:@@employees-employment-status-updated:Employment status updated.`);
   }
   protected saveBank() {
     const { bankName, accountName, accountNumber, iban, currency } = this.bankDraft;
@@ -137,14 +146,14 @@ export class EmployeeProfileComponent implements OnInit {
     this.save(this.api.updateBank(this.company, this.employeeId, {
       bankName: bankName.trim(), accountName: accountName.trim(), accountNumber: accountNumber.trim(),
       iban: optional(iban), currency: currency.trim().toUpperCase(),
-    }), 'Bank account updated.');
+    }), $localize`:@@employees-bank-account-updated:Bank account updated.`);
   }
   protected saveDependent() {
     if (!this.allowed(this.grants.dependentManage) || !this.dependent.fullName.trim() || !this.dependent.relationship.trim()) return;
     this.save(this.api.addDependent(this.company, this.employeeId, {
       fullName: this.dependent.fullName.trim(), relationship: this.dependent.relationship.trim(),
       dateOfBirth: this.dependent.dateOfBirth || null, fiscalDependent: this.dependent.fiscalDependent,
-    }), 'Dependent added.');
+    }), $localize`:@@employees-dependent-added:Dependent added.`);
   }
   protected mask(value: string | null) {
     if (!value) return '—';
@@ -160,10 +169,10 @@ export class EmployeeProfileComponent implements OnInit {
       .pipe(takeUntilDestroyed(this.destroy)).subscribe({
         next: result => {
           try { this.link.set({ id: document.id, url: storageUrl(result.url) }); }
-          catch (error) { this.error.set(apiErrorMessage(error)); }
+          catch (error) { this.error.set(employeeErrorMessage(error)); }
           this.busy.set(false);
         },
-        error: error => { this.error.set(apiErrorMessage(error)); this.busy.set(false); },
+        error: error => { this.error.set(employeeErrorMessage(error)); this.busy.set(false); },
       });
   }
 
@@ -171,7 +180,7 @@ export class EmployeeProfileComponent implements OnInit {
     const id = this.documentId.trim();
     if (!this.allowed('documents:associations:create') || !/^[\da-f]{8}(?:-[\da-f]{4}){3}-[\da-f]{12}$/i.test(id)) return;
     this.save(this.documentsApi.write(this.company, '/' + encodeURIComponent(id) + '/associations',
-      { entityType: 'EMPLOYEE', entityId: this.employeeId }), 'Document associated.');
+      { entityType: 'EMPLOYEE', entityId: this.employeeId }), $localize`:@@employees-document-associated:Document associated.`);
   }
 
   private save(request: Observable<unknown>, notice: string) {
@@ -192,7 +201,7 @@ export class EmployeeProfileComponent implements OnInit {
         this.documentId = '';
         this.load();
       },
-      error: error => { this.error.set(apiErrorMessage(error)); this.busy.set(false); },
+      error: error => { this.error.set(employeeErrorMessage(error)); this.busy.set(false); },
     });
   }
 }

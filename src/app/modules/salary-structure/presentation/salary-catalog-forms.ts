@@ -4,9 +4,9 @@ import { Field, Values, choose, currency, currencyValue, effectiveFrom, flag, id
 
 export const recordFields: Field[] = [
   { key: 'code', label: 'Code', required: true, max: 50 },
-  { key: 'name', label: 'Name', required: true, max: 150 },
+  { key: 'name', label: $localize`:@@ui-4el6o6:Name`, required: true, max: 150 },
 ];
-const description: Field = { key: 'description', label: 'Description', kind: 'textarea', max: 1000 };
+const description: Field = { key: 'description', label: $localize`:@@ui-sjj37t:Description`, kind: 'textarea', max: 1000 };
 export const componentFields = (allowances: boolean, version?: ComponentVersion): Field[] => [
   choose('componentType', 'Component type', allowances ? ['ALLOWANCE', 'BENEFIT'] : COMPONENT_TYPES, version?.componentType),
   choose('calculationMethod', 'Calculation method', CALCULATION_METHODS, version?.calculationMethod),

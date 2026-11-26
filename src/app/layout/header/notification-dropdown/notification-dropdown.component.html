@@ -14,7 +14,7 @@
   @if (open()) {
     <section id="notification-popover" aria-label="Recent notifications"
       class="absolute start-0 z-50 mt-3 w-64 rounded-xl border border-gray-200 bg-white shadow-theme-lg sm:w-80 xl:start-auto xl:end-0 dark:border-gray-700 dark:bg-gray-900">
-      <h2 class="border-b border-gray-200 px-4 py-3 font-semibold text-gray-900 dark:border-gray-800 dark:text-white">Notifications</h2>
+      <h2 class="border-b border-gray-200 px-4 py-3 font-semibold text-gray-900 dark:border-gray-800 dark:text-white"><ng-container i18n="@@ui-fki4un">Notifications</ng-container></h2>
       @if (loading()) {
         <p role="status" class="px-4 py-4 text-sm text-gray-500 dark:text-gray-400">Loading notifications…</p>
       } @else if (failed()) {

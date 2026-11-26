@@ -3,7 +3,7 @@ import { Component, DestroyRef, Input, inject, signal } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { FormsModule } from '@angular/forms';
 import { RouterLink } from '@angular/router';
-import { apiErrorMessage } from '../../../core/api/api-error';
+import { employeeErrorMessage, employeeImportError } from './employee-display';
 import { ComponentCardComponent } from '../../../shared/components/common/component-card/component-card.component';
 import { Employee, ImportResult } from '../domain/employee.models';
 import { csvColumns, emptyEmployee, normalizeEmployee, previewEmployeeRows, previewEmployees, registrationFields } from '../domain/employee-registration';
@@ -16,6 +16,12 @@ import { EmployeesApi } from '../infrastructure/employees-api.service';
   templateUrl: './employee-registration.component.html',
 })
 export class EmployeeRegistrationComponent {
+  protected readonly importError = employeeImportError;
+  protected readonly copy = {
+    register: $localize`:@@employees-register-an-employee:Register an employee`,
+    fileImport: $localize`:@@employees-employee-file-import:Employee file import`,
+  };
+
   @Input({ required: true }) company = 0;
   @Input() canRead = false;
   @Input() mode: 'new' | 'imports' = 'new';
@@ -52,7 +58,7 @@ export class EmployeeRegistrationComponent {
     this.error.set('');
     if (!file || this.busy()) return;
     if (file.size > 2 * 1024 * 1024 || !/\.(?:csv|xlsx)$/i.test(file.name)) {
-      this.error.set('Choose a CSV or XLSX file up to 2 MB.');
+      this.error.set($localize`:@@employees-choose-a-csv-or-xlsx-file-up-to-2-mb:Choose a CSV or XLSX file up to 2 MB.`);
       return;
     }
     this.busy.set(true);
@@ -74,7 +80,7 @@ export class EmployeeRegistrationComponent {
       next: result => { this.imported.set(result); this.busy.set(false); },
       error: error => {
         this.fail(error);
-        this.error.update(message => message + ' Check whether any records were created before resubmitting.');
+        this.error.update(message => message + " " + $localize`:@@employees-check-whether-any-records-were-created-before-resubmitting:Check whether any records were created before resubmitting.`);
       },
     });
   }
@@ -89,7 +95,7 @@ export class EmployeeRegistrationComponent {
   }
 
   private fail(error: unknown) {
-    this.error.set(apiErrorMessage(error));
+    this.error.set(employeeErrorMessage(error));
     this.busy.set(false);
   }
 }

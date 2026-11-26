@@ -28,7 +28,7 @@ export const newBillingLine = (): BillingLine => ({
 });
 
 const currency: Field = { name: 'currency', label: 'Currency (ISO code)', pattern: '[A-Z]{3}', default: 'AOA', max: 3 };
-const amount: Field = { name: 'amount', label: 'Amount', pattern: '[0-9]{1,12}(\\.[0-9]{1,2})?', max: 15 };
+const amount: Field = { name: 'amount', label: $localize`:@@ui-a2ky21:Amount`, pattern: '[0-9]{1,12}(\\.[0-9]{1,2})?', max: 15 };
 const identifier = (name: string, label: string): Field => ({
   name, label, pattern: '[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}', max: 36,
 });

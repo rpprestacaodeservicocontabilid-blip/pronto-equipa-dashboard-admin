@@ -27,7 +27,7 @@ export interface PayrollSection {
 
 const withResults: RunStatus[] = ['PROCESSING', 'PARTIALLY_PROCESSED', 'FAILED', 'READY_FOR_REVIEW', 'SUBMITTED', 'APPROVED', 'REJECTED', 'CLOSED'];
 export const PAYROLL_SECTIONS: PayrollSection[] = [
-  { path: 'overview', title: 'Overview', group: 'Planning', view: 'overview' },
+  { path: 'overview', title: $localize`:@@ui-thnxru:Overview`, group: 'Planning', view: 'overview' },
   { path: 'periods', title: 'Payroll periods', group: 'Planning', view: 'periods' },
   { path: 'pre-processing', title: 'Pre-processing', group: 'Planning', view: 'runs',
     statuses: ['DRAFT', 'VALIDATING', 'VALIDATION_FAILED'] },
@@ -49,15 +49,15 @@ export const PAYROLL_SECTIONS: PayrollSection[] = [
     statuses: withResults, grants: [SENSITIVE_RESULTS], tab: 'results' },
   { path: 'issues', title: 'Issues and exceptions', group: 'Review', view: 'runs',
     statuses: ['VALIDATION_FAILED', 'PARTIALLY_PROCESSED', 'FAILED'], tab: 'issues' },
-  { path: 'approvals', title: 'Approvals', group: 'Review', view: 'runs',
+  { path: 'approvals', title: $localize`:@@ui-1m405m7:Approvals`, group: 'Review', view: 'runs',
     statuses: ['READY_FOR_REVIEW', 'SUBMITTED', 'APPROVED', 'REJECTED', 'CLOSED'], tab: 'approvals' },
   { path: 'closing', title: 'Payroll closing', group: 'Review', view: 'runs',
     statuses: ['APPROVED', 'CLOSED'], tab: 'closing' },
   { path: 'payments', title: 'Payment preparation', group: 'Review', view: 'runs',
     statuses: ['CLOSED'], grants: [PAYMENTS_READ, PAYMENTS_PREPARE], tab: 'payments' },
   { path: 'history', title: 'Payroll history', group: 'Oversight', view: 'runs', grants: [HISTORY_READ], tab: 'history' },
-  { path: 'reports', title: 'Reports', group: 'Oversight', view: 'reports', grants: [REPORTS_READ] },
-  { path: 'settings', title: 'Settings', group: 'Oversight', view: 'settings', grants: [POLICIES_MANAGE] },
+  { path: 'reports', title: $localize`:@@ui-wwt148:Reports`, group: 'Oversight', view: 'reports', grants: [REPORTS_READ] },
+  { path: 'settings', title: $localize`:@@ui-ktdb8o:Settings`, group: 'Oversight', view: 'settings', grants: [POLICIES_MANAGE] },
 ];
 
 export function canOpenPayrollSection(section: PayrollSection, permissions: string[]) {

@@ -7,7 +7,7 @@ export interface IntegrationSection {
   ownerGrant?: string;
 }
 export const INTEGRATION_SECTIONS: readonly IntegrationSection[] = [
-  { path: 'overview', title: 'Overview' },
+  { path: 'overview', title: $localize`:@@ui-thnxru:Overview` },
   { path: 'catalogue', title: 'Provider catalogue' },
   { path: 'payment-providers', title: 'Salary payment providers', source: 'PAYMENTS', ownerPath: '/payments/providers',
     ownerGrant: 'payments.platform.integrations.read' },

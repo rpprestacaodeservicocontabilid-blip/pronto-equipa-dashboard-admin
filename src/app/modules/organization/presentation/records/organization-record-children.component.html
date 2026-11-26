@@ -3,78 +3,78 @@
     @if (referenceError()) { <p role="status" class="text-sm text-gray-600 dark:text-gray-400">{{ referenceError() }}</p> }
     @if (error()) {
       <p role="alert" class="feedback">{{ error() }}</p>
-      @if (!form()) { <button class="action" type="button" (click)="load()">Refresh related records</button> }
+      @if (!form()) { <button class="action" type="button" (click)="load()"><ng-container i18n="@@organization-refresh-related-records">Refresh related records</ng-container></button> }
     }
     @if (notice()) { <p role="status" class="notice">{{ notice() }}</p> }
-    @if (loading()) { <p role="status" class="text-sm text-gray-600 dark:text-gray-400">Loading related records…</p> }
+    @if (loading()) { <p role="status" class="text-sm text-gray-600 dark:text-gray-400"><ng-container i18n="@@organization-loading-related-records">Loading related records…</ng-container></p> }
 
     @if (!shiftsOnly && ['departments', 'establishments', 'cost-centers', 'job-functions', 'job-positions', 'calendars', 'schedules'].includes(resource)) {
-      <app-component-card title="Organization links">
+      <app-component-card i18n-title="@@organization-organization-links" title="Organization links">
         <dl class="grid gap-3 text-sm text-gray-700 dark:text-gray-300 sm:grid-cols-2">
           @if (resource === 'departments' || resource === 'establishments') {
-            <div><dt>{{ resource === 'departments' ? 'Manager' : 'Responsible employee' }}</dt>
+            <div><dt>{{ resource === 'departments' ? labels.manager : labels.responsibleEmployee }}</dt>
               <dd class="font-semibold">{{ employeeLabel(record.data[resource === 'departments' ? 'managerEmployeeId' : 'responsibleEmployeeId']) }}</dd></div>
           }
           @if (resource === 'departments') {
-            <div><dt>Parent department</dt><dd class="font-semibold">{{ referenceLabel(departments(), record.parentId) }}</dd></div>
+            <div><dt><ng-container i18n="@@organization-parent-department">Parent department</ng-container></dt><dd class="font-semibold">{{ referenceLabel(departments(), record.parentId) }}</dd></div>
           }
           @if (resource === 'job-functions' || resource === 'job-positions') {
-            <div><dt>{{ resource === 'job-functions' ? 'Professional category' : 'Job function' }}</dt>
-              <dd class="font-semibold">{{ record.relatedId === undefined ? 'Association unavailable from API' : referenceLabel(resource === 'job-functions' ? categories() : functions(), record.relatedId) }}</dd></div>
+            <div><dt>{{ resource === 'job-functions' ? labels.professionalCategory : labels.jobFunction }}</dt>
+              <dd class="font-semibold">{{ record.relatedId === undefined ? labels.associationUnavailable : referenceLabel(resource === 'job-functions' ? categories() : functions(), record.relatedId) }}</dd></div>
           }
           @if (resource === 'job-positions' || resource === 'schedules') {
-            <div><dt>Department</dt><dd class="font-semibold">{{ referenceLabel(departments(), record.data['departmentId']) }}</dd></div>
+            <div><dt><ng-container i18n="@@organization-department">Department</ng-container></dt><dd class="font-semibold">{{ referenceLabel(departments(), record.data['departmentId']) }}</dd></div>
           }
           @if (['departments', 'cost-centers', 'calendars', 'schedules'].includes(resource)) {
-            <div><dt>Establishment</dt><dd class="font-semibold">{{ referenceLabel(sites(), record.data['establishmentId']) }}</dd></div>
+            <div><dt><ng-container i18n="@@organization-establishment">Establishment</ng-container></dt><dd class="font-semibold">{{ referenceLabel(sites(), record.data['establishmentId']) }}</dd></div>
           }
         </dl>
         @if (resource === 'establishments') {
           <ul class="mt-3 space-y-2">
             @for (department of relatedDepartments(); track department.id) {
               <li><a class="text-sm font-medium text-brand-700 dark:text-brand-300" [routerLink]="['/organization', context.company.id, 'departments', department.id]">{{ department.name }}</a></li>
-            } @empty { <li class="text-sm text-gray-600 dark:text-gray-400">No associated departments.</li> }
+            } @empty { <li class="text-sm text-gray-600 dark:text-gray-400"><ng-container i18n="@@organization-no-associated-departments">No associated departments.</ng-container></li> }
           </ul>
         }
       </app-component-card>
     }
 
     @if (resource === 'departments') {
-      <app-component-card title="Employee assignments">
+      <app-component-card i18n-title="@@organization-employee-assignments" title="Employee assignments">
         @if (can('departments:update') && canReadEmployees && record.status === 'ACTIVE') {
-          <button class="action action-primary" type="button" [disabled]="loading() || busy()" (click)="openForm('department')">Assign employee</button>
+          <button class="action action-primary" type="button" [disabled]="loading() || busy()" (click)="openForm('department')"><ng-container i18n="@@organization-assign-employee">Assign employee</ng-container></button>
         }
         <ul class="mt-3 divide-y divide-gray-200 dark:divide-gray-800">
           @for (row of rows(); track row.id) {
             <li class="flex flex-wrap justify-between gap-3 py-2 text-sm text-gray-700 dark:text-gray-300">
-              <span>{{ row.employeeId === undefined ? row.name : employeeLabel(row.employeeId) }} · {{ row.data['assignmentType'] }}</span>
-              <span>{{ row.effectiveFrom | date:'mediumDate':'UTC' }} – {{ (row.effectiveTo | date:'mediumDate':'UTC') || 'Open-ended' }}</span>
+              <span>{{ row.employeeId === undefined ? optionLabel(row.name) : employeeLabel(row.employeeId) }} · {{ optionLabel(row.data['assignmentType']) }}</span>
+              <span>{{ row.effectiveFrom | date:'mediumDate':'UTC' }} – {{ (row.effectiveTo | date:'mediumDate':'UTC') || labels.openEnded }}</span>
             </li>
-          } @empty { <li class="text-sm text-gray-600 dark:text-gray-400">No assignments found.</li> }
+          } @empty { <li class="text-sm text-gray-600 dark:text-gray-400"><ng-container i18n="@@organization-no-assignments-found">No assignments found.</ng-container></li> }
         </ul>
         @if (rows().length && rows()[0].employeeId === undefined) {
-          <p class="mt-2 text-sm text-gray-600 dark:text-gray-400">The API does not return the employee reference for these assignments.</p>
+          <p class="mt-2 text-sm text-gray-600 dark:text-gray-400"><ng-container i18n="@@organization-the-api-does-not-return-the-employee-reference-for-these-assignments">The API does not return the employee reference for these assignments.</ng-container></p>
         }
       </app-component-card>
     }
 
     @if (resource === 'calendars') {
-      <app-component-card title="Monthly calendar">
+      <app-component-card i18n-title="@@organization-monthly-calendar" title="Monthly calendar">
         <div class="space-y-4">
           <div class="flex flex-wrap items-center justify-between gap-2">
             <div class="flex flex-wrap items-center gap-2">
-              <button type="button" class="action" (click)="moveMonth(-1)">Previous month</button>
+              <button type="button" class="action" (click)="moveMonth(-1)"><ng-container i18n="@@organization-previous-month">Previous month</ng-container></button>
               <p class="font-semibold text-gray-900 dark:text-gray-100" aria-live="polite">{{ monthName() }}</p>
-              <button type="button" class="action" (click)="moveMonth(1)">Next month</button>
+              <button type="button" class="action" (click)="moveMonth(1)"><ng-container i18n="@@organization-next-month">Next month</ng-container></button>
             </div>
             @if (can('calendars:manage') && record.status === 'ACTIVE' && (!record.effectiveTo || record.effectiveTo >= today)) {
-              <button class="action action-primary" type="button" [disabled]="loading() || busy()" (click)="openForm('exception')">Add exception</button>
+              <button class="action action-primary" type="button" [disabled]="loading() || busy()" (click)="openForm('exception')"><ng-container i18n="@@organization-add-exception">Add exception</ng-container></button>
             }
           </div>
           <div class="overflow-x-auto">
             <div class="grid min-w-[33rem] grid-cols-7 gap-1">
               @for (weekday of order; track weekday) {
-                <span class="p-2 text-xs font-semibold text-gray-700 dark:text-gray-300">{{ weekdays[weekday].slice(0, 3) }}</span>
+                <span class="p-2 text-xs font-semibold text-gray-700 dark:text-gray-300">{{ shortWeekday(weekday) }}</span>
               }
               @for (cell of monthCells(); track $index) {
                 @if (cell) {
@@ -99,85 +99,85 @@
     }
 
     @if (resource === 'schedules') {
-      <app-component-card title="Weekly shifts">
+      <app-component-card i18n-title="@@organization-weekly-shifts" title="Weekly shifts">
         @if (canAddShift) {
-          <button class="action action-primary" type="button" [disabled]="loading() || busy()" (click)="openForm('shift')">Add shift</button>
+          <button class="action action-primary" type="button" [disabled]="loading() || busy()" (click)="openForm('shift')"><ng-container i18n="@@organization-add-shift">Add shift</ng-container></button>
         } @else if (can('schedules:manage') && record.status === 'ACTIVE' && record.effectiveFrom && record.effectiveFrom < today) {
-          <p class="text-sm text-gray-600 dark:text-gray-400">Create a new schedule period to change shifts without changing the existing period.</p>
+          <p class="text-sm text-gray-600 dark:text-gray-400"><ng-container i18n="@@organization-create-a-new-schedule-period-to-change-shifts-without-changing-the-existing-period">Create a new schedule period to change shifts without changing the existing period.</ng-container></p>
         }
         <div class="mt-3 overflow-x-auto">
           <table class="w-full min-w-[23rem] text-start text-sm text-gray-700 dark:text-gray-300">
-            <thead class="table-heading"><tr><th scope="col">Day</th><th scope="col">Starts</th><th scope="col">Ends</th><th scope="col">Break</th></tr></thead>
+            <thead class="table-heading"><tr><th scope="col"><ng-container i18n="@@organization-day">Day</ng-container></th><th scope="col"><ng-container i18n="@@organization-starts">Starts</ng-container></th><th scope="col"><ng-container i18n="@@organization-ends">Ends</ng-container></th><th scope="col"><ng-container i18n="@@organization-break">Break</ng-container></th></tr></thead>
             <tbody class="divide-y divide-gray-200 dark:divide-gray-800">
               @for (shift of shifts(); track $index) {
                 <tr><td class="table-cell">{{ weekdays[shift.weekday] }}</td><td class="table-cell">{{ shift.startTime }}</td>
-                  <td class="table-cell">{{ shift.endTime }} @if (shift.crossesMidnight) { <span class="text-xs">(next day)</span> }</td>
-                  <td class="table-cell">{{ shift.breakMinutes }} min</td></tr>
-              } @empty { <tr><td class="table-cell" colspan="4">No shifts configured.</td></tr> }
+                  <td class="table-cell">{{ shift.endTime }} @if (shift.crossesMidnight) { <span class="text-xs"><ng-container i18n="@@organization--next-day">(next day)</ng-container></span> }</td>
+                  <td class="table-cell"><ng-container i18n="@@organization-break-minutes-label">{{ shift.breakMinutes }} min</ng-container></td></tr>
+              } @empty { <tr><td class="table-cell" colspan="4"><ng-container i18n="@@organization-no-shifts-configured">No shifts configured.</ng-container></td></tr> }
             </tbody>
           </table>
         </div>
       </app-component-card>
       @if (!shiftsOnly) {
-        <app-component-card title="Schedule assignments">
+        <app-component-card i18n-title="@@organization-schedule-assignments" title="Schedule assignments">
           @if (can('schedules:manage') && record.status === 'ACTIVE' && (!record.effectiveTo || record.effectiveTo >= today)) {
-            <button class="action action-primary" type="button" [disabled]="loading() || busy()" (click)="openForm('scheduleAssignment')">Assign schedule</button>
+            <button class="action action-primary" type="button" [disabled]="loading() || busy()" (click)="openForm('scheduleAssignment')"><ng-container i18n="@@organization-assign-schedule">Assign schedule</ng-container></button>
           }
           <ul class="mt-3 divide-y divide-gray-200 dark:divide-gray-800">
             @for (row of assignments(); track row.id) {
               <li class="flex flex-wrap justify-between gap-3 py-2 text-sm text-gray-700 dark:text-gray-300">
-                <span>{{ row.data['targetType'] }} · {{ targetLabel(row) }}</span>
-                <span>{{ row.effectiveFrom | date:'mediumDate':'UTC' }} – {{ (row.effectiveTo | date:'mediumDate':'UTC') || 'Open-ended' }}</span>
+                <span>{{ optionLabel(row.data['targetType']) }} · {{ targetLabel(row) }}</span>
+                <span>{{ row.effectiveFrom | date:'mediumDate':'UTC' }} – {{ (row.effectiveTo | date:'mediumDate':'UTC') || labels.openEnded }}</span>
               </li>
-            } @empty { <li class="text-sm text-gray-600 dark:text-gray-400">No schedule assignments.</li> }
+            } @empty { <li class="text-sm text-gray-600 dark:text-gray-400"><ng-container i18n="@@organization-no-schedule-assignments">No schedule assignments.</ng-container></li> }
           </ul>
         </app-component-card>
       }
     }
 
     @if (form(); as formKind) {
-      <app-component-card title="New related record">
+      <app-component-card i18n-title="@@organization-new-related-record" title="New related record">
         <form #relatedForm="ngForm" (ngSubmit)="relatedForm.valid && save()">
           <fieldset [disabled]="busy()" class="grid gap-3 sm:grid-cols-2">
             @if (formKind === 'shift' || formKind === 'exception') {
-              <label class="field">Name<input class="control" name="name" [(ngModel)]="name" maxlength="150" required /></label>
+              <label class="field"><ng-container i18n="@@organization-name">Name</ng-container><input class="control" name="name" [(ngModel)]="name" maxlength="150" required /></label>
             }
             @switch (formKind) {
               @case ('department') {
-                <label class="field">Employee<select class="control" name="employee" [(ngModel)]="employee" required>
-                  <option value="">Select employee</option>
+                <label class="field"><ng-container i18n="@@organization-employee">Employee</ng-container><select class="control" name="employee" [(ngModel)]="employee" required>
+                  <option value=""><ng-container i18n="@@organization-select-employee">Select employee</ng-container></option>
                   @for (entry of employees(); track entry.id) { <option [value]="entry.id">{{ entry.firstName }} {{ entry.lastName }} · {{ entry.employeeNumber }}</option> }
                 </select></label>
-                <label class="field">Assignment type<select class="control" name="assignmentType" [(ngModel)]="assignmentType">
-                  <option value="PRIMARY">Primary</option><option value="SECONDARY">Secondary</option>
+                <label class="field"><ng-container i18n="@@organization-assignment-type">Assignment type</ng-container><select class="control" name="assignmentType" [(ngModel)]="assignmentType">
+                  <option value="PRIMARY"><ng-container i18n="@@organization-primary">Primary</ng-container></option><option value="SECONDARY"><ng-container i18n="@@organization-secondary">Secondary</ng-container></option>
                 </select></label>
-                <label class="field">Job position<select class="control" name="position" [(ngModel)]="position">
-                  <option value="">None</option>
+                <label class="field"><ng-container i18n="@@organization-job-position">Job position</ng-container><select class="control" name="position" [(ngModel)]="position">
+                  <option value=""><ng-container i18n="@@organization-none">None</ng-container></option>
                   @for (entry of positions(); track entry.id) { <option [value]="entry.id">{{ entry.name }}</option> }
                 </select></label>
               }
               @case ('exception') {
-                <label class="field">Day type<select class="control" name="dayType" [(ngModel)]="dayType">
-                  <option value="HOLIDAY">Holiday</option><option value="REST_DAY">Rest day</option><option value="WORKING_DAY">Working day</option><option value="SPECIAL">Special</option>
+                <label class="field"><ng-container i18n="@@organization-day-type">Day type</ng-container><select class="control" name="dayType" [(ngModel)]="dayType">
+                  <option value="HOLIDAY"><ng-container i18n="@@organization-holiday">Holiday</ng-container></option><option value="REST_DAY"><ng-container i18n="@@organization-rest-day">Rest day</ng-container></option><option value="WORKING_DAY"><ng-container i18n="@@organization-working-day">Working day</ng-container></option><option value="SPECIAL"><ng-container i18n="@@organization-special">Special</ng-container></option>
                 </select></label>
-                <label class="field">Description<input class="control" name="description" [(ngModel)]="description" maxlength="250" required /></label>
+                <label class="field"><ng-container i18n="@@organization-description">Description</ng-container><input class="control" name="description" [(ngModel)]="description" maxlength="250" required /></label>
               }
               @case ('shift') {
-                <label class="field">Weekday<select class="control" name="weekday" [(ngModel)]="weekday">
+                <label class="field"><ng-container i18n="@@organization-weekday">Weekday</ng-container><select class="control" name="weekday" [(ngModel)]="weekday">
                   @for (day of order; track day) { <option [ngValue]="day">{{ weekdays[day] }}</option> }
                 </select></label>
-                <label class="field">Start time<input class="control" type="time" name="start" [(ngModel)]="start" required /></label>
-                <label class="field">End time<input class="control" type="time" name="end" [(ngModel)]="end" required /></label>
-                <label class="field">Break in minutes<input class="control" type="number" min="0" step="1" name="pause" [(ngModel)]="pause" required /></label>
-                <label class="flex items-center gap-2 text-sm text-gray-700 dark:text-gray-300"><input type="checkbox" name="overnight" [(ngModel)]="overnight" class="accent-brand-500" /> Ends the following day</label>
+                <label class="field"><ng-container i18n="@@organization-start-time">Start time</ng-container><input class="control" type="time" name="start" [(ngModel)]="start" required /></label>
+                <label class="field"><ng-container i18n="@@organization-end-time">End time</ng-container><input class="control" type="time" name="end" [(ngModel)]="end" required /></label>
+                <label class="field"><ng-container i18n="@@organization-break-in-minutes">Break in minutes</ng-container><input class="control" type="number" min="0" step="1" name="pause" [(ngModel)]="pause" required /></label>
+                <label class="flex items-center gap-2 text-sm text-gray-700 dark:text-gray-300"><input type="checkbox" name="overnight" [(ngModel)]="overnight" class="accent-brand-500" /> <ng-container i18n="@@organization-ends-the-following-day">Ends the following day</ng-container></label>
               }
               @case ('scheduleAssignment') {
-                <label class="field">Assignment target<select class="control" name="targetType" [(ngModel)]="targetType" (ngModelChange)="target = ''">
-                  <option value="DEPARTMENT">Department</option><option value="ESTABLISHMENT">Establishment</option>
-                  @if (canReadEmployees) { <option value="EMPLOYEE">Employee</option> }
+                <label class="field"><ng-container i18n="@@organization-assignment-target">Assignment target</ng-container><select class="control" name="targetType" [(ngModel)]="targetType" (ngModelChange)="target = ''">
+                  <option value="DEPARTMENT"><ng-container i18n="@@organization-department">Department</ng-container></option><option value="ESTABLISHMENT"><ng-container i18n="@@organization-establishment">Establishment</ng-container></option>
+                  @if (canReadEmployees) { <option value="EMPLOYEE"><ng-container i18n="@@organization-employee">Employee</ng-container></option> }
                 </select></label>
-                <label class="field">Target<select class="control" name="target" [(ngModel)]="target" required>
-                  <option value="">Select a target</option>
+                <label class="field"><ng-container i18n="@@organization-target">Target</ng-container><select class="control" name="target" [(ngModel)]="target" required>
+                  <option value=""><ng-container i18n="@@organization-select-a-target">Select a target</ng-container></option>
                   @if (targetType === 'EMPLOYEE') {
                     @for (entry of employees(); track entry.id) { <option [value]="entry.id">{{ entry.firstName }} {{ entry.lastName }} · {{ entry.employeeNumber }}</option> }
                   } @else {
@@ -189,15 +189,15 @@
               }
             }
             @if (formKind !== 'shift') {
-              <label class="field">{{ formKind === 'exception' ? 'Date' : 'Effective from' }}<input class="control" type="date" name="from" [(ngModel)]="from" [attr.min]="today" required /></label>
+              <label class="field">{{ formKind === 'exception' ? labels.date : labels.effectiveFrom }}<input class="control" type="date" name="from" [(ngModel)]="from" [attr.min]="today" required /></label>
               @if (formKind !== 'exception') {
-                <label class="field">Effective to<input class="control" type="date" name="to" [(ngModel)]="to" [attr.min]="from" /></label>
+                <label class="field"><ng-container i18n="@@organization-effective-to">Effective to</ng-container><input class="control" type="date" name="to" [(ngModel)]="to" [attr.min]="from" /></label>
               }
             }
             @if (error()) { <p role="alert" class="feedback sm:col-span-2">{{ error() }}</p> }
             <div class="flex flex-wrap gap-2 sm:col-span-2">
-              <button class="action action-primary" type="submit" [disabled]="relatedForm.invalid">{{ busy() ? 'Saving…' : 'Save' }}</button>
-              <button class="action" type="button" (click)="form.set(null); error.set('')">Cancel</button>
+              <button class="action action-primary" type="submit" [disabled]="relatedForm.invalid">{{ busy() ? labels.saving : labels.save }}</button>
+              <button class="action" type="button" (click)="form.set(null); error.set('')"><ng-container i18n="@@organization-cancel">Cancel</ng-container></button>
             </div>
           </fieldset>
         </form>

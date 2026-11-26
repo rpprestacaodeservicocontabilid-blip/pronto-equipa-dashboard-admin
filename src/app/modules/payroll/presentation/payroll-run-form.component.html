@@ -48,7 +48,7 @@
           <div class="space-y-3 rounded-xl border border-gray-200 p-4 dark:border-gray-800">
             <div class="flex flex-wrap items-center justify-between gap-3">
               <div>
-                <h3 class="font-medium text-gray-900 dark:text-gray-100">Employees</h3>
+                <h3 class="font-medium text-gray-900 dark:text-gray-100"><ng-container i18n="@@ui-f4bo3a">Employees</ng-container></h3>
                 <p class="text-sm text-gray-600 dark:text-gray-400">{{ selected().size }} selected. Eligibility is checked during pre-processing.</p>
               </div>
               @if (selected().size) { <button type="button" class="action" (click)="clearSelection()">Clear selection</button> }
@@ -68,7 +68,7 @@
                 <label class="field grow">Search employees
                   <input class="control" type="search" name="search" maxlength="100" [(ngModel)]="search" (keydown.enter)="$event.preventDefault(); searchEmployees()" placeholder="Name or employee number" />
                 </label>
-                <button type="button" class="action" (click)="searchEmployees()">Search</button>
+                <button type="button" class="action" (click)="searchEmployees()"><ng-container i18n="@@ui-1j0itop">Search</ng-container></button>
                 @if (scope() === 'COLLECTIVE') {
                   <button type="button" class="action" (click)="selectActiveEmployees()">Select all active employees</button>
                 }
@@ -89,8 +89,8 @@
                 </div>
                 @if (result.pagination.totalPages > 1) {
                   <div class="flex flex-wrap items-center gap-2 text-sm text-gray-600 dark:text-gray-400">
-                    <button type="button" class="action" [disabled]="employeePage() <= 1" (click)="changePage(-1)">Previous</button>
-                    <button type="button" class="action" [disabled]="employeePage() >= result.pagination.totalPages" (click)="changePage(1)">Next</button>
+                    <button type="button" class="action" [disabled]="employeePage() <= 1" (click)="changePage(-1)"><ng-container i18n="@@ui-1t5jxvs">Previous</ng-container></button>
+                    <button type="button" class="action" [disabled]="employeePage() >= result.pagination.totalPages" (click)="changePage(1)"><ng-container i18n="@@ui-1padbm0">Next</ng-container></button>
                     <span>Page {{ employeePage() }} of {{ result.pagination.totalPages }}</span>
                   </div>
                 }

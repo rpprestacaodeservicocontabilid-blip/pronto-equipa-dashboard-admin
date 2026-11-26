@@ -1,10 +1,10 @@
-import { DatePipe } from '@angular/common';
+import { DatePipe, PercentPipe } from '@angular/common';
 import { Component, DestroyRef, Input, OnInit, inject, signal } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { FormsModule } from '@angular/forms';
 import { catchError, of } from 'rxjs';
 import { ApiPage, CompanyWorkspace } from '../../../../core/api/company-workspace-api';
-import { apiErrorMessage } from '../../../../core/api/api-error';
+import { organizationErrorMessage } from '../organization-display';
 import { ComponentCardComponent } from '../../../../shared/components/common/component-card/component-card.component';
 import { OrganizationRecord } from '../../domain/organization.models';
 import { isoDate, validAllocation, validPeriod } from '../../domain/organization-validation';
@@ -16,10 +16,17 @@ interface AllocationDraft { key: number; costCenterId: string; percentage: numbe
 @Component({
   selector: 'app-organization-allocations',
   standalone: true,
-  imports: [DatePipe, FormsModule, ComponentCardComponent, OrganizationHistoryComponent],
+  imports: [DatePipe, PercentPipe, FormsModule, ComponentCardComponent, OrganizationHistoryComponent],
   templateUrl: './organization-allocations.component.html',
 })
 export class OrganizationAllocationsComponent implements OnInit {
+  protected readonly labels = {
+    saving: $localize`:@@organization-saving:Saving…`,
+    saveAllocation: $localize`:@@organization-save-allocation:Save allocation`,
+    unavailable: $localize`:@@organization-unavailable:Unavailable`,
+    openEnded: $localize`:@@organization-open-ended:Open-ended`,
+  };
+
   @Input({ required: true }) context!: CompanyWorkspace;
   @Input() centerId = '';
 
@@ -62,7 +69,7 @@ export class OrganizationAllocationsComponent implements OnInit {
     this.api.page(this.context.company.id, 'cost-allocations', this.filterCenter ? { relatedId: this.filterCenter } : {}, page)
       .pipe(takeUntilDestroyed(this.destroy)).subscribe({
         next: rows => { this.rows.set(rows); this.loading.set(false); },
-        error: error => { this.error.set(apiErrorMessage(error)); this.loading.set(false); },
+        error: error => { this.error.set(organizationErrorMessage(error)); this.loading.set(false); },
       });
   }
 
@@ -71,23 +78,23 @@ export class OrganizationAllocationsComponent implements OnInit {
     this.referenceError.set('');
     this.api.all(companyId, 'cost-centers').pipe(takeUntilDestroyed(this.destroy)).subscribe({
       next: rows => this.centers.set(rows),
-      error: error => this.referenceError.set(apiErrorMessage(error)),
+      error: error => this.referenceError.set(organizationErrorMessage(error)),
     });
     if (this.context.permissions.includes('employees.read')) {
       this.api.employees(companyId).pipe(catchError(error => {
-        this.referenceError.set(apiErrorMessage(error));
+        this.referenceError.set(organizationErrorMessage(error));
         return of([]);
       }), takeUntilDestroyed(this.destroy)).subscribe(rows => this.employees.set(rows));
     }
   }
 
   protected centerName(id: string | null | undefined) {
-    return id ? this.centers().find(record => record.id === id)?.name ?? '—' : 'Unavailable';
+    return id ? this.centers().find(record => record.id === id)?.name ?? '—' : $localize`:@@organization-unavailable:Unavailable`;
   }
 
   protected employeeName(id: string | null | undefined) {
     const employee = this.employees().find(record => record.id === id);
-    return employee ? employee.firstName + ' ' + employee.lastName : 'Unavailable';
+    return employee ? employee.firstName + ' ' + employee.lastName : $localize`:@@organization-unavailable:Unavailable`;
   }
 
   protected add() {
@@ -103,7 +110,7 @@ export class OrganizationAllocationsComponent implements OnInit {
     this.error.set('');
     this.notice.set('');
     if (!this.companyEmployee || !validPeriod(this.from, this.to) || this.from < this.today || !validAllocation(this.drafts)) {
-      this.error.set('Select an employee, enter a current or future period and allocate exactly 100% across distinct cost centers.');
+      this.error.set($localize`:@@organization-select-an-employee-enter-a-current-or-future-period-and-allocate-exactly-100-across-distinct-cost-centers:Select an employee, enter a current or future period and allocate exactly 100% across distinct cost centers.`);
       return;
     }
     this.busy.set(true);
@@ -114,12 +121,12 @@ export class OrganizationAllocationsComponent implements OnInit {
       next: () => {
         this.busy.set(false);
         this.showForm.set(false);
-        this.notice.set('Cost allocations saved for the selected period.');
+        this.notice.set($localize`:@@organization-cost-allocations-saved-for-the-selected-period:Cost allocations saved for the selected period.`);
         this.drafts = [{ key: this.nextKey++, costCenterId: '', percentage: 100 }];
         this.companyEmployee = '';
         this.load(1);
       },
-      error: error => { this.error.set(apiErrorMessage(error)); this.busy.set(false); },
+      error: error => { this.error.set(organizationErrorMessage(error)); this.busy.set(false); },
     });
   }
 }

@@ -19,10 +19,10 @@
     <a class="action" [routerLink]="root()">All payroll periods</a>
     <app-component-card title="Payroll period">
       <dl class="grid gap-4 text-sm text-gray-700 sm:grid-cols-2 lg:grid-cols-4 dark:text-gray-300">
-        <div><dt class="font-medium">Start date</dt><dd>{{ date(period.startDate) }}</dd></div>
-        <div><dt class="font-medium">End date</dt><dd>{{ date(period.endDate) }}</dd></div>
+        <div><dt class="font-medium"><ng-container i18n="@@ui-16seyg1">Start date</ng-container></dt><dd>{{ date(period.startDate) }}</dd></div>
+        <div><dt class="font-medium"><ng-container i18n="@@ui-ivkp8q">End date</ng-container></dt><dd>{{ date(period.endDate) }}</dd></div>
         <div><dt class="font-medium">Planned payment date</dt><dd>{{ date(period.paymentDate) }}</dd></div>
-        <div><dt class="font-medium">Status</dt><dd>{{ label(period.status) }} · Version {{ period.version }}</dd></div>
+        <div><dt class="font-medium"><ng-container i18n="@@ui-3pd73">Status</ng-container></dt><dd>{{ label(period.status) }} · Version {{ period.version }}</dd></div>
       </dl>
       <div class="mt-5 flex flex-wrap gap-2">
         @if (period.status === 'DRAFT' && allowed('update') && !editing()) {
@@ -41,7 +41,7 @@
           <p class="text-sm text-gray-700 dark:text-gray-300">Close the period after all its payroll runs have been closed or cancelled.</p>
           <div class="flex flex-wrap gap-2">
             <button class="action action-primary" type="button" [disabled]="busy()" (click)="transition(period, 'close')">Confirm period closing</button>
-            <button class="action" type="button" [disabled]="busy()" (click)="confirming.set(false)">Back</button>
+            <button class="action" type="button" [disabled]="busy()" (click)="confirming.set(false)"><ng-container i18n="@@ui-1hzmxtu">Back</ng-container></button>
           </div>
         </div>
       }
@@ -56,7 +56,7 @@
     <app-component-card title="Payroll periods">
       <div class="overflow-x-auto">
         <table class="w-full text-start text-sm text-gray-700 dark:text-gray-300">
-          <thead class="table-heading"><tr><th scope="col">Period</th><th scope="col">Planned payment</th><th scope="col">Status</th><th scope="col">Version</th></tr></thead>
+          <thead class="table-heading"><tr><th scope="col">Period</th><th scope="col">Planned payment</th><th scope="col"><ng-container i18n="@@ui-3pd73">Status</ng-container></th><th scope="col">Version</th></tr></thead>
           <tbody class="divide-y divide-gray-200 dark:divide-gray-800">
             @for (period of result.data; track period.id) {
               <tr>
@@ -71,8 +71,8 @@
         <div class="mt-4 flex flex-wrap items-center justify-between gap-2 text-sm text-gray-600 dark:text-gray-400">
           <span>Page {{ result.page }} · {{ result.total }} periods</span>
           <div class="flex gap-2">
-            <button type="button" class="action" [disabled]="result.page <= 1" (click)="page.set(result.page - 1)">Previous</button>
-            <button type="button" class="action" [disabled]="result.page * result.limit >= result.total" (click)="page.set(result.page + 1)">Next</button>
+            <button type="button" class="action" [disabled]="result.page <= 1" (click)="page.set(result.page - 1)"><ng-container i18n="@@ui-1t5jxvs">Previous</ng-container></button>
+            <button type="button" class="action" [disabled]="result.page * result.limit >= result.total" (click)="page.set(result.page + 1)"><ng-container i18n="@@ui-1padbm0">Next</ng-container></button>
           </div>
         </div>
       }
@@ -83,13 +83,13 @@
 <ng-template #periodForm>
   <form #form="ngForm" class="space-y-4" (ngSubmit)="save()">
     <div class="grid gap-3 sm:grid-cols-3">
-      <label class="field">Start date <input class="control" type="date" name="startDate" required [(ngModel)]="dates.startDate" [disabled]="busy()" /></label>
-      <label class="field">End date <input class="control" type="date" name="endDate" required [(ngModel)]="dates.endDate" [attr.min]="dates.startDate || null" [disabled]="busy()" /></label>
+      <label class="field"><ng-container i18n="@@ui-16seyg1">Start date</ng-container> <input class="control" type="date" name="startDate" required [(ngModel)]="dates.startDate" [disabled]="busy()" /></label>
+      <label class="field"><ng-container i18n="@@ui-ivkp8q">End date</ng-container> <input class="control" type="date" name="endDate" required [(ngModel)]="dates.endDate" [attr.min]="dates.startDate || null" [disabled]="busy()" /></label>
       <label class="field">Planned payment date <input class="control" type="date" name="paymentDate" required [(ngModel)]="dates.paymentDate" [disabled]="busy()" /></label>
     </div>
     <div class="flex flex-wrap gap-2">
       <button class="action action-primary" type="submit" [disabled]="busy() || form.invalid">Save period</button>
-      @if (editing()) { <button class="action" type="button" [disabled]="busy()" (click)="editing.set(null)">Cancel</button> }
+      @if (editing()) { <button class="action" type="button" [disabled]="busy()" (click)="editing.set(null)"><ng-container i18n="@@ui-ew9em3">Cancel</ng-container></button> }
     </div>
   </form>
 </ng-template>

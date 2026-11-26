@@ -7,7 +7,7 @@
 } @else if (run(); as record) {
   <app-component-card [title]="titles[record.runType] + ' payroll run'">
     <dl class="grid gap-4 text-sm text-gray-700 sm:grid-cols-2 xl:grid-cols-4 dark:text-gray-300">
-      <div><dt class="font-medium">Status</dt><dd>{{ label(record.status) }} · Version {{ record.version }}</dd></div>
+      <div><dt class="font-medium"><ng-container i18n="@@ui-3pd73">Status</ng-container></dt><dd>{{ label(record.status) }} · Version {{ record.version }}</dd></div>
       <div><dt class="font-medium">Execution scope</dt><dd>{{ label(record.executionScope) }} · {{ record.employeeIds.length }} employees</dd></div>
       <div><dt class="font-medium">Created</dt><dd>{{ date(record.createdAt, true) }}</dd></div>
       <div><dt class="font-medium">Period</dt><dd>
@@ -50,7 +50,7 @@
         }
         <div class="flex flex-wrap gap-2">
           <button class="action action-primary" type="submit" [disabled]="busy() || syncing() || !!progressError() || (action.id === 'reject' && !reason.trim())">Confirm {{ action.label.toLowerCase() }}</button>
-          <button class="action" type="button" [disabled]="busy()" (click)="confirmation.set(null)">Back</button>
+          <button class="action" type="button" [disabled]="busy()" (click)="confirmation.set(null)"><ng-container i18n="@@ui-1hzmxtu">Back</ng-container></button>
         </div>
       </form>
     } @else {

@@ -38,7 +38,7 @@
       <button class="action action-primary" type="submit" [disabled]="busy() || (!!definition.confirm && !confirmed())">
         {{ busy() ? 'Processing…' : definition.submitLabel ?? 'Save' }}
       </button>
-      <button class="action" type="button" [disabled]="busy()" (click)="cancelled.emit()">Cancel</button>
+      <button class="action" type="button" [disabled]="busy()" (click)="cancelled.emit()"><ng-container i18n="@@ui-ew9em3">Cancel</ng-container></button>
     </div>
   </form>
 </app-component-card>

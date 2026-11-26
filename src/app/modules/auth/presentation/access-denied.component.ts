@@ -99,7 +99,7 @@ export class AccessDeniedComponent {
   protected readonly message = computed(() => {
     const area = this.query().get('area');
     return area && Object.hasOwn(messages, area) ? messages[area as keyof typeof messages] : {
-      title: 'Access required', description: 'Contact your platform administrator to request access to this page.',
+      title: $localize`:@@ui-1gyob2k:Access required`, description: 'Contact your platform administrator to request access to this page.',
     };
   });
   protected readonly error = signal('');

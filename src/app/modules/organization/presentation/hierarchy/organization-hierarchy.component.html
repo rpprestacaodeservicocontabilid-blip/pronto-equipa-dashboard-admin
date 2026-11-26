@@ -1,30 +1,30 @@
-<app-component-card title="Organization hierarchy">
+<app-component-card i18n-title="@@organization-organization-hierarchy" title="Organization hierarchy">
   <div class="space-y-4">
     <div class="flex flex-wrap items-end gap-3">
-      <label class="field flex-1">Find department<input type="search" class="control" [ngModel]="search()" (ngModelChange)="search.set($event)" placeholder="Code, name or manager" /></label>
+      <label class="field flex-1"><ng-container i18n="@@organization-find-department">Find department</ng-container><input i18n-placeholder="@@organization-code-name-or-manager" type="search" class="control" [ngModel]="search()" (ngModelChange)="search.set($event)" placeholder="Code, name or manager" /></label>
       @if (context.permissions.includes('organization:history:read')) {
-        <label class="field">View as of<input type="date" class="control" [(ngModel)]="asOf" [attr.max]="today" /></label>
-        <button class="action" type="button" [disabled]="loading() || saving()" (click)="showHistory()">View historical structure</button>
-        @if (historical()) { <button type="button" class="action" (click)="currentStructure()">Current structure</button> }
+        <label class="field"><ng-container i18n="@@organization-view-as-of">View as of</ng-container><input type="date" class="control" [(ngModel)]="asOf" [attr.max]="today" /></label>
+        <button class="action" type="button" [disabled]="loading() || saving()" (click)="showHistory()"><ng-container i18n="@@organization-view-historical-structure">View historical structure</ng-container></button>
+        @if (historical()) { <button type="button" class="action" (click)="currentStructure()"><ng-container i18n="@@organization-current-structure">Current structure</ng-container></button> }
       }
     </div>
-    @if (error()) { <p role="alert" class="feedback">{{ error() }}</p><button type="button" class="action" (click)="load()" [disabled]="loading() || saving()">Refresh hierarchy</button> }
+    @if (error()) { <p role="alert" class="feedback">{{ error() }}</p><button type="button" class="action" (click)="load()" [disabled]="loading() || saving()"><ng-container i18n="@@organization-refresh-hierarchy">Refresh hierarchy</ng-container></button> }
     @if (notice()) { <p role="status" class="notice">{{ notice() }}</p> }
     @if (selected(); as item) {
       <form (ngSubmit)="move()" class="space-y-3 rounded-lg border border-gray-200 p-3 dark:border-gray-800">
-        <label class="field">Move {{ item.name }} under
+        <label class="field"><ng-container i18n="@@organization-move-department">Move {{ item.name }} under</ng-container>
           <select name="parent" [(ngModel)]="parent" class="control">
-            <option value="">Top-level department</option>
+            <option value=""><ng-container i18n="@@organization-top-level-department">Top-level department</ng-container></option>
             @for (option of parentOptions(); track option.id) { <option [value]="option.id">{{ option.name }} · {{ option.code }}</option> }
           </select>
         </label>
         <div class="flex flex-wrap gap-2">
-          <button class="action action-primary" type="submit" [disabled]="saving() || (item.parentId || '') === parent">Confirm move</button>
-          <button class="action" type="button" [disabled]="saving()" (click)="selected.set(null)">Cancel</button>
+          <button class="action action-primary" type="submit" [disabled]="saving() || (item.parentId || '') === parent"><ng-container i18n="@@organization-confirm-move">Confirm move</ng-container></button>
+          <button class="action" type="button" [disabled]="saving()" (click)="selected.set(null)"><ng-container i18n="@@organization-cancel">Cancel</ng-container></button>
         </div>
       </form>
     }
-    @if (loading()) { <p role="status" class="text-sm text-gray-600 dark:text-gray-400">Loading hierarchy…</p> }
+    @if (loading()) { <p role="status" class="text-sm text-gray-600 dark:text-gray-400"><ng-container i18n="@@organization-loading-hierarchy">Loading hierarchy…</ng-container></p> }
     @else { <ng-container [ngTemplateOutlet]="branch" [ngTemplateOutletContext]="{ $implicit: visible() }" /> }
   </div>
 </app-component-card>
@@ -36,7 +36,7 @@
         <div class="flex flex-wrap items-center gap-2 rounded-lg border border-gray-200 bg-gray-50 p-2 dark:border-gray-800 dark:bg-gray-800/40">
           @if (node.children.length) {
             <button type="button" class="action px-2" [attr.aria-expanded]="expanded().has(node.id) || !!search().trim()"
-              [attr.aria-label]="'Toggle ' + node.name" (click)="toggle(node.id)">{{ expanded().has(node.id) || search().trim() ? '−' : '+' }}</button>
+              [attr.aria-label]="toggleLabel(node.name)" (click)="toggle(node.id)">{{ expanded().has(node.id) || search().trim() ? '−' : '+' }}</button>
           }
           <div class="min-w-0 flex-1 text-sm">
             @if (historical()) {
@@ -44,16 +44,16 @@
             } @else {
               <a class="font-semibold text-brand-700 dark:text-brand-300" [routerLink]="['/organization', context.company.id, 'departments', node.id]">{{ node.name }}</a>
             }
-            <p class="text-gray-600 dark:text-gray-400">{{ node.code }} · {{ node.status }} @if (manager(node)) { · {{ manager(node) }} }</p>
+            <p class="text-gray-600 dark:text-gray-400">{{ node.code }} · {{ statusLabel(node.status) }} @if (manager(node)) { · {{ manager(node) }} }</p>
           </div>
           @if (!historical() && context.permissions.includes('organization:hierarchy:manage')) {
-            <button class="action" type="button" [disabled]="saving()" (click)="beginMove(node)">Move</button>
+            <button class="action" type="button" [disabled]="saving()" (click)="beginMove(node)"><ng-container i18n="@@organization-move">Move</ng-container></button>
           }
         </div>
         @if (node.children.length && (expanded().has(node.id) || search().trim())) {
           <ng-container [ngTemplateOutlet]="branch" [ngTemplateOutletContext]="{ $implicit: node.children }" />
         }
       </li>
-    } @empty { <li class="text-sm text-gray-600 dark:text-gray-400">No departments found.</li> }
+    } @empty { <li class="text-sm text-gray-600 dark:text-gray-400"><ng-container i18n="@@organization-no-departments-found">No departments found.</ng-container></li> }
   </ul>
 </ng-template>

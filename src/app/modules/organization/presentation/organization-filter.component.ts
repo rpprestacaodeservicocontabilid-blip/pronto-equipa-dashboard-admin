@@ -2,7 +2,7 @@ import { Component, DestroyRef, EventEmitter, Input, OnInit, Output, inject, sig
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { FormsModule } from '@angular/forms';
 import { forkJoin } from 'rxjs';
-import { apiErrorMessage } from '../../../core/api/api-error';
+import { organizationErrorMessage } from './organization-display';
 import { OrganizationRecord } from '../domain/organization.models';
 import { OrganizationApi } from '../infrastructure/organization-api.service';
 
@@ -16,17 +16,17 @@ import { OrganizationApi } from '../infrastructure/organization-api.service';
       @if (directory.departments.length || directory.establishments.length) {
         <div class="grid gap-3 sm:grid-cols-2">
           @if (directory.establishments.length) {
-            <label class="field">Establishment
+            <label class="field"><ng-container i18n="@@organization-establishment">Establishment</ng-container>
               <select class="control" [disabled]="disabled" [ngModel]="establishment" [ngModelOptions]="{standalone: true}" (ngModelChange)="selectEstablishment($event)">
-                <option value="">All establishments</option>
+                <option value=""><ng-container i18n="@@organization-all-establishments">All establishments</ng-container></option>
                 @for (item of directory.establishments; track item.id) { <option [value]="item.id">{{ item.name }}</option> }
               </select>
             </label>
           }
           @if (departments().length) {
-            <label class="field">Department
+            <label class="field"><ng-container i18n="@@organization-department">Department</ng-container>
               <select class="control" [disabled]="disabled" [ngModel]="department" [ngModelOptions]="{standalone: true}" (ngModelChange)="department = $event; select()">
-                <option value="">All departments</option>
+                <option value=""><ng-container i18n="@@organization-all-departments">All departments</ng-container></option>
                 @for (item of departments(); track item.id) { <option [value]="item.id">{{ item.name }}</option> }
               </select>
             </label>
@@ -51,7 +51,7 @@ export class OrganizationFilterComponent implements OnInit {
     forkJoin({ departments: this.api.all(this.company, 'departments'), establishments: this.api.all(this.company, 'establishments') })
       .pipe(takeUntilDestroyed(this.destroy)).subscribe({
         next: result => this.data.set(result),
-        error: error => this.error.set('Organization filters are unavailable. ' + apiErrorMessage(error)),
+        error: error => this.error.set($localize`:@@organization-organization-filters-are-unavailable:Organization filters are unavailable.` + " " + organizationErrorMessage(error)),
       });
   }
 

@@ -21,7 +21,7 @@ const workspace = () => import('./presentation/loans-workspace.component').then(
 export const LOANS_ROUTES: Routes = [
   {
     path: '', pathMatch: 'full', title: 'Select company | Loans',
-    data: { workspace: { label: 'Loans', path: '/loans' } },
+    data: { workspace: { label: $localize`:@@ui-jklrbs:Loans`, path: '/loans' } },
     loadComponent: () => import('../../shared/components/common/company-workspace/company-workspace-picker.component')
       .then(module => module.CompanyWorkspacePickerComponent),
   },

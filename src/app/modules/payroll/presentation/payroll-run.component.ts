@@ -19,10 +19,10 @@ const TABS: { id: PayrollTab; title: string; grants?: string[] }[] = [
   { id: 'summary', title: 'Totals' },
   { id: 'issues', title: 'Issues' },
   { id: 'results', title: 'Employee results', grants: [SENSITIVE_RESULTS] },
-  { id: 'approvals', title: 'Approvals' },
+  { id: 'approvals', title: $localize`:@@ui-1m405m7:Approvals` },
   { id: 'closing', title: 'Closing' },
-  { id: 'payments', title: 'Payments', grants: [PAYMENTS_PREPARE, PAYMENTS_READ] },
-  { id: 'history', title: 'History', grants: [HISTORY_READ] },
+  { id: 'payments', title: $localize`:@@ui-jbt9om:Payments`, grants: [PAYMENTS_PREPARE, PAYMENTS_READ] },
+  { id: 'history', title: $localize`:@@ui-yugfpb:History`, grants: [HISTORY_READ] },
 ];
 
 const MESSAGES: Partial<Record<RunAction, string>> = {

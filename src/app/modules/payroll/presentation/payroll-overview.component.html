@@ -24,7 +24,7 @@
           <option value="">All establishments</option>
           @for (option of organization.data.establishments; track option.id) { <option [value]="option.id">{{ option.name }}</option> }
         </select></label>
-        <label class="field">Department <select class="control" name="payroll-department" [ngModel]="department()" (ngModelChange)="department.set($event)">
+        <label class="field"><ng-container i18n="@@ui-1430r53">Department</ng-container> <select class="control" name="payroll-department" [ngModel]="department()" (ngModelChange)="department.set($event)">
           <option value="">All departments</option>
           @for (option of departmentOptions(); track option.id) { <option [value]="option.id">{{ option.name }}</option> }
         </select></label>
@@ -60,7 +60,7 @@
   <app-component-card title="Payroll activity">
     <div class="overflow-x-auto">
       <table class="w-full text-start text-sm text-gray-700 dark:text-gray-300">
-        <thead class="table-heading"><tr><th scope="col">Run</th><th scope="col">Scope</th><th scope="col">Employees</th><th scope="col">Status</th><th scope="col">Created</th></tr></thead>
+        <thead class="table-heading"><tr><th scope="col">Run</th><th scope="col">Scope</th><th scope="col"><ng-container i18n="@@ui-f4bo3a">Employees</ng-container></th><th scope="col"><ng-container i18n="@@ui-3pd73">Status</ng-container></th><th scope="col">Created</th></tr></thead>
         <tbody class="divide-y divide-gray-200 dark:divide-gray-800">
           @for (row of activity().slice(0, 20); track row.run.id) {
             @let run = row.run;

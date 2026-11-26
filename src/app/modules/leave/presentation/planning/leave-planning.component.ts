@@ -139,8 +139,8 @@ export class LeavePlanningComponent implements OnInit {
       { label: 'Pending decisions', value: requestData ? count('PENDING_APPROVAL') : null },
       { label: 'Available days now', value: available ?? null },
       { label: 'Overlapping request pairs', value: requestData ? clashes : null },
-      { label: 'Approved', value: requestData ? count('APPROVED') : null },
-      { label: 'Rejected', value: requestData ? count('REJECTED') : null },
+      { label: $localize`:@@ui-1j3qly2:Approved`, value: requestData ? count('APPROVED') : null },
+      { label: $localize`:@@ui-1uofzaf:Rejected`, value: requestData ? count('REJECTED') : null },
       { label: 'Drafts', value: requestData ? count('DRAFT') : null },
     ];
   });

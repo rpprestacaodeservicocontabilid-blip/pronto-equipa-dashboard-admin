@@ -1,3 +1,4 @@
+import { activeLocale, LANGUAGES, selectLocale } from '../../../core/i18n/locale';
 import { inject } from '@angular/core';
 import { AuthService } from '../../../core/auth/auth.service';
 import { apiErrorMessage } from '../../../core/api/api-error';
@@ -7,14 +8,6 @@ import { RouterModule } from '@angular/router';
 import { Subscription } from 'rxjs';
 import { DropdownService } from '../../../core/services/dropdown.service';
 import { ButtonComponent } from '../../../shared/components/ui/button/button.component';
-
-interface Language {
-  id: string;
-  name: string;
-  shortName: string;
-  flag: string;
-  badge?: string;
-}
 
 @Component({
   selector: 'app-user-dropdown',
@@ -45,35 +38,8 @@ export class UserDropdownComponent implements OnInit, OnDestroy {
   readonly dropdownId = 'user-dropdown';
   isOpen = false;
   subDropdownOpen = false;
-  currentLocale = 'en';
-
-  languages: Language[] = [
-    {
-      id: 'en',
-      name: 'English',
-      shortName: 'English',
-      flag: 'flag-us.svg',
-    },
-    {
-      id: 'ar',
-      name: 'Arabic (Saudi)',
-      shortName: 'Arabic',
-      flag: 'flag-sa.svg',
-      badge: 'RTL',
-    },
-    {
-      id: 'es',
-      name: 'Español',
-      shortName: 'Español',
-      flag: 'flag-es.svg',
-    },
-    {
-      id: 'de',
-      name: 'Deutsch',
-      shortName: 'Deutsch',
-      flag: 'flag-de.svg',
-    },
-  ];
+  readonly currentLocale = activeLocale();
+  readonly languages = LANGUAGES;
 
   private sub = new Subscription();
 
@@ -84,11 +50,6 @@ export class UserDropdownComponent implements OnInit, OnDestroy {
   ) {}
 
   ngOnInit(): void {
-    const savedDir = localStorage.getItem('dir');
-    const isRtl = savedDir === 'rtl' || document.documentElement.getAttribute('dir') === 'rtl';
-    this.currentLocale = isRtl ? 'ar' : 'en';
-    document.documentElement.setAttribute('dir', isRtl ? 'rtl' : 'ltr');
-
     this.sub.add(
       this.dropdownService.activeDropdown$.subscribe((activeId) => {
         this.isOpen = activeId === this.dropdownId;
@@ -104,7 +65,7 @@ export class UserDropdownComponent implements OnInit, OnDestroy {
     this.sub.unsubscribe();
   }
 
-  get currentLang(): Language {
+  get currentLang() {
     return this.languages.find((l) => l.id === this.currentLocale) || this.languages[0];
   }
 
@@ -158,10 +119,7 @@ export class UserDropdownComponent implements OnInit, OnDestroy {
 
   selectLanguage(id: string, event?: Event): void {
     event?.stopPropagation();
-    this.currentLocale = id;
-    const dir = id === 'ar' ? 'rtl' : 'ltr';
-    document.documentElement.setAttribute('dir', dir);
-    localStorage.setItem('dir', dir);
+    selectLocale(id);
     this.closeDropdown();
   }
 

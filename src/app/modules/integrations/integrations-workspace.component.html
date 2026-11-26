@@ -4,7 +4,7 @@
     <p role="status" class="text-sm text-gray-600 dark:text-gray-400">Loading integration inventory…</p>
   } @else if (catalogue.error(); as error) {
     <p role="alert" class="feedback">{{ errorMessage(error) }}</p>
-    <button type="button" class="action" (click)="catalogue.reload()">Retry</button>
+    <button type="button" class="action" (click)="catalogue.reload()"><ng-container i18n="@@ui-zkouah">Retry</ng-container></button>
   } @else if (catalogue.hasValue()) {
     <div class="flex flex-wrap items-center justify-between gap-3 text-sm text-gray-600 dark:text-gray-400">
       <p>Inventory read at {{ catalogue.value().observedAt | date:'medium' }}</p>

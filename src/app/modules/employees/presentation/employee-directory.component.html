@@ -1,42 +1,42 @@
-<app-component-card [title]="view === 'overview' ? 'Workforce by status' : view === 'reports' ? 'Workforce report by admission period' : view === 'exports' ? 'Export employee records' : 'Employee directory'">
+<app-component-card [title]="view === 'overview' ? copy.workforce : view === 'reports' ? copy.report : view === 'exports' ? copy.export : copy.directory">
   @if (view !== 'overview') {
     @if (view === 'exports') {
-      <p class="mb-4 text-sm text-gray-600 dark:text-gray-400">Each CSV contains up to 100 matching records. Choose the page to download.</p>
+      <p class="mb-4 text-sm text-gray-600 dark:text-gray-400"><ng-container i18n="@@employees-each-csv-contains-up-to-100-matching-records-choose-the-page-to-download">Each CSV contains up to 100 matching records. Choose the page to download.</ng-container></p>
     }
     <form (ngSubmit)="view === 'exports' ? download() : load(1, true)" class="mb-4 flex flex-wrap items-end gap-3">
-      <label class="field min-w-52 flex-1">Search
-        <input class="control" name="search" [(ngModel)]="search" maxlength="100" placeholder="Employee number or name" [disabled]="loading()" />
+      <label class="field min-w-52 flex-1"><ng-container i18n="@@employees-search">Search</ng-container>
+        <input i18n-placeholder="@@employees-employee-number-or-name" class="control" name="search" [(ngModel)]="search" maxlength="100" placeholder="Employee number or name" [disabled]="loading()" />
       </label>
       @if (!preset && view !== 'reports') {
-        <label class="field">Status
+        <label class="field"><ng-container i18n="@@employees-status">Status</ng-container>
           <select class="control" name="status" [(ngModel)]="status" [disabled]="loading()">
-            <option value="">All statuses</option>
+            <option value=""><ng-container i18n="@@employees-all-statuses">All statuses</ng-container></option>
             @for (item of statuses; track item) { <option [value]="item">{{ labels[item] }}</option> }
           </select>
         </label>
       }
-      <label class="field">Admitted from
+      <label class="field"><ng-container i18n="@@employees-admitted-from">Admitted from</ng-container>
         <input class="control" type="date" name="admittedFrom" [(ngModel)]="admittedFrom" [disabled]="loading()" />
       </label>
-      <label class="field">Admitted through
+      <label class="field"><ng-container i18n="@@employees-admitted-through">Admitted through</ng-container>
         <input class="control" type="date" name="admittedTo" [(ngModel)]="admittedTo" [disabled]="loading()" />
       </label>
-      <label class="field w-32">Department ID
+      <label class="field w-32"><ng-container i18n="@@employees-department-id">Department ID</ng-container>
         <input class="control" type="number" name="departmentId" min="1" step="1" [(ngModel)]="departmentId" [disabled]="loading()" />
       </label>
       @if (view !== 'reports') {
-        <label class="field">Sort by
+        <label class="field"><ng-container i18n="@@employees-sort-by">Sort by</ng-container>
           <select class="control" name="sort" [(ngModel)]="sort" [disabled]="loading()">
-            <option value="name">Name</option><option value="admission-desc">Newest admission</option>
+            <option value="name"><ng-container i18n="@@employees-name">Name</ng-container></option><option value="admission-desc"><ng-container i18n="@@employees-newest-admission">Newest admission</ng-container></option>
           </select>
         </label>
       }
       @if (view === 'exports') {
-        <label class="field w-28">Page
+        <label class="field w-28"><ng-container i18n="@@employees-page">Page</ng-container>
           <input type="number" min="1" step="1" name="page" class="control" [(ngModel)]="exportPage" [disabled]="loading()" />
         </label>
       }
-      <button [disabled]="loading()" class="action action-primary">{{ view === 'exports' ? 'Download CSV' : view === 'reports' ? 'Run report' : 'Search' }}</button>
+      <button [disabled]="loading()" class="action action-primary">{{ view === 'exports' ? copy.download : view === 'reports' ? copy.runReport : copy.search }}</button>
     </form>
   }
   @if (view === 'overview' || view === 'reports') {
@@ -53,17 +53,17 @@
       }
     </div>
   }
-  @if (loading()) { <p role="status" class="py-3 text-sm text-gray-600 dark:text-gray-400">Loading employee data…</p> }
+  @if (loading()) { <p role="status" class="py-3 text-sm text-gray-600 dark:text-gray-400"><ng-container i18n="@@employees-loading-employee-data">Loading employee data…</ng-container></p> }
   @if (error()) {
     <p class="feedback" role="alert">{{ error() }}</p>
-    @if (view !== 'exports') { <button type="button" class="action mt-3" (click)="load()">Retry</button> }
+    @if (view !== 'exports') { <button type="button" class="action mt-3" (click)="load()"><ng-container i18n="@@employees-retry">Retry</ng-container></button> }
   }
   @if (view === 'directory' && page(); as result) {
     <div class="custom-scrollbar overflow-x-auto">
       <table class="w-full text-start text-sm text-gray-700 dark:text-gray-300">
         <thead class="table-heading"><tr>
-          <th scope="col">Employee</th><th scope="col">Job title</th><th scope="col">Department ID</th>
-          <th scope="col">Admission date</th><th scope="col">Status</th>
+          <th scope="col"><ng-container i18n="@@employees-employee">Employee</ng-container></th><th scope="col"><ng-container i18n="@@employees-job-title">Job title</ng-container></th><th scope="col"><ng-container i18n="@@employees-department-id">Department ID</ng-container></th>
+          <th scope="col"><ng-container i18n="@@employees-admission-date">Admission date</ng-container></th><th scope="col"><ng-container i18n="@@employees-status">Status</ng-container></th>
         </tr></thead>
         <tbody>
           @for (row of result.data; track row.id) {
@@ -75,15 +75,15 @@
               <td class="table-cell">{{ row.jobTitle || '—' }}</td><td class="table-cell">{{ row.departmentId ?? '—' }}</td>
               <td class="table-cell">{{ row.admissionDate | date:'mediumDate':'UTC' }}</td><td class="table-cell">{{ labels[row.status] }}</td>
             </tr>
-          } @empty { <tr><td colspan="5" class="p-6 text-center">No employees found.</td></tr> }
+          } @empty { <tr><td colspan="5" class="p-6 text-center"><ng-container i18n="@@employees-no-employees-found">No employees found.</ng-container></td></tr> }
         </tbody>
       </table>
     </div>
     <div class="mt-4 flex flex-wrap items-center justify-between gap-3 text-sm text-gray-600 dark:text-gray-400">
-      <span>{{ result.pagination.total }} employees · Page {{ result.pagination.page }}</span>
+      <span><ng-container i18n="@@employees-directory-page">{{ result.pagination.total }} employees · Page {{ result.pagination.page }}</ng-container></span>
       <div class="flex gap-3">
-        <button type="button" class="action" [disabled]="loading() || result.pagination.page <= 1" (click)="load(result.pagination.page - 1)">Previous</button>
-        <button type="button" class="action" [disabled]="loading() || result.pagination.page >= result.pagination.totalPages" (click)="load(result.pagination.page + 1)">Next</button>
+        <button type="button" class="action" [disabled]="loading() || result.pagination.page <= 1" (click)="load(result.pagination.page - 1)"><ng-container i18n="@@employees-previous">Previous</ng-container></button>
+        <button type="button" class="action" [disabled]="loading() || result.pagination.page >= result.pagination.totalPages" (click)="load(result.pagination.page + 1)"><ng-container i18n="@@employees-next">Next</ng-container></button>
       </div>
     </div>
   }

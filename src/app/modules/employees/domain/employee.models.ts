@@ -1,4 +1,4 @@
-export const employeeStatuses = { ACTIVE: 'Active', SUSPENDED: 'Suspended', ON_LEAVE: 'On leave', TERMINATED: 'Terminated' } as const;
+export const employeeStatuses = { ACTIVE: $localize`:@@employees-active:Active`, SUSPENDED: $localize`:@@employees-suspended:Suspended`, ON_LEAVE: $localize`:@@employees-on-leave:On leave`, TERMINATED: $localize`:@@employees-terminated:Terminated` } as const;
 export type EmployeeStatus = keyof typeof employeeStatuses;
 export const statusOptions = Object.keys(employeeStatuses) as EmployeeStatus[];
 

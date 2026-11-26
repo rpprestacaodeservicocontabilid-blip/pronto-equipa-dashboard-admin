@@ -14,7 +14,7 @@
       <dl class="grid gap-x-6 gap-y-3 text-sm text-gray-700 sm:grid-cols-2 xl:grid-cols-3 dark:text-gray-300">
         <div class="min-w-0"><dt class="font-semibold">Application ID</dt><dd class="break-all">{{ application.id }}</dd></div>
         <div><dt class="font-semibold">Loan type</dt><dd>{{ label(application.loanType) }}</dd></div>
-        <div><dt class="font-semibold">Status</dt><dd>{{ label(application.status) }}</dd></div>
+        <div><dt class="font-semibold"><ng-container i18n="@@ui-3pd73">Status</ng-container></dt><dd>{{ label(application.status) }}</dd></div>
         <div><dt class="font-semibold">Requested</dt><dd>{{ money(application.requestedAmount, application.currency) }}</dd></div>
         <div><dt class="font-semibold">Repayment terms</dt><dd>{{ application.installmentCount }} · {{ label(application.frequency) }} · From {{ application.firstDueDate }}</dd></div>
         <div><dt class="font-semibold">Annual interest</dt><dd>{{ application.annualInterestBps / 100 }}%</dd></div>

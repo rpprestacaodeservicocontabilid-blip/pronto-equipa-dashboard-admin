@@ -212,8 +212,8 @@
   @if (total() > limit && section.view !== 'policy') {
     <div class="mt-4 flex flex-wrap items-center justify-between gap-2">
       <p class="pr-muted" aria-live="polite">{{ total() | number }} records · Page {{ page() }}</p>
-      <div class="flex gap-2"><button class="pr-secondary" type="button" [disabled]="page() <= 1" (click)="load(page() - 1)">Previous</button>
-        <button class="pr-secondary" type="button" [disabled]="page() * limit >= total()" (click)="load(page() + 1)">Next</button></div>
+      <div class="flex gap-2"><button class="pr-secondary" type="button" [disabled]="page() <= 1" (click)="load(page() - 1)"><ng-container i18n="@@ui-1t5jxvs">Previous</ng-container></button>
+        <button class="pr-secondary" type="button" [disabled]="page() * limit >= total()" (click)="load(page() + 1)"><ng-container i18n="@@ui-1padbm0">Next</ng-container></button></div>
     </div>
   }
 }

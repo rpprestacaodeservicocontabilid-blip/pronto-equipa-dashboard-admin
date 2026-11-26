@@ -14,11 +14,11 @@ const resolveCompany: ResolveFn<CompanyPaymentContext> = route => {
 };
 const workspace = () => import('./presentation/company-payments.component').then(module => module.CompanyPaymentsComponent);
 export const COMPANY_PAYMENTS_ROUTES: Routes = [
-  { path: '', pathMatch: 'full', title: 'Company payments | PRONTOEQUIPAS',
-    data: { workspace: { label: 'Company payments', path: '/company-payments' } },
+  { path: '', pathMatch: 'full', title: $localize`:@@ui-inyz63:Company payments` + ' | PRONTOEQUIPAS',
+    data: { workspace: { label: $localize`:@@ui-inyz63:Company payments`, path: '/company-payments' } },
     loadComponent: () => import('../../shared/components/common/company-workspace/company-workspace-picker.component')
       .then(module => module.CompanyWorkspacePickerComponent) },
-  { path: ':companyId', pathMatch: 'full', title: 'Company payments | PRONTOEQUIPAS', resolve: { access: resolveCompany }, loadComponent: workspace },
+  { path: ':companyId', pathMatch: 'full', title: $localize`:@@ui-inyz63:Company payments` + ' | PRONTOEQUIPAS', resolve: { access: resolveCompany }, loadComponent: workspace },
   ...companyPaymentSections.map(section => ({ path: ':companyId/' + section.path,
     title: section.title + ' | Company payments', data: { section }, resolve: { access: resolveCompany }, loadComponent: workspace })),
 ];

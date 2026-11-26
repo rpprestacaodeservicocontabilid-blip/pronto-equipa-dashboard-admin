@@ -13,12 +13,12 @@
 }
 
 @if (!id && can('read') && !form()) {
-  <app-component-card title="Filters">
+  <app-component-card i18n-title="@@ui-345x4c" title="Filters">
     <form class="space-y-3" (ngSubmit)="apply()">
       <div class="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
         <label class="field">Name or code<input class="control" type="search" name="search" [(ngModel)]="filters.search" maxlength="150" /></label>
-        <label class="field">Status<select class="control" name="status" [(ngModel)]="filters.status">
-          <option value="">All statuses</option><option value="ACTIVE">Active</option><option value="INACTIVE">Inactive</option>
+        <label class="field"><ng-container i18n="@@ui-3pd73">Status</ng-container><select class="control" name="status" [(ngModel)]="filters.status">
+          <option value="">All statuses</option><option value="ACTIVE"><ng-container i18n="@@ui-8qzyhb">Active</ng-container></option><option value="INACTIVE"><ng-container i18n="@@ui-13zf5vc">Inactive</ng-container></option>
         </select></label>
         @if (resource === 'components') {
           @if (mode !== 'allowances') {
@@ -37,7 +37,7 @@
           </select></label>
         }
       </div>
-      <button class="action action-primary" type="submit" [disabled]="loading()">Apply filters</button>
+      <button class="action action-primary" type="submit" [disabled]="loading()"><ng-container i18n="@@ui-1ml4h1c">Apply filters</ng-container></button>
     </form>
   </app-component-card>
 }
@@ -87,7 +87,7 @@
             <div><dt class="font-semibold">Component type</dt><dd>{{ human(version.componentType) }}</dd></div>
             <div><dt class="font-semibold">Calculation</dt><dd>{{ human(version.calculationMethod) }}</dd></div>
             <div><dt class="font-semibold">Frequency</dt><dd>{{ human(version.frequency) }}</dd></div>
-            <div><dt class="font-semibold">Currency</dt><dd>{{ version.currency }}</dd></div>
+            <div><dt class="font-semibold"><ng-container i18n="@@ui-5o3zh2">Currency</ng-container></dt><dd>{{ version.currency }}</dd></div>
             <div class="min-w-0"><dt class="font-semibold">Legal classification reference</dt><dd class="wrap-anywhere">{{ version.legalClassificationRef || '—' }}</dd></div>
             @if (version.calculationMethod === 'FORMULA') {
               <div><dt class="font-semibold">Formula</dt><dd>{{ version.calculationConfig['percentage'] }}% of base salary</dd></div>
@@ -164,8 +164,8 @@
     <app-component-card [title]="title">
       <div class="overflow-x-auto rounded-lg border border-gray-200 dark:border-gray-800">
         <table class="w-full min-w-[38rem] text-start text-sm text-gray-700 dark:text-gray-300">
-          <thead class="table-heading"><tr><th scope="col">Code</th><th scope="col">Name</th><th scope="col">Status</th>
-            <th scope="col">Version</th><th scope="col">Details</th><th scope="col"><span class="sr-only">Actions</span></th></tr></thead>
+          <thead class="table-heading"><tr><th scope="col">Code</th><th scope="col"><ng-container i18n="@@ui-4el6o6">Name</ng-container></th><th scope="col"><ng-container i18n="@@ui-3pd73">Status</ng-container></th>
+            <th scope="col">Version</th><th scope="col">Details</th><th scope="col"><span class="sr-only"><ng-container i18n="@@ui-1rx51qc">Actions</ng-container></span></th></tr></thead>
           <tbody class="divide-y divide-gray-100 dark:divide-gray-800">
             @for (row of visible(view); track row.id) {
               <tr>
@@ -176,7 +176,7 @@
                     {{ human(version.componentType) }} · {{ human(version.calculationMethod) }} · {{ human(version.frequency) }}
                   } @else { {{ row.description || '—' }} }
                 </td>
-                <td class="table-cell"><a class="text-brand-700 underline dark:text-brand-300" [routerLink]="['/salary-structure', company, mode, row.id]">View details</a></td>
+                <td class="table-cell"><a class="text-brand-700 underline dark:text-brand-300" [routerLink]="['/salary-structure', company, mode, row.id]"><ng-container i18n="@@ui-5dxh2m">View details</ng-container></a></td>
               </tr>
             } @empty { <tr><td colspan="6" class="table-cell">No records match the filters.</td></tr> }
           </tbody>
@@ -185,8 +185,8 @@
       <div class="flex flex-wrap items-center justify-between gap-3">
         <p class="text-sm text-gray-600 dark:text-gray-400">{{ view.total }} records · Page {{ page }}</p>
         <div class="flex gap-2">
-          <button class="action" type="button" [disabled]="page <= 1" (click)="go(page - 1)">Previous</button>
-          <button class="action" type="button" [disabled]="page * 20 >= view.total" (click)="go(page + 1)">Next</button>
+          <button class="action" type="button" [disabled]="page <= 1" (click)="go(page - 1)"><ng-container i18n="@@ui-1t5jxvs">Previous</ng-container></button>
+          <button class="action" type="button" [disabled]="page * 20 >= view.total" (click)="go(page + 1)"><ng-container i18n="@@ui-1padbm0">Next</ng-container></button>
         </div>
       </div>
     </app-component-card>

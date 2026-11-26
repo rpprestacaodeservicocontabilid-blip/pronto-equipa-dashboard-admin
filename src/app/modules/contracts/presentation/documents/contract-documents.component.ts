@@ -1,7 +1,7 @@
 import { Component, DestroyRef, EventEmitter, Input, OnInit, Output, inject, signal } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { FormsModule } from '@angular/forms';
-import { apiErrorMessage } from '../../../../core/api/api-error';
+import { contractErrorMessage } from '../contract-errors';
 import { CompanyContext, ContractRecord, DocumentSummary } from '../../domain/contracts.models';
 import { ContractsApi } from '../../infrastructure/contracts-api.service';
 import { ContractDocumentPickerComponent } from './contract-document-picker.component';
@@ -46,7 +46,7 @@ export class ContractDocumentsComponent implements OnInit {
     this.error.set('');
     this.api.records(this.context.company.id, this.id, 'documents').pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
       next: records => { this.records.set(records); this.loading.set(false); },
-      error: error => { this.error.set(apiErrorMessage(error)); this.loading.set(false); },
+      error: error => { this.error.set(contractErrorMessage(error)); this.loading.set(false); },
     });
   }
 
@@ -54,10 +54,19 @@ export class ContractDocumentsComponent implements OnInit {
     return typeof record.payload.documentId === 'string' ? record.payload.documentId : '';
   }
 
+  protected documentType(value?: string) {
+    switch (value) {
+      case 'CONTRACT': return $localize`:@@contracts-contract:Contract`;
+      case 'ATTACHMENT': return $localize`:@@contracts-attachment:Attachment`;
+      case 'SUPPORTING': return $localize`:@@contracts-supporting-document:Supporting document`;
+      default: return value ?? '—';
+    }
+  }
+
   protected link() {
     if (!this.selected || !this.canLink || this.busy()) return;
     if (this.records().some(record => this.documentId(record) === this.selected?.id && record.payload.documentType === this.type)) {
-      this.error.set('That document is already linked with this type.');
+      this.error.set($localize`:@@contracts-that-document-is-already-linked-with-this-type:That document is already linked with this type.`);
       return;
     }
     this.error.set('');
@@ -69,7 +78,7 @@ export class ContractDocumentsComponent implements OnInit {
           this.busy.set(false);
           this.attached.emit();
         },
-        error: error => { this.error.set(apiErrorMessage(error)); this.busy.set(false); },
+        error: error => { this.error.set(contractErrorMessage(error)); this.busy.set(false); },
       });
   }
 
@@ -83,11 +92,11 @@ export class ContractDocumentsComponent implements OnInit {
         if (/^https?:\/\//i.test(url)) {
           this.access.set({ id, url, purpose });
         } else {
-          this.error.set('The document service returned an invalid link.');
+          this.error.set($localize`:@@contracts-the-document-service-returned-an-invalid-link:The document service returned an invalid link.`);
         }
         this.busy.set(false);
       },
-      error: error => { this.error.set(apiErrorMessage(error)); this.busy.set(false); },
+      error: error => { this.error.set(contractErrorMessage(error)); this.busy.set(false); },
     });
   }
 }

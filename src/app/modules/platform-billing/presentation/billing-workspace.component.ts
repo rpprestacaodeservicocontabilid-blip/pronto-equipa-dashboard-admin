@@ -63,7 +63,7 @@ export class BillingWorkspaceComponent {
   protected readonly cell = cell;
   protected readonly related = related;
   protected readonly accountLinks = [
-    { label: 'Invoices', path: 'invoices' }, { label: 'Payments', path: 'payments' },
+    { label: $localize`:@@ui-7b7gu1:Invoices`, path: 'invoices' }, { label: $localize`:@@ui-jbt9om:Payments`, path: 'payments' },
     { label: 'Credits', path: 'credit-notes' }, { label: 'Details', path: 'billing-accounts' },
   ];
   protected companyId: number | null = null;

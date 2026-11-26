@@ -8,7 +8,7 @@
       @let context = view.access.context;
       @let available = byGrant(context.permissions);
       <div class="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-gray-200 bg-white px-5 py-4 dark:border-gray-800 dark:bg-white/[0.03]">
-        <div><p class="text-sm text-gray-500 dark:text-gray-400">Salary structure</p>
+        <div><p class="text-sm text-gray-500 dark:text-gray-400"><ng-container i18n="@@ui-hjlbyy">Salary structure</ng-container></p>
           <h2 class="text-lg font-semibold text-gray-900 dark:text-white">{{ context.company.name }}</h2>
         </div>
         <a class="action" routerLink="/salary-structure">Change company</a>

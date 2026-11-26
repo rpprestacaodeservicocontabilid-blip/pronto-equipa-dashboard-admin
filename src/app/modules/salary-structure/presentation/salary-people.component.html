@@ -10,11 +10,11 @@
   <button class="action action-primary" type="button" (click)="create()">{{ mode === 'assignments' ? 'New assignment' : 'New revision' }}</button>
 }
 @if (!id && canRead && !editor()) {
-  <app-component-card title="Filters">
+  <app-component-card i18n-title="@@ui-345x4c" title="Filters">
     <form (ngSubmit)="apply()" class="space-y-3">
       <div class="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
         <app-salary-field [context]="context" [field]="employeeField" [value]="filter.employee" (update)="setEmployee($event)" />
-        <label class="field">Status<select class="control" name="status" [(ngModel)]="filter.status">
+        <label class="field"><ng-container i18n="@@ui-3pd73">Status</ng-container><select class="control" name="status" [(ngModel)]="filter.status">
           <option value="">All statuses</option>
           @for (status of mode === 'revisions' ? states : ['Current', 'Future', 'Historical']; track status) {
             <option [value]="status">{{ human(status) }}</option>
@@ -23,7 +23,7 @@
         <label class="field">Effective from<input type="date" class="control" name="from" [(ngModel)]="filter.from" /></label>
         <label class="field">Effective through<input type="date" class="control" name="to" [(ngModel)]="filter.to" /></label>
       </div>
-      <button class="action action-primary" type="submit" [disabled]="loading()">Apply filters</button>
+      <button class="action action-primary" type="submit" [disabled]="loading()"><ng-container i18n="@@ui-1ml4h1c">Apply filters</ng-container></button>
       @if (filterError()) { <p class="feedback" role="alert">{{ filterError() }}</p> }
     </form>
   </app-component-card>
@@ -47,7 +47,7 @@
           </div>
         </div>
         <dl class="grid gap-3 text-sm text-gray-700 sm:grid-cols-2 dark:text-gray-300">
-          <div class="min-w-0"><dt class="font-semibold">Employee</dt><dd class="wrap-anywhere">{{ employeeName(row.employeeId) }}</dd></div>
+          <div class="min-w-0"><dt class="font-semibold"><ng-container i18n="@@ui-1fak8xt">Employee</ng-container></dt><dd class="wrap-anywhere">{{ employeeName(row.employeeId) }}</dd></div>
           <div class="min-w-0"><dt class="font-semibold">Revision ID</dt><dd class="break-all">{{ row.id }}</dd></div>
           <div><dt class="font-semibold">Requested by</dt><dd>User {{ row.requestedBy }} · {{ row.createdAt | date:'medium' }}</dd></div>
           <div><dt class="font-semibold">Snapshots to review</dt><dd>{{ row.impact?.snapshotsToReview ?? '—' }}</dd></div>
@@ -89,7 +89,7 @@
             <a class="action" [routerLink]="['/salary-structure', company, 'assignments', row.previousAssignmentId]">Previous assignment</a>
             @if (row.appliedAssignmentId) { <a class="action" [routerLink]="['/salary-structure', company, 'assignments', row.appliedAssignmentId]">Applied assignment</a> }
           }
-          @if (can('audit:records:read-tenant')) { <a class="action" [routerLink]="['/salary-structure', company, 'audit']" [queryParams]="{resource: row.id}">Audit history</a> }
+          @if (can('audit:records:read-tenant')) { <a class="action" [routerLink]="['/salary-structure', company, 'audit']" [queryParams]="{resource: row.id}"><ng-container i18n="@@ui-jnu6u8">Audit history</ng-container></a> }
         </div>
       </app-component-card>
       @if (previewError()) { <p class="feedback" role="alert">{{ previewError() }}</p> }
@@ -106,7 +106,7 @@
     } @else {
       <app-component-card title="Salary assignment" [desc]="payState(row) + ' · ' + row.effectiveFrom + ' – ' + (row.effectiveTo ?? 'Open')">
         <dl class="grid gap-4 text-sm text-gray-700 sm:grid-cols-2 xl:grid-cols-3 dark:text-gray-300">
-          <div class="min-w-0"><dt class="font-semibold">Employee</dt><dd class="wrap-anywhere">{{ employeeName(row.employeeId) }}</dd></div>
+          <div class="min-w-0"><dt class="font-semibold"><ng-container i18n="@@ui-1fak8xt">Employee</ng-container></dt><dd class="wrap-anywhere">{{ employeeName(row.employeeId) }}</dd></div>
           <div><dt class="font-semibold">Base salary</dt><dd class="text-lg font-semibold">{{ money(row.baseSalary, row.currency) }}</dd></div>
           <div><dt class="font-semibold">Assignment version</dt><dd>{{ row.version }}</dd></div>
           <div class="min-w-0"><dt class="font-semibold">Contract</dt><dd class="break-all">{{ row.contractId }}</dd></div>
@@ -121,7 +121,7 @@
           @if (can('revisions:read')) {
             <a class="action" [routerLink]="['/salary-structure', company, 'revisions']" [queryParams]="{employee: row.employeeId}">Employee revisions</a>
           }
-          @if (can('audit:records:read-tenant')) { <a class="action" [routerLink]="['/salary-structure', company, 'audit']" [queryParams]="{resource: row.id}">Audit history</a> }
+          @if (can('audit:records:read-tenant')) { <a class="action" [routerLink]="['/salary-structure', company, 'audit']" [queryParams]="{resource: row.id}"><ng-container i18n="@@ui-jnu6u8">Audit history</ng-container></a> }
         </div>
       </app-component-card>
       <app-component-card title="Assigned components">
@@ -139,9 +139,9 @@
     <app-component-card [title]="mode === 'assignments' ? 'Salary assignments' : 'Salary revisions'">
       <div class="overflow-x-auto rounded-lg border border-gray-200 dark:border-gray-800">
         <table class="w-full min-w-[40rem] text-start text-sm text-gray-700 dark:text-gray-300">
-          <thead class="table-heading"><tr><th scope="col">Employee</th><th scope="col">Effective date</th><th scope="col">Status</th>
+          <thead class="table-heading"><tr><th scope="col"><ng-container i18n="@@ui-1fak8xt">Employee</ng-container></th><th scope="col">Effective date</th><th scope="col"><ng-container i18n="@@ui-3pd73">Status</ng-container></th>
             <th scope="col">{{ mode === 'assignments' ? 'Base salary' : 'Proposed base salary' }}</th>
-            <th scope="col">{{ mode === 'assignments' ? 'Contract ID' : 'Requester' }}</th><th scope="col"><span class="sr-only">Actions</span></th></tr></thead>
+            <th scope="col">{{ mode === 'assignments' ? 'Contract ID' : 'Requester' }}</th><th scope="col"><span class="sr-only"><ng-container i18n="@@ui-1rx51qc">Actions</ng-container></span></th></tr></thead>
           <tbody class="divide-y divide-gray-100 dark:divide-gray-800">
             @for (row of visible(view); track row.id) {
               <tr><td class="table-cell max-w-52 wrap-anywhere">
@@ -156,7 +156,7 @@
                   <td class="table-cell">{{ payState(row) }}</td><td class="table-cell whitespace-nowrap">{{ money(row.baseSalary, row.currency) }}</td>
                   <td class="table-cell max-w-56 wrap-anywhere">{{ row.contractId }}</td>
                 }
-                <td class="table-cell"><a class="text-brand-700 underline dark:text-brand-300" [routerLink]="['/salary-structure', company, mode, row.id]">View details</a></td>
+                <td class="table-cell"><a class="text-brand-700 underline dark:text-brand-300" [routerLink]="['/salary-structure', company, mode, row.id]"><ng-container i18n="@@ui-5dxh2m">View details</ng-container></a></td>
               </tr>
             } @empty { <tr><td class="table-cell" colspan="6">No salary records match this selection.</td></tr> }
           </tbody>
@@ -164,8 +164,8 @@
       </div>
       <div class="flex flex-wrap items-center justify-between gap-2">
         <p class="text-sm text-gray-600 dark:text-gray-400">{{ view.total }} records · Page {{ page }}</p>
-        <div class="flex gap-2"><button class="action" type="button" [disabled]="page <= 1" (click)="go(page - 1)">Previous</button>
-          <button class="action" type="button" [disabled]="page * 20 >= view.total" (click)="go(page + 1)">Next</button></div>
+        <div class="flex gap-2"><button class="action" type="button" [disabled]="page <= 1" (click)="go(page - 1)"><ng-container i18n="@@ui-1t5jxvs">Previous</ng-container></button>
+          <button class="action" type="button" [disabled]="page * 20 >= view.total" (click)="go(page + 1)"><ng-container i18n="@@ui-1padbm0">Next</ng-container></button></div>
       </div>
     </app-component-card>
   }

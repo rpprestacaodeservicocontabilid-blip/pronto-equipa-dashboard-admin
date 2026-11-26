@@ -1,20 +1,20 @@
-<app-auth-form-frame title="Verify your email" description="Enter the email verification code or use the token from your verification link." [error]="error()" [notice]="notice()">
+<app-auth-form-frame i18n-title="@@auth-message-20" title="Verify your email" i18n-description="@@auth-message-21" description="Enter the email verification code or use the token from your verification link." [error]="error()" [notice]="notice()">
     @if (!done()) {
       <form #form="ngForm" (ngSubmit)="form.valid && verify()" class="space-y-5 text-gray-700 dark:text-gray-400">
-        <label class="block text-sm" for="verify-mode">Verification method<select appAuthInput id="verify-mode" name="mode" [(ngModel)]="mode"><option value="code">Email code</option><option value="token">Email link token</option></select></label>
+        <label class="block text-sm" for="verify-mode"><ng-container i18n="@@auth-message-22">Verification method</ng-container><select appAuthInput id="verify-mode" name="mode" [(ngModel)]="mode"><option value="code"><ng-container i18n="@@auth-message-23">Email code</ng-container></option><option value="token"><ng-container i18n="@@auth-message-24">Email link token</ng-container></option></select></label>
         @if (mode === 'code') {
           @if (challengeId) {
-            <label class="block text-sm" for="verification-code">Verification code<input appAuthInput id="verification-code" name="code" [(ngModel)]="code" required pattern="[0-9]{6}" maxlength="6" inputmode="numeric" autocomplete="one-time-code" /></label>
-          } @else { <p class="text-sm">Request a verification code using your email below.</p> }
+            <label class="block text-sm" for="verification-code"><ng-container i18n="@@ui-1kh9uwn">Verification code</ng-container><input appAuthInput id="verification-code" name="code" [(ngModel)]="code" required pattern="[0-9]{6}" maxlength="6" inputmode="numeric" autocomplete="one-time-code" /></label>
+          } @else { <p class="text-sm"><ng-container i18n="@@auth-message-25">Request a verification code using your email below.</ng-container></p> }
         } @else {
-          <label class="block text-sm" for="verification-token">Verification token<input appAuthInput id="verification-token" name="token" [(ngModel)]="token" required autocomplete="off" /></label>
+          <label class="block text-sm" for="verification-token"><ng-container i18n="@@auth-message-26">Verification token</ng-container><input appAuthInput id="verification-token" name="token" [(ngModel)]="token" required autocomplete="off" /></label>
         }
-        <button [disabled]="busy() || form.invalid || (mode === 'code' && !challengeId)" class="h-11 w-full rounded-lg bg-brand-500 text-sm font-medium text-white hover:bg-brand-600 disabled:opacity-50 dark:bg-brand-500 dark:hover:bg-brand-600">{{ busy() ? 'Please wait…' : 'Verify email' }}</button>
+        <button [disabled]="busy() || form.invalid || (mode === 'code' && !challengeId)" class="h-11 w-full rounded-lg bg-brand-500 text-sm font-medium text-white hover:bg-brand-600 disabled:opacity-50 dark:bg-brand-500 dark:hover:bg-brand-600">@if (busy()) { <ng-container i18n="@@auth-message-27">Please wait…</ng-container> } @else { <ng-container i18n="@@ui-4c38zo">Verify email</ng-container> }</button>
       </form>
       <form #resendForm="ngForm" (ngSubmit)="resendForm.valid && resend()" class="mt-6 space-y-3 text-gray-700 dark:text-gray-400">
-        <label class="block text-sm" for="verification-email">Email<input appAuthInput id="verification-email" name="email" type="email" email [(ngModel)]="email" required autocomplete="email" /></label>
-        <button [disabled]="busy() || resendForm.invalid" class="text-sm text-brand-500 disabled:opacity-50 dark:text-brand-400">Send a new verification code</button>
+        <label class="block text-sm" for="verification-email"><ng-container i18n="@@ui-inbfc7">Email</ng-container><input appAuthInput id="verification-email" name="email" type="email" email [(ngModel)]="email" required autocomplete="email" /></label>
+        <button [disabled]="busy() || resendForm.invalid" class="text-sm text-brand-500 disabled:opacity-50 dark:text-brand-400"><ng-container i18n="@@auth-message-28">Send a new verification code</ng-container></button>
       </form>
     }
-    <a routerLink="/signin" class="mt-5 block text-sm text-brand-500 dark:text-brand-400">Sign in</a>
+    <a routerLink="/signin" class="mt-5 block text-sm text-brand-500 dark:text-brand-400"><ng-container i18n="@@ui-w9nig3">Sign in</ng-container></a>
   </app-auth-form-frame>

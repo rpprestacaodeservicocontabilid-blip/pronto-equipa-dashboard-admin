@@ -3,7 +3,7 @@ import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { FormsModule } from '@angular/forms';
 import { ContractsApi } from '../../infrastructure/contracts-api.service';
 import { DocumentSummary } from '../../domain/contracts.models';
-import { apiErrorMessage } from '../../../../core/api/api-error';
+import { contractErrorMessage } from '../contract-errors';
 
 @Component({
   selector: 'app-contract-document-picker',
@@ -11,30 +11,30 @@ import { apiErrorMessage } from '../../../../core/api/api-error';
   imports: [FormsModule],
   template: `
     <label class="field">
-      Available documents
+      <ng-container i18n="@@contracts-available-documents">Available documents</ng-container>
       <select class="control" [ngModel]="selected?.id ?? ''" (ngModelChange)="select($event)" [disabled]="loading()">
-        <option value="">Select an active document</option>
+        <option value=""><ng-container i18n="@@contracts-select-an-active-document">Select an active document</ng-container></option>
         @if (selected && !inCurrentPage(selected.id)) { <option [value]="selected.id">{{ selected.name }}</option> }
         @for (entry of documents(); track entry.id) { <option [value]="entry.id">{{ entry.name }}</option> }
       </select>
     </label>
     <div class="mt-2 flex flex-wrap items-center gap-2">
-      <button class="action" type="button" [disabled]="loading() || page() === 1" (click)="load(page() - 1)">Previous</button>
-      <button class="action" type="button" [disabled]="loading() || documents().length < 25" (click)="load(page() + 1)">Next</button>
-      <span class="text-sm text-gray-600 dark:text-gray-400">Page {{ page() }}</span>
+      <button class="action" type="button" [disabled]="loading() || page() === 1" (click)="load(page() - 1)"><ng-container i18n="@@contracts-previous">Previous</ng-container></button>
+      <button class="action" type="button" [disabled]="loading() || documents().length < 25" (click)="load(page() + 1)"><ng-container i18n="@@contracts-next">Next</ng-container></button>
+      <span class="text-sm text-gray-600 dark:text-gray-400"><ng-container i18n="@@contracts-document-picker-page">Page {{ page() }}</ng-container></span>
       @if (previewAllowed && selected) {
         @if (preview(); as link) {
           @if (link.id === selected.id) {
-            <a class="action" [href]="link.url" target="_blank" rel="noopener noreferrer">Open preview</a>
+            <a class="action" [href]="link.url" target="_blank" rel="noopener noreferrer"><ng-container i18n="@@contracts-open-preview">Open preview</ng-container></a>
           }
         }
-        <button class="action" type="button" [disabled]="previewLoading()" (click)="preparePreview()">Prepare preview</button>
+        <button class="action" type="button" [disabled]="previewLoading()" (click)="preparePreview()"><ng-container i18n="@@contracts-prepare-preview">Prepare preview</ng-container></button>
       }
     </div>
-    @if (loading()) { <p role="status" class="mt-2 text-sm text-gray-600 dark:text-gray-400">Loading documents…</p> }
+    @if (loading()) { <p role="status" class="mt-2 text-sm text-gray-600 dark:text-gray-400"><ng-container i18n="@@contracts-loading-documents">Loading documents…</ng-container></p> }
     @if (error()) {
       <p role="alert" class="feedback mt-2">{{ error() }}</p>
-      <button class="action mt-2" type="button" (click)="load(page())">Try again</button>
+      <button class="action mt-2" type="button" (click)="load(page())"><ng-container i18n="@@contracts-try-again">Try again</ng-container></button>
     }
   `,
 })
@@ -60,7 +60,7 @@ export class ContractDocumentPickerComponent implements OnInit {
     this.error.set('');
     this.api.documentPage(this.companyId, page).pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
       next: documents => { this.documents.set(documents); this.page.set(page); this.loading.set(false); },
-      error: error => { this.error.set(apiErrorMessage(error)); this.loading.set(false); },
+      error: error => { this.error.set(contractErrorMessage(error)); this.loading.set(false); },
     });
   }
 
@@ -80,10 +80,10 @@ export class ContractDocumentPickerComponent implements OnInit {
     this.api.documentAccess(this.companyId, id, 'preview').pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
       next: url => {
         if (/^https?:\/\//i.test(url)) this.preview.set({ id, url });
-        else this.error.set('The document service returned an invalid link.');
+        else this.error.set($localize`:@@contracts-the-document-service-returned-an-invalid-link:The document service returned an invalid link.`);
         this.previewLoading.set(false);
       },
-      error: error => { this.error.set(apiErrorMessage(error)); this.previewLoading.set(false); },
+      error: error => { this.error.set(contractErrorMessage(error)); this.previewLoading.set(false); },
     });
   }
 }

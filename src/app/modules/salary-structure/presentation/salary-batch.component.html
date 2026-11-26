@@ -24,7 +24,7 @@
   <app-component-card [title]="current.code" [desc]="human(current.status) + ' · Effective ' + current.effectiveFrom">
     <dl class="grid gap-3 text-sm text-gray-700 sm:grid-cols-2 xl:grid-cols-4 dark:text-gray-300">
       <div class="min-w-0"><dt class="font-semibold">Batch ID</dt><dd class="break-all">{{ current.id }}</dd></div>
-      <div><dt class="font-semibold">Employees</dt><dd>{{ current.items.length }}</dd></div>
+      <div><dt class="font-semibold"><ng-container i18n="@@ui-f4bo3a">Employees</ng-container></dt><dd>{{ current.items.length }}</dd></div>
       <div><dt class="font-semibold">Applied</dt><dd>{{ count(current, 'APPLIED') }}</dd></div>
       <div><dt class="font-semibold">Invalid or failed</dt><dd>{{ count(current, 'INVALID') + count(current, 'FAILED') }}</dd></div>
       <div><dt class="font-semibold">Requested by</dt><dd>User {{ current.requestedBy }}</dd></div>
@@ -43,13 +43,13 @@
       @if (current.status === 'APPROVED' || current.status === 'APPLYING') {
         <button class="action" type="button" [disabled]="!!form()" (click)="action('apply')">{{ current.status === 'APPLYING' ? 'Resume application' : 'Apply approved batch' }}</button>
       }
-      @if (can('audit:records:read-tenant')) { <a class="action" [routerLink]="['/salary-structure', company, 'audit']" [queryParams]="{resource: current.id}">Audit history</a> }
+      @if (can('audit:records:read-tenant')) { <a class="action" [routerLink]="['/salary-structure', company, 'audit']" [queryParams]="{resource: current.id}"><ng-container i18n="@@ui-jnu6u8">Audit history</ng-container></a> }
     </div>
   </app-component-card>
   <app-component-card title="Validation and results by employee">
     <div class="max-h-[32rem] overflow-auto rounded-lg border border-gray-200 dark:border-gray-800">
       <table class="w-full min-w-[42rem] text-start text-sm text-gray-700 dark:text-gray-300">
-        <thead class="table-heading"><tr><th scope="col">Employee ID</th><th scope="col">Proposed base salary</th><th scope="col">Status</th><th scope="col">Result</th></tr></thead>
+        <thead class="table-heading"><tr><th scope="col">Employee ID</th><th scope="col">Proposed base salary</th><th scope="col"><ng-container i18n="@@ui-3pd73">Status</ng-container></th><th scope="col">Result</th></tr></thead>
         <tbody class="divide-y divide-gray-100 dark:divide-gray-800">
           @for (item of current.items; track item.id) {
             <tr><td class="table-cell max-w-52 wrap-anywhere">{{ item.employeeId }}</td>

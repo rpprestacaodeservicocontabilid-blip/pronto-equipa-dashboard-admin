@@ -1,11 +1,12 @@
 import { NgTemplateOutlet } from '@angular/common';
+import { activeLocale } from '../../../../core/i18n/locale';
 import { Component, DestroyRef, Input, OnInit, computed, inject, signal } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { FormsModule } from '@angular/forms';
 import { RouterLink } from '@angular/router';
 import { catchError, forkJoin, from, map, mergeMap, of, switchMap, toArray } from 'rxjs';
 import { CompanyWorkspace } from '../../../../core/api/company-workspace-api';
-import { apiErrorMessage } from '../../../../core/api/api-error';
+import { organizationErrorMessage, organizationOptionLabel } from '../organization-display';
 import { ComponentCardComponent } from '../../../../shared/components/common/component-card/component-card.component';
 import { DepartmentNode, OrganizationRecord } from '../../domain/organization.models';
 import { descendantIds, isoDate } from '../../domain/organization-validation';
@@ -18,6 +19,13 @@ import { OrganizationApi } from '../../infrastructure/organization-api.service';
   templateUrl: './organization-hierarchy.component.html',
 })
 export class OrganizationHierarchyComponent implements OnInit {
+  protected readonly statusLabel = organizationOptionLabel;
+  private readonly dateFormatter = new Intl.DateTimeFormat(activeLocale(), { dateStyle: 'medium', timeZone: 'UTC' });
+
+  protected toggleLabel(name: string) {
+    return $localize`:@@organization-toggle-department:Toggle ${name}:NAME:`;
+  }
+
   @Input({ required: true }) context!: CompanyWorkspace;
   private readonly api = inject(OrganizationApi);
   private readonly destroyRef = inject(DestroyRef);
@@ -57,7 +65,7 @@ export class OrganizationHierarchyComponent implements OnInit {
 
   protected manager(node: DepartmentNode) {
     const id = node.data['managerEmployeeId'];
-    return typeof id === 'string' ? this.managers().get(id) ?? 'Manager assigned' : '';
+    return typeof id === 'string' ? this.managers().get(id) ?? $localize`:@@organization-manager-assigned:Manager assigned` : '';
   }
 
   protected load() {
@@ -73,7 +81,7 @@ export class OrganizationHierarchyComponent implements OnInit {
         this.expanded.set(new Set(nodes.map(node => node.id)));
         this.loading.set(false);
       },
-      error: error => { this.error.set(apiErrorMessage(error)); this.loading.set(false); },
+      error: error => { this.error.set(organizationErrorMessage(error)); this.loading.set(false); },
     });
   }
 
@@ -101,10 +109,10 @@ export class OrganizationHierarchyComponent implements OnInit {
       next: () => {
         this.saving.set(false);
         this.selected.set(null);
-        this.notice.set('Department moved. The previous structure is preserved in history.');
+        this.notice.set($localize`:@@organization-department-moved-the-previous-structure-is-preserved-in-history:Department moved. The previous structure is preserved in history.`);
         this.load();
       },
-      error: error => { this.saving.set(false); this.error.set(apiErrorMessage(error)); },
+      error: error => { this.saving.set(false); this.error.set(organizationErrorMessage(error)); },
     });
   }
 
@@ -135,10 +143,11 @@ export class OrganizationHierarchyComponent implements OnInit {
         }
         this.historical.set(roots);
         this.expanded.set(new Set(nodes.keys()));
-        this.notice.set('Structure at the end of ' + cutoff + ' (UTC).');
+        const date = this.dateFormatter.format(new Date(cutoff + 'T00:00:00Z'));
+        this.notice.set($localize`:@@organization-structure-at-date:Structure at the end of ${date}:DATE:.`);
         this.loading.set(false);
       },
-      error: error => { this.error.set(apiErrorMessage(error)); this.loading.set(false); },
+      error: error => { this.error.set(organizationErrorMessage(error)); this.loading.set(false); },
     });
   }
 

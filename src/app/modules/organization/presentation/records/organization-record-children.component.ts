@@ -1,11 +1,12 @@
 import { DatePipe } from '@angular/common';
+import { activeLocale } from '../../../../core/i18n/locale';
 import { Component, DestroyRef, EventEmitter, Input, OnInit, Output, computed, inject, signal } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { FormsModule } from '@angular/forms';
 import { RouterLink } from '@angular/router';
 import { Observable, catchError, forkJoin, of } from 'rxjs';
 import { CompanyWorkspace } from '../../../../core/api/company-workspace-api';
-import { apiErrorMessage } from '../../../../core/api/api-error';
+import { organizationErrorMessage, organizationOptionLabel } from '../organization-display';
 import { ComponentCardComponent } from '../../../../shared/components/common/component-card/component-card.component';
 import { OrganizationRecord, Resource, Shift } from '../../domain/organization.models';
 import { MONDAY_FIRST, WEEKDAYS } from '../../domain/organization.resources';
@@ -22,6 +23,19 @@ type FormKind = 'department' | 'exception' | 'shift' | 'scheduleAssignment';
   templateUrl: './organization-record-children.component.html',
 })
 export class OrganizationRecordChildrenComponent implements OnInit {
+  protected readonly labels = {
+    manager: $localize`:@@organization-manager:Manager`,
+    responsibleEmployee: $localize`:@@organization-responsible-employee:Responsible employee`,
+    professionalCategory: $localize`:@@organization-professional-category:Professional category`,
+    jobFunction: $localize`:@@organization-job-function:Job function`,
+    associationUnavailable: $localize`:@@organization-association-unavailable-from-api:Association unavailable from API`,
+    openEnded: $localize`:@@organization-open-ended:Open-ended`,
+    date: $localize`:@@organization-date:Date`,
+    effectiveFrom: $localize`:@@organization-effective-from:Effective from`,
+    saving: $localize`:@@organization-saving:Saving…`,
+    save: $localize`:@@organization-save:Save`,
+  };
+
   @Input({ required: true }) context!: CompanyWorkspace;
   @Input({ required: true }) resource!: Resource;
   @Input({ required: true }) record!: OrganizationRecord;
@@ -51,7 +65,14 @@ export class OrganizationRecordChildrenComponent implements OnInit {
     const value = this.record.data['shifts'];
     return Array.isArray(value) ? value as Shift[] : [];
   });
-  protected readonly monthName = computed(() => new Intl.DateTimeFormat('en-GB', {
+  protected readonly optionLabel = organizationOptionLabel;
+  private readonly weekdayFormatter = new Intl.DateTimeFormat(activeLocale(), { weekday: 'short', timeZone: 'UTC' });
+
+  protected shortWeekday(day: number) {
+    return this.weekdayFormatter.format(new Date(Date.UTC(2024, 0, 7 + day)));
+  }
+
+  protected readonly monthName = computed(() => new Intl.DateTimeFormat(activeLocale(), {
     month: 'long', year: 'numeric', timeZone: 'UTC',
   }).format(new Date(this.month() + '-01T00:00:00Z')));
   protected readonly monthCells = computed(() => {
@@ -70,8 +91,8 @@ export class OrganizationRecordChildrenComponent implements OnInit {
       const effective = (!this.record.effectiveFrom || key >= this.record.effectiveFrom)
         && (!this.record.effectiveTo || key <= this.record.effectiveTo);
       const special = exception?.data['dayType'];
-      const type = !effective ? 'Outside period' : typeof special === 'string' ? special.replaceAll('_', ' ')
-        : Array.isArray(working) && working.includes(weekday) ? 'Working day' : 'Rest day';
+      const type = !effective ? $localize`:@@organization-outside-period:Outside period` : typeof special === 'string' ? this.optionLabel(special)
+        : Array.isArray(working) && working.includes(weekday) ? $localize`:@@organization-working-day:Working day` : $localize`:@@organization-rest-day:Rest day`;
       return { key, day, type, name: exception?.name ?? '', holiday: special === 'HOLIDAY' && effective };
     });
   });
@@ -112,11 +133,11 @@ export class OrganizationRecordChildrenComponent implements OnInit {
   protected employeeLabel(id: unknown) {
     if (typeof id !== 'string' || !id) return '—';
     const employee = this.employees().find(entry => entry.id === id);
-    return employee ? employee.firstName + ' ' + employee.lastName : 'Assigned';
+    return employee ? employee.firstName + ' ' + employee.lastName : $localize`:@@organization-assigned:Assigned`;
   }
 
   protected referenceLabel(records: OrganizationRecord[], id: unknown) {
-    return typeof id === 'string' && id ? records.find(row => row.id === id)?.name ?? 'Assigned' : '—';
+    return typeof id === 'string' && id ? records.find(row => row.id === id)?.name ?? $localize`:@@organization-assigned:Assigned` : '—';
   }
 
   protected relatedDepartments() {
@@ -164,13 +185,13 @@ export class OrganizationRecordChildrenComponent implements OnInit {
         this.employees.set(result.employees);
         this.loading.set(false);
       },
-      error: error => { this.loading.set(false); this.error.set(apiErrorMessage(error)); },
+      error: error => { this.loading.set(false); this.error.set(organizationErrorMessage(error)); },
     });
   }
 
   private optional<T>(request: Observable<T[]>) {
     return request.pipe(catchError(() => {
-      this.referenceError.set('Some related records could not be loaded.');
+      this.referenceError.set($localize`:@@organization-some-related-records-could-not-be-loaded:Some related records could not be loaded.`);
       return of([]);
     }));
   }
@@ -203,7 +224,7 @@ export class OrganizationRecordChildrenComponent implements OnInit {
     const code = crypto.randomUUID();
     const date = this.from;
     if (mode !== 'shift' && (!validPeriod(date, this.to) || date < this.today)) {
-      this.error.set('Enter a valid effective period starting today or later.');
+      this.error.set($localize`:@@organization-enter-a-valid-effective-period-starting-today-or-later:Enter a valid effective period starting today or later.`);
       return;
     }
 
@@ -221,7 +242,7 @@ export class OrganizationRecordChildrenComponent implements OnInit {
         if (!this.name.trim() || !this.description.trim()) return;
         if ((this.record.effectiveFrom && date < this.record.effectiveFrom) || (this.record.effectiveTo && date > this.record.effectiveTo)
             || this.rows().some(row => row.effectiveFrom === date && row.status === 'ACTIVE')) {
-          this.error.set('Select a day within the calendar period that has no active exception.');
+          this.error.set($localize`:@@organization-select-a-day-within-the-calendar-period-that-has-no-active-exception:Select a day within the calendar period that has no active exception.`);
           return;
         }
         request = this.api.create(company, childCollection('calendars', id, 'exceptions'), {
@@ -242,7 +263,7 @@ export class OrganizationRecordChildrenComponent implements OnInit {
         if (!this.target) return;
         if ((this.record.effectiveFrom && date < this.record.effectiveFrom)
             || (this.record.effectiveTo && (!this.to || this.to > this.record.effectiveTo))) {
-          this.error.set('The assignment must stay within the schedule’s effective period.');
+          this.error.set($localize`:@@organization-the-assignment-must-stay-within-the-schedule-s-effective-period:The assignment must stay within the schedule’s effective period.`);
           return;
         }
         request = this.api.create(company, 'schedule-assignments', {
@@ -257,11 +278,11 @@ export class OrganizationRecordChildrenComponent implements OnInit {
         this.busy.set(false);
         if (mode === 'shift') { this.changed.emit(); return; }
         this.form.set(null);
-        this.notice.set('Record added.');
+        this.notice.set($localize`:@@organization-record-added:Record added.`);
         if (mode === 'exception') this.month.set(date.slice(0, 7));
         this.load();
       },
-      error: error => { this.busy.set(false); this.error.set(apiErrorMessage(error)); },
+      error: error => { this.busy.set(false); this.error.set(organizationErrorMessage(error)); },
     });
   }
 }

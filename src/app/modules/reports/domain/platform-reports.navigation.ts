@@ -7,7 +7,7 @@ export interface ReportSection {
 }
 
 export const REPORT_SECTIONS: ReportSection[] = [
-  { path: 'overview', title: 'Overview', group: 'Reporting', view: 'overview' },
+  { path: 'overview', title: $localize`:@@ui-thnxru:Overview`, group: 'Reporting', view: 'overview' },
   { path: 'catalog', title: 'Report catalogue', group: 'Reporting', view: 'catalog' },
   { path: 'analysis', title: 'Analysis and trends', group: 'Reporting', view: 'analysis' },
   { path: 'activity', title: 'Report activity', group: 'Operational reports', view: 'analysis', code: 'REPORT_ACTIVITY' },
@@ -20,7 +20,7 @@ export const REPORT_SECTIONS: ReportSection[] = [
   { path: 'executions', title: 'Execution history', group: 'Workspace', view: 'executions' },
   { path: 'templates', title: 'Saved templates', group: 'Workspace', view: 'templates' },
   { path: 'schedules', title: 'Scheduled reports', group: 'Workspace', view: 'schedules' },
-  { path: 'exports', title: 'Exports', group: 'Workspace', view: 'exports' },
+  { path: 'exports', title: $localize`:@@ui-w9ox5s:Exports`, group: 'Workspace', view: 'exports' },
   { path: 'audit', title: 'Audit trail', group: 'Governance', view: 'audit' },
   { path: 'settings', title: 'Report policies', group: 'Governance', view: 'policy' },
 ];

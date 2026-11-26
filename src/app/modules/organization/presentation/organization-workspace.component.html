@@ -1,25 +1,25 @@
 <div class="workspace-ui space-y-5">
-  <app-page-breadcrumb pageTitle="Organization management" homeLink="/organization" />
+  <app-page-breadcrumb i18n-pageTitle="@@organization-organization-management" pageTitle="Organization management" homeLink="/organization" />
   @let state = access();
   @if ('error' in state) {
     <p role="alert" class="feedback">{{ state.error }}</p>
-    <a routerLink="/organization" class="action">Select another company</a>
+    <a routerLink="/organization" class="action"><ng-container i18n="@@organization-select-another-company">Select another company</ng-container></a>
   } @else {
     @let context = state.context;
     @let companyId = context.company.id;
     <div class="flex flex-wrap items-center justify-between gap-3">
-      <div><p class="text-sm text-gray-600 dark:text-gray-400">Active company</p>
+      <div><p class="text-sm text-gray-600 dark:text-gray-400"><ng-container i18n="@@organization-active-company">Active company</ng-container></p>
         <h2 class="text-xl font-semibold text-gray-900 dark:text-gray-100">{{ context.company.name }}</h2></div>
       <div class="flex flex-wrap gap-2">
-        <a class="action" [routerLink]="['/contracts', companyId]">Contracts</a>
-        <a class="action" routerLink="/organization">Switch company</a>
+        <a class="action" [routerLink]="['/contracts', companyId]"><ng-container i18n="@@organization-contracts">Contracts</ng-container></a>
+        <a class="action" routerLink="/organization"><ng-container i18n="@@organization-switch-company">Switch company</ng-container></a>
       </div>
     </div>
     @if (!context.permissions.includes('organization:read')) {
-      <p role="alert" class="feedback">Your company role does not allow access to Organization.</p>
+      <p role="alert" class="feedback"><ng-container i18n="@@organization-your-company-role-does-not-allow-access-to-organization">Your company role does not allow access to Organization.</ng-container></p>
     } @else {
       @if (state.readOnly) {
-        <p role="status" class="text-sm text-gray-600 dark:text-gray-400">Basic organization access is available. Company access is required to load your full permissions.</p>
+        <p role="status" class="text-sm text-gray-600 dark:text-gray-400"><ng-container i18n="@@organization-basic-organization-access-is-available-company-access-is-required-to-load-your-full-permissions">Basic organization access is available. Company access is required to load your full permissions.</ng-container></p>
       }
       <div>
         <div class="min-w-0">
@@ -34,7 +34,7 @@
                 @if (resource(); as collection) {
                   <app-organization-resource [context]="context" [resource]="collection" [id]="id()" [shiftsOnly]="section() === 'shifts'" />
                 } @else {
-                  <p role="alert" class="feedback">This organization section does not exist.</p>
+                  <p role="alert" class="feedback"><ng-container i18n="@@organization-this-organization-section-does-not-exist">This organization section does not exist.</ng-container></p>
                 }
               }
             }

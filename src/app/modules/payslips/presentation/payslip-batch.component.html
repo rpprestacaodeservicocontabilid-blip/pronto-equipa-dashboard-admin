@@ -20,8 +20,8 @@
       <dl class="grid grid-cols-2 gap-3 xl:grid-cols-4">
         <div class="ps-stat"><dt>Items</dt><dd>{{ data.total | number }}</dd></div>
         <div class="ps-stat"><dt>Generated</dt><dd>{{ data.completed | number }}</dd></div>
-        <div class="ps-stat"><dt>Pending</dt><dd>{{ pending(data) | number }}</dd></div>
-        <div class="ps-stat"><dt>Failed</dt><dd>{{ data.failed | number }}</dd></div>
+        <div class="ps-stat"><dt><ng-container i18n="@@ui-e8nfto">Pending</ng-container></dt><dd>{{ pending(data) | number }}</dd></div>
+        <div class="ps-stat"><dt><ng-container i18n="@@ui-npsixg">Failed</ng-container></dt><dd>{{ data.failed | number }}</dd></div>
       </dl>
     </app-component-card>
     <app-component-card title="Current item status">

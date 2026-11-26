@@ -72,16 +72,17 @@ export class AppSidebarComponent {
   protected readonly groups = computed(() => {
     const nav = SIDEBAR_MODULES.find(item => item.id === this.unfolded());
     if (!nav) return [];
-    const groups = new Map<string, SidebarLink[]>();
+    const groups = new Map<string, { title: string; links: SidebarLink[] }>();
     for (const link of nav.links) {
-      const group = link.group ?? '';
-      const items = groups.get(group) ?? [];
-      items.push(link);
-      groups.set(group, items);
+      const title = link.group ?? '';
+      const id = link.groupKey ?? title;
+      const group = groups.get(id) ?? { title, links: [] };
+      group.links.push(link);
+      groups.set(id, group);
     }
     const permissions = nav.tenant ? this.location().context?.permissions : this.auth.claims()?.permissions;
-    return [...groups].map(([title, links]): MenuGroup => {
-      const key = nav.id + '/' + title;
+    return [...groups].map(([id, { title, links }]): MenuGroup => {
+      const key = nav.id + '/' + id;
       return { title, key, links: ordered(links, this.preferences()[key], item => this.linkId(item))
         .filter(link => !permissions || !link.requires || link.requires(permissions, !nav.tenant && this.auth.isPlatformAdmin())) };
     }).filter(group => group.links.length);
@@ -167,7 +168,7 @@ export class AppSidebarComponent {
   }
 
   private moveLink(nav: SidebarModule, group: MenuGroup, from: number, to: number) {
-    const complete = ordered(nav.links.filter(link => (link.group ?? '') === group.title), this.preferences()[group.key], item => this.linkId(item));
+    const complete = ordered(nav.links.filter(link => nav.id + '/' + (link.groupKey ?? link.group ?? '') === group.key), this.preferences()[group.key], item => this.linkId(item));
     this.reorder(group.key, complete.map(item => this.linkId(item)), group.links.map(item => this.linkId(item)), from, to, group.links[from]?.title);
   }
 

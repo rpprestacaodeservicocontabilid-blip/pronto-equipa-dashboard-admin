@@ -21,14 +21,14 @@ const workspace = () => import('./presentation/engine-workspace.component').then
 export const PAYROLL_ENGINE_ROUTES: Routes = [
   {
     path: '', pathMatch: 'full', title: 'Select company | Payroll engine',
-    data: { workspace: { label: 'Payroll engine', path: '/payroll-engine' } },
+    data: { workspace: { label: $localize`:@@ui-1yye4vg:Payroll engine`, path: '/payroll-engine' } },
     loadComponent: () => import('../../shared/components/common/company-workspace/company-workspace-picker.component')
       .then(module => module.CompanyWorkspacePickerComponent),
   },
   {
     path: ':companyId', resolve: { access: companyAccess },
     children: [
-      { path: '', pathMatch: 'full', title: 'Payroll engine', loadComponent: workspace },
+      { path: '', pathMatch: 'full', title: $localize`:@@ui-1yye4vg:Payroll engine`, loadComponent: workspace },
       ...ENGINE_SECTIONS.map(section => ({
         path: section.id, title: section.title + ' | Payroll engine', loadComponent: workspace, data: { section },
       })),

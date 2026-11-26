@@ -3,7 +3,7 @@ import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { FormsModule } from '@angular/forms';
 import { catchError, forkJoin, map, of } from 'rxjs';
 import { CompanyWorkspace } from '../../../../core/api/company-workspace-api';
-import { apiErrorMessage } from '../../../../core/api/api-error';
+import { organizationErrorMessage } from '../organization-display';
 import { OrganizationInput, OrganizationRecord, Resource } from '../../domain/organization.models';
 import { Field, MONDAY_FIRST, ORGANIZATION_RESOURCES, WEEKDAYS } from '../../domain/organization.resources';
 import { isoDate, validPeriod } from '../../domain/organization-validation';
@@ -19,6 +19,19 @@ type Source = Resource | 'employees';
   templateUrl: './organization-record-editor.component.html',
 })
 export class OrganizationRecordEditorComponent implements OnInit {
+  protected editLabel(name: string) {
+    return $localize`:@@organization-edit-named-record:Edit ${name}:NAME:`;
+  }
+
+  protected readonly labels = {
+    newRecord: $localize`:@@organization-new-record:New record`,
+    keepAssociation: $localize`:@@organization-keep-current-association:Keep current association`,
+    selectRecord: $localize`:@@organization-select-a-record:Select a record`,
+    none: $localize`:@@organization-none:None`,
+    saving: $localize`:@@organization-saving:Saving…`,
+    saveRecord: $localize`:@@organization-save-record:Save record`,
+  };
+
   @Input({ required: true }) context!: CompanyWorkspace;
   @Input({ required: true }) resource!: Resource;
   @Input() record: OrganizationRecord | null = null;
@@ -47,7 +60,7 @@ export class OrganizationRecordEditorComponent implements OnInit {
   ngOnInit() {
     this.fields.push(...this.config.fields);
     if (!this.record && this.resource === 'departments' && this.context.permissions.includes('organization:hierarchy:manage')) {
-      this.fields.unshift({ key: 'parentId', label: 'Parent department', kind: 'reference', source: 'departments', topLevel: true });
+      this.fields.unshift({ key: 'parentId', label: $localize`:@@organization-parent-department:Parent department`, kind: 'reference', source: 'departments', topLevel: true });
     }
     const row = this.record;
     this.code = row?.code ?? '';
@@ -112,7 +125,7 @@ export class OrganizationRecordEditorComponent implements OnInit {
       return items.pipe(
         map(choices => [source, choices] as const),
         catchError(() => {
-          this.referenceError.set('Some reference lists could not be loaded. Try again before changing a reference.');
+          this.referenceError.set($localize`:@@organization-some-reference-lists-could-not-be-loaded-try-again-before-changing-a-reference:Some reference lists could not be loaded. Try again before changing a reference.`);
           return of([source, []] as const);
         }),
       );
@@ -132,50 +145,52 @@ export class OrganizationRecordEditorComponent implements OnInit {
     this.error.set('');
     let input: OrganizationInput;
     try { input = this.build(); }
-    catch (error) { this.error.set(apiErrorMessage(error)); return; }
+    catch (error) { this.error.set(organizationErrorMessage(error)); return; }
     this.busy.set(true);
     const company = this.context.company.id;
     const request = this.record ? this.api.update(company, this.resource, this.record, input) : this.api.create(company, this.resource, input);
     request.pipe(takeUntilDestroyed(this.destroy)).subscribe({
       next: saved => { this.busy.set(false); this.saved.emit(saved); },
-      error: error => { this.busy.set(false); this.error.set(apiErrorMessage(error)); },
+      error: error => { this.busy.set(false); this.error.set(organizationErrorMessage(error)); },
     });
   }
 
   private build(): OrganizationInput {
     if (!/^[A-Za-z0-9][A-Za-z0-9._-]{0,49}$/.test(this.code.trim()) || !this.name.trim()) {
-      throw new Error('Enter a valid code and name.');
+      throw new Error($localize`:@@organization-enter-a-valid-code-and-name:Enter a valid code and name.`);
     }
     if (this.config.dated && !validPeriod(this.effectiveFrom, this.effectiveTo)) {
-      throw new Error('Enter a start date and an end date on or after it.');
+      throw new Error($localize`:@@organization-enter-a-start-date-and-an-end-date-on-or-after-it:Enter a start date and an end date on or after it.`);
     }
     if (this.resource === 'establishments' && this.values['openedAt'] && this.values['closedAt'] &&
-        this.values['closedAt'] < this.values['openedAt']) throw new Error('The closing date must be on or after the opening date.');
+        this.values['closedAt'] < this.values['openedAt']) throw new Error($localize`:@@organization-the-closing-date-must-be-on-or-after-the-opening-date:The closing date must be on or after the opening date.`);
     const input: OrganizationInput = {
       code: this.code.trim(), name: this.name.trim(), data: { ...this.record?.data },
       ...(this.config.dated ? { effectiveFrom: this.effectiveFrom, effectiveTo: this.effectiveTo || null } : {}),
     };
     for (const field of this.fields) {
       if (field.kind === 'weekdays') {
-        if (!this.days.size) throw new Error('Select at least one working day.');
+        if (!this.days.size) throw new Error($localize`:@@organization-select-at-least-one-working-day:Select at least one working day.`);
         input.data[field.key] = [...this.days].sort();
         continue;
       }
       const value = this.values[field.key].trim();
       if (field.topLevel && this.record && this.original[field.key] === value) continue;
-      if (field.required && !value) throw new Error('Complete ' + field.label.toLowerCase() + '.');
+      if (field.required && !value) {
+        throw new Error($localize`:@@organization-complete-field:Complete the “${field.label}:FIELD:” field.`);
+      }
       if (field.topLevel) {
         if (field.key === 'parentId') input.parentId = value || null;
         else input.relatedId = value && value !== 'clear' ? value : null;
       } else if (field.kind === 'lines') {
         const lines = value.split('\n').map(line => line.trim()).filter(Boolean);
-        if (lines.length > 50 || lines.some(line => line.length > 250)) throw new Error('Use up to 50 requirements of up to 250 characters each.');
+        if (lines.length > 50 || lines.some(line => line.length > 250)) throw new Error($localize`:@@organization-use-up-to-50-requirements-of-up-to-250-characters-each:Use up to 50 requirements of up to 250 characters each.`);
         input.data[field.key] = lines;
       } else if (field.kind === 'integer') {
         const number = Number(value);
         const min = field.key === 'weeklyMinutes' ? 1 : 0;
         if (value && (!Number.isInteger(number) || number < min || number > (field.max ?? Infinity))) {
-          throw new Error('Enter a valid integer for ' + field.label.toLowerCase() + '.');
+          throw new Error($localize`:@@organization-valid-integer:Enter a valid integer for “${field.label}:FIELD:”.`);
         }
         if (value) input.data[field.key] = number;
         else delete input.data[field.key];

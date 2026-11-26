@@ -80,13 +80,13 @@
     <div class="flex flex-wrap gap-2">
       @if (kind === 'prompt' && row) {
         @if (canPublish) { <button type="submit" class="ai-button" [disabled]="busy() || !confirmed">Publish version</button> }
-        @else if (error() && !preview()) { <button type="button" class="ai-secondary" [disabled]="busy()" (click)="load()">Retry</button> }
+        @else if (error() && !preview()) { <button type="button" class="ai-secondary" [disabled]="busy()" (click)="load()"><ng-container i18n="@@ui-zkouah">Retry</ng-container></button> }
       } @else {
         <button type="submit" class="ai-button" [disabled]="busy() || editorForm.invalid || (kind === 'model' && !row && !providers().length)">
           {{ kind === 'disable' ? 'Disable tool' : kind === 'sync' ? 'Sync catalogue' : kind === 'prompt' ? 'Save draft' : 'Save' }}
         </button>
       }
-      <button type="button" class="ai-secondary" [disabled]="busy()" (click)="closed.emit()">Close</button>
+      <button type="button" class="ai-secondary" [disabled]="busy()" (click)="closed.emit()"><ng-container i18n="@@ui-1l0xxoj">Close</ng-container></button>
     </div>
   </form>
 </app-component-card>

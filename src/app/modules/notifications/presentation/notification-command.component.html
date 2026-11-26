@@ -93,7 +93,7 @@
     }
     <div class="flex flex-wrap gap-2">
       <button type="submit" class="nt-button" [disabled]="busy()">{{ busy() ? 'Working…' : titles[action] }}</button>
-      <button type="button" class="nt-secondary" (click)="closed.emit()" [disabled]="busy()">Close</button>
+      <button type="button" class="nt-secondary" (click)="closed.emit()" [disabled]="busy()"><ng-container i18n="@@ui-1l0xxoj">Close</ng-container></button>
     </div>
   </form>
 </app-component-card>

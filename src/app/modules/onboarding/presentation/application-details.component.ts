@@ -13,10 +13,10 @@ import { OnboardingApi } from '../infrastructure/onboarding-api.service';
 
 const TABS = [
   { id: 'summary', label: 'Summary' }, { id: 'company', label: 'Company and contacts' },
-  { id: 'documents', label: 'Documents' }, { id: 'subscription', label: 'Plan and subscription' },
+  { id: 'documents', label: $localize`:@@ui-oz47lx:Documents` }, { id: 'subscription', label: 'Plan and subscription' },
   { id: 'configuration', label: 'Setup' }, { id: 'provisioning', label: 'Provisioning' },
-  { id: 'invitations', label: 'Invitations' }, { id: 'imports', label: 'Imports' },
-  { id: 'history', label: 'History' },
+  { id: 'invitations', label: 'Invitations' }, { id: 'imports', label: $localize`:@@ui-1pi5v2d:Imports` },
+  { id: 'history', label: $localize`:@@ui-yugfpb:History` },
 ] as const;
 
 interface Action {

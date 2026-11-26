@@ -34,7 +34,7 @@
       @if (writeError()) { <p class="feedback" role="alert">{{ writeError() }}</p> }
       <div class="flex flex-wrap gap-2">
         <button class="action action-primary" type="submit" [disabled]="busy() || form.invalid || !confirmed()">Publish policy</button>
-        <button class="action" type="button" [disabled]="busy()" (click)="editing.set(false)">Cancel</button>
+        <button class="action" type="button" [disabled]="busy()" (click)="editing.set(false)"><ng-container i18n="@@ui-ew9em3">Cancel</ng-container></button>
       </div>
     </form>
   </app-component-card>
@@ -48,7 +48,7 @@
   <app-component-card title="Policy versions">
     <div class="overflow-x-auto rounded-lg border border-gray-200 dark:border-gray-800">
       <table class="w-full min-w-[44rem] text-start text-sm text-gray-700 dark:text-gray-300">
-        <thead class="table-heading"><tr><th scope="col">Code</th><th scope="col">Version</th><th scope="col">Validity</th><th scope="col">Types</th><th scope="col">Limits</th><th scope="col">Controls</th><th scope="col"><span class="sr-only">Actions</span></th></tr></thead>
+        <thead class="table-heading"><tr><th scope="col">Code</th><th scope="col">Version</th><th scope="col">Validity</th><th scope="col">Types</th><th scope="col">Limits</th><th scope="col">Controls</th><th scope="col"><span class="sr-only"><ng-container i18n="@@ui-1rx51qc">Actions</ng-container></span></th></tr></thead>
         <tbody class="divide-y divide-gray-100 dark:divide-gray-800">
           @for (policy of records; track policy.id) {
             <tr>

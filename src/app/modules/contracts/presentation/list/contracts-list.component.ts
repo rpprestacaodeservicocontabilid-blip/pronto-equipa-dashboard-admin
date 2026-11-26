@@ -3,14 +3,14 @@ import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, RouterLink } from '@angular/router';
 import { catchError, firstValueFrom, forkJoin, map, of, switchMap } from 'rxjs';
-import { apiErrorMessage } from '../../../../core/api/api-error';
+import { contractErrorMessage } from '../contract-errors';
 import { ComponentCardComponent } from '../../../../shared/components/common/component-card/component-card.component';
 import {
   CLOSED_STATUSES, CONTRACT_STATUSES, CONTRACT_VIEWS, CompanyContext, ContractStatus,
   ContractType, ContractView, Department, EmployeeSummary, EmploymentContract,
 } from '../../domain/contracts.models';
 import { ContractsApi } from '../../infrastructure/contracts-api.service';
-import { contractAmount, employeeName, formatContractDate } from '../format-contract';
+import { departmentNumber, contractAmount, employeeName, formatContractDate } from '../format-contract';
 
 const DAY = 86400000;
 const PAGE_SIZE = 15;
@@ -60,6 +60,7 @@ export class ContractsListComponent implements OnInit {
   protected readonly expiryDays = signal(30);
   protected readonly page = signal(1);
   protected readonly statuses = CONTRACT_STATUSES;
+  protected readonly recentTitle = $localize`:@@contracts-recent-contracts:Recent contracts`;
   protected readonly names = CONTRACT_VIEWS;
   protected readonly formatDate = formatContractDate;
   protected readonly formatAmount = contractAmount;
@@ -100,11 +101,11 @@ export class ContractsListComponent implements OnInit {
   protected readonly metrics = computed(() => {
     const rows = this.rows();
     return [
-      { label: 'Total contracts', count: rows.length, view: 'all' },
-      { label: 'Active', count: rows.filter(contract => contract.status === 'ACTIVE').length, view: 'all', status: 'ACTIVE' },
-      { label: 'Expiring in 30 days', count: rows.filter(contract => this.isExpiring(contract)).length, view: 'expiring' },
-      { label: 'Pending approval', count: rows.filter(contract => contract.status === 'PENDING_APPROVAL').length, view: 'approvals' },
-      { label: 'Suspended', count: rows.filter(contract => contract.status === 'SUSPENDED').length, view: 'suspensions', status: 'SUSPENDED' },
+      { label: $localize`:@@contracts-total-contracts:Total contracts`, count: rows.length, view: 'all' },
+      { label: $localize`:@@ui-8qzyhb:Active`, count: rows.filter(contract => contract.status === 'ACTIVE').length, view: 'all', status: 'ACTIVE' },
+      { label: $localize`:@@contracts-expiring-in-30-days:Expiring in 30 days`, count: rows.filter(contract => this.isExpiring(contract)).length, view: 'expiring' },
+      { label: $localize`:@@contracts-pending-approval:Pending approval`, count: rows.filter(contract => contract.status === 'PENDING_APPROVAL').length, view: 'approvals' },
+      { label: $localize`:@@contracts-suspended:Suspended`, count: rows.filter(contract => contract.status === 'SUSPENDED').length, view: 'suspensions', status: 'SUSPENDED' },
     ];
   });
   protected readonly distribution = computed(() => {
@@ -145,18 +146,18 @@ export class ContractsListComponent implements OnInit {
         const listedDepartments = departments ?? [];
         const known = new Set(listedDepartments.map(department => String(department.id)));
         const missing = [...new Set((employees ?? []).flatMap(employee => employee.departmentId ?? []))]
-          .filter(id => !known.has(String(id))).map(id => ({ id, name: 'Department #' + id }));
+          .filter(id => !known.has(String(id))).map(id => ({ id, name: departmentNumber(id) }));
         this.departments.set([...listedDepartments, ...missing]);
         this.page.set(1);
         this.loading.set(false);
       },
-      error: error => { this.error.set(apiErrorMessage(error)); this.loading.set(false); },
+      error: error => { this.error.set(contractErrorMessage(error)); this.loading.set(false); },
     });
   }
 
   private soft<T>(source: import('rxjs').Observable<T>) {
     return source.pipe(catchError(() => {
-      this.supplementalError.set('Some reference data could not be loaded. Contract records are still available.');
+      this.supplementalError.set($localize`:@@contracts-some-reference-data-could-not-be-loaded-contract-records-are-still-available:Some reference data could not be loaded. Contract records are still available.`);
       return of(null);
     }));
   }
@@ -184,7 +185,7 @@ export class ContractsListComponent implements OnInit {
     try {
       const context = await firstValueFrom(this.api.context(this.context.company.id).pipe(takeUntilDestroyed(this.destroyRef)));
       if (!context.permissions.includes('contracts.export') || !context.permissions.includes('contracts.read')) {
-        throw new Error('Your company role does not allow contract exports.');
+        throw new Error($localize`:@@contracts-your-company-role-does-not-allow-contract-exports:Your company role does not allow contract exports.`);
       }
       const employeeDirectory = context.permissions.includes('employees.read') ? this.directory() : new Map();
       const typeNames = this.typeNames();
@@ -193,7 +194,7 @@ export class ContractsListComponent implements OnInit {
         typeNames.get(contract.typeCode) ?? contract.typeCode, contract.startDate, contract.endDate ?? '',
         contract.salaryAmount ?? '', contract.currency, CONTRACT_STATUSES[contract.status],
       ]);
-      const headings = ['Contract', 'Employee', 'Type', 'Start', 'End', 'Salary', 'Currency', 'Status'];
+      const headings = [$localize`:@@contracts-contract:Contract`, $localize`:@@contracts-employee:Employee`, $localize`:@@contracts-type:Type`, $localize`:@@contracts-start:Start`, $localize`:@@contracts-end:End`, $localize`:@@contracts-salary:Salary`, $localize`:@@contracts-currency:Currency`, $localize`:@@contracts-status:Status`];
       const csv = [headings, ...data].map(row => row.map(csvCell).join(',')).join('\r\n');
       const url = URL.createObjectURL(new Blob(['\uFEFF', csv], { type: 'text/csv;charset=utf-8' }));
       const link = document.createElement('a');
@@ -202,7 +203,7 @@ export class ContractsListComponent implements OnInit {
       link.click();
       setTimeout(() => URL.revokeObjectURL(url), 1_000);
     } catch (error) {
-      if (!this.destroyRef.destroyed) this.exportError.set(apiErrorMessage(error));
+      if (!this.destroyRef.destroyed) this.exportError.set(contractErrorMessage(error));
     } finally {
       this.exporting.set(false);
     }

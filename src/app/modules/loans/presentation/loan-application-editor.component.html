@@ -71,12 +71,12 @@
 
   @if (error()) { <p class="feedback" role="alert">{{ error() }}</p> }
   <div class="flex flex-wrap gap-2">
-    @if (step() > 1) { <button class="action" type="button" [disabled]="busy()" (click)="back()">Back</button> }
+    @if (step() > 1) { <button class="action" type="button" [disabled]="busy()" (click)="back()"><ng-container i18n="@@ui-1hzmxtu">Back</ng-container></button> }
     @if (step() < 4) {
-      <button class="action action-primary" type="button" [disabled]="busy()" (click)="next()">Continue</button>
+      <button class="action action-primary" type="button" [disabled]="busy()" (click)="next()"><ng-container i18n="@@ui-1bipuuc">Continue</ng-container></button>
     } @else {
       <button class="action action-primary" type="button" [disabled]="busy()" (click)="save()">{{ busy() ? 'Saving…' : 'Save draft' }}</button>
     }
-    <button class="action" type="button" [disabled]="busy()" (click)="cancelled.emit()">Cancel</button>
+    <button class="action" type="button" [disabled]="busy()" (click)="cancelled.emit()"><ng-container i18n="@@ui-ew9em3">Cancel</ng-container></button>
   </div>
 </app-component-card>

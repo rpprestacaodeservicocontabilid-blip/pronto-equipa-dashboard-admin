@@ -9,7 +9,7 @@
   <p role="status" class="text-gray-600 dark:text-gray-400">Loading company profile…</p>
 } @else if (company.error(); as error) {
   <p role="alert" class="text-error-600 dark:text-error-400">{{ errorMessage(error) }}</p>
-  <button type="button" (click)="company.reload()" class="mt-3 text-brand-600 dark:text-brand-400">Retry</button>
+  <button type="button" (click)="company.reload()" class="mt-3 text-brand-600 dark:text-brand-400"><ng-container i18n="@@ui-zkouah">Retry</ng-container></button>
 } @else if (company.hasValue()) {
   @let record = company.value();
   <app-component-card [title]="record.name">
@@ -46,7 +46,7 @@
           <button type="submit" [disabled]="saving() || profileForm.invalid"
             class="rounded-lg bg-brand-500 px-4 py-2 text-sm text-white disabled:opacity-50 dark:hover:bg-brand-400">Save profile</button>
           <button type="button" (click)="cancel()" [disabled]="saving()"
-            class="rounded-lg border border-gray-300 px-4 py-2 text-sm text-gray-700 dark:border-gray-700 dark:text-gray-300">Cancel</button>
+            class="rounded-lg border border-gray-300 px-4 py-2 text-sm text-gray-700 dark:border-gray-700 dark:text-gray-300"><ng-container i18n="@@ui-ew9em3">Cancel</ng-container></button>
         </div>
       </form>
     } @else {
@@ -71,7 +71,7 @@
         <p role="status" class="text-sm text-gray-600 dark:text-gray-400">Loading memberships…</p>
       } @else if (members.error(); as error) {
         <p role="alert" class="text-sm text-error-600 dark:text-error-400">{{ errorMessage(error) }}</p>
-        <button type="button" (click)="members.reload()" class="mt-3 text-sm text-brand-600 dark:text-brand-400">Retry</button>
+        <button type="button" (click)="members.reload()" class="mt-3 text-sm text-brand-600 dark:text-brand-400"><ng-container i18n="@@ui-zkouah">Retry</ng-container></button>
       } @else if (members.hasValue()) {
         @let page = members.value();
         <div class="custom-scrollbar overflow-x-auto">
@@ -104,8 +104,8 @@
         <div class="mt-4 flex flex-wrap items-center justify-between gap-3 text-sm text-gray-600 dark:text-gray-400">
           <p>{{ page.pagination.total }} memberships · Page {{ page.pagination.page }} of {{ page.pagination.totalPages }}</p>
           <div class="flex gap-4">
-            <button type="button" [disabled]="page.pagination.page <= 1" (click)="showMembers(page.pagination.page - 1)" class="disabled:opacity-40">Previous</button>
-            <button type="button" [disabled]="page.pagination.page >= page.pagination.totalPages" (click)="showMembers(page.pagination.page + 1)" class="disabled:opacity-40">Next</button>
+            <button type="button" [disabled]="page.pagination.page <= 1" (click)="showMembers(page.pagination.page - 1)" class="disabled:opacity-40"><ng-container i18n="@@ui-1t5jxvs">Previous</ng-container></button>
+            <button type="button" [disabled]="page.pagination.page >= page.pagination.totalPages" (click)="showMembers(page.pagination.page + 1)" class="disabled:opacity-40"><ng-container i18n="@@ui-1padbm0">Next</ng-container></button>
           </div>
         </div>
       }

@@ -5,7 +5,7 @@
 
 <form class="mb-5 space-y-4 rounded-xl border border-gray-200 bg-white p-4 dark:border-gray-800 dark:bg-gray-900" (ngSubmit)="applyFilters()">
   <div class="grid items-end gap-3 sm:grid-cols-2 xl:grid-cols-[minmax(12rem,1.5fr)_minmax(9rem,1fr)_minmax(9rem,1fr)_auto]">
-    <label class="ps-label">Company
+    <label class="ps-label"><ng-container i18n="@@ui-1hra0d8">Company</ng-container>
       <select class="ps-input" name="companyId" [ngModel]="draft.companyId" (ngModelChange)="selectCompany($event)">
         <option [ngValue]="null">{{ companyOnly ? 'Select a company' : 'All companies' }}</option>
         @for (option of options(); track option.id) { <option [ngValue]="option.id">{{ option.name }}</option> }
@@ -15,7 +15,7 @@
       <label class="ps-label">From<input class="ps-input" type="date" name="from" [(ngModel)]="draft.from" required></label>
       <label class="ps-label">Through<input class="ps-input" type="date" name="to" [(ngModel)]="draft.to" required></label>
     }
-    <div><button type="submit" class="ps-button" [disabled]="busy() || (companyOnly && !draft.companyId)">Apply filters</button></div>
+    <div><button type="submit" class="ps-button" [disabled]="busy() || (companyOnly && !draft.companyId)"><ng-container i18n="@@ui-1ml4h1c">Apply filters</ng-container></button></div>
   </div>
   @if (usesVolume || usesAudit || section.view === 'batches') {
     <div class="grid gap-3 border-t border-gray-100 pt-4 sm:grid-cols-2 xl:grid-cols-4 dark:border-gray-800">
@@ -261,8 +261,8 @@
     <div class="mt-4 flex flex-wrap items-center justify-between gap-3">
       <p class="ps-muted" aria-live="polite">{{ total() | number }} rows · Page {{ page() }}</p>
       <div class="flex gap-2">
-        <button type="button" class="ps-secondary" [disabled]="page() <= 1" (click)="turnPage(page() - 1)">Previous</button>
-        <button type="button" class="ps-secondary" [disabled]="page() * limit >= total()" (click)="turnPage(page() + 1)">Next</button>
+        <button type="button" class="ps-secondary" [disabled]="page() <= 1" (click)="turnPage(page() - 1)"><ng-container i18n="@@ui-1t5jxvs">Previous</ng-container></button>
+        <button type="button" class="ps-secondary" [disabled]="page() * limit >= total()" (click)="turnPage(page() + 1)"><ng-container i18n="@@ui-1padbm0">Next</ng-container></button>
       </div>
     </div>
   }

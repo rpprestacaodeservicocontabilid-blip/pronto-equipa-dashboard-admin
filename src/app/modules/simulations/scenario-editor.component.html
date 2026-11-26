@@ -73,6 +73,6 @@
   @if (error) { <p class="sim-error" role="alert">{{ error }}</p> }
   <div class="flex flex-wrap gap-2">
     <button type="submit" class="sim-primary" [disabled]="busy">Save {{ scenario ? 'new version' : 'scenario' }}</button>
-    <button type="button" class="sim-action" [disabled]="busy" (click)="dismiss.emit()">Cancel</button>
+    <button type="button" class="sim-action" [disabled]="busy" (click)="dismiss.emit()"><ng-container i18n="@@ui-ew9em3">Cancel</ng-container></button>
   </div>
 </form>

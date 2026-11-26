@@ -7,9 +7,9 @@
       <p class="aud-muted" role="status">Loading your companies…</p>
     } @else if (companyError()) {
       <p class="aud-error mb-3" role="alert">{{ companyError() }}</p>
-      <button type="button" class="aud-secondary" (click)="loadCompanies()">Retry</button>
+      <button type="button" class="aud-secondary" (click)="loadCompanies()"><ng-container i18n="@@ui-zkouah">Retry</ng-container></button>
     } @else if (companies().length) {
-      <label class="aud-label max-w-lg">Company
+      <label class="aud-label max-w-lg"><ng-container i18n="@@ui-1hra0d8">Company</ng-container>
         <select class="aud-control" name="company" [ngModel]="companyId" (ngModelChange)="chooseCompany($event)">
           <option [ngValue]="null">Select a company</option>
           @for (company of companies(); track company.id) {
@@ -25,7 +25,7 @@
 }
 
 @if (purpose.value() && (!section.company || companyId)) {
-  <app-component-card title="Filters" class="mb-5">
+  <app-component-card i18n-title="@@ui-345x4c" title="Filters" class="mb-5">
     <form class="space-y-4" (ngSubmit)="search()">
       <div class="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
         <label class="aud-label">From<input class="aud-control" type="date" name="from" [(ngModel)]="fromDate"></label>
@@ -74,7 +74,7 @@
         }
       </div>
       <div class="flex flex-wrap items-center gap-2">
-        <button type="submit" class="aud-button" [disabled]="!canSearch || busy()">Apply filters</button>
+        <button type="submit" class="aud-button" [disabled]="!canSearch || busy()"><ng-container i18n="@@ui-1ml4h1c">Apply filters</ng-container></button>
         @if (canExport) {
           <button type="button" class="aud-secondary" [disabled]="busy() || exportBusy()" (click)="reviewExport.set(true)">Request export of these results</button>
         }
@@ -88,7 +88,7 @@
     <p class="aud-muted mb-3">The request uses the last applied filters and the displayed snapshot. Another administrator must approve it before the file can be generated.</p>
     <div class="flex gap-2">
       <button type="button" class="aud-button" [disabled]="exportBusy() || busy()" (click)="requestExport()">Submit request</button>
-      <button type="button" class="aud-secondary" [disabled]="exportBusy()" (click)="reviewExport.set(false)">Cancel</button>
+      <button type="button" class="aud-secondary" [disabled]="exportBusy()" (click)="reviewExport.set(false)"><ng-container i18n="@@ui-ew9em3">Cancel</ng-container></button>
     </div>
   </app-component-card>
 }
@@ -200,8 +200,8 @@
       </tbody>
     </table></div>
     <div class="mt-4 flex gap-2">
-      <button type="button" class="aud-secondary" [disabled]="!hasPrevious" (click)="previous()">Previous</button>
-      <button type="button" class="aud-secondary" [disabled]="result.nextCursor === null" (click)="next()">Next</button>
+      <button type="button" class="aud-secondary" [disabled]="!hasPrevious" (click)="previous()"><ng-container i18n="@@ui-1t5jxvs">Previous</ng-container></button>
+      <button type="button" class="aud-secondary" [disabled]="result.nextCursor === null" (click)="next()"><ng-container i18n="@@ui-1padbm0">Next</ng-container></button>
     </div>
   </app-component-card>
 }

@@ -26,7 +26,7 @@
         @if (error()) { <p class="feedback" role="alert">{{ error() }}</p> }
         <div class="flex flex-wrap gap-2">
           <button class="action action-primary" type="submit" [disabled]="working()">Register instrument</button>
-          <button class="action" type="button" [disabled]="working()" (click)="open.set(false)">Cancel</button>
+          <button class="action" type="button" [disabled]="working()" (click)="open.set(false)"><ng-container i18n="@@ui-ew9em3">Cancel</ng-container></button>
         </div>
       </form>
     </app-component-card>

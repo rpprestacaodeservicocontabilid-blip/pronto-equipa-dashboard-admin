@@ -6,7 +6,7 @@
       <p class="max-w-2xl text-sm text-gray-600 dark:text-gray-400">Track invoicing, collections and customer balances for PRONTOEQUIPAS.</p>
     }
     <div class="ms-auto flex flex-wrap gap-2">
-      <button type="button" class="action" (click)="refresh()" [disabled]="state().loading || busy()">Refresh</button>
+      <button type="button" class="action" (click)="refresh()" [disabled]="state().loading || busy()"><ng-container i18n="@@ui-28r6qc">Refresh</ng-container></button>
       @if (mainAction && can(mainAction.permission) ? mainAction : null; as action) {
         <button type="button" class="action primary" [disabled]="busy()" (click)="open(action)">{{ action.title }}</button>
       }
@@ -19,7 +19,7 @@
   <form class="panel" (ngSubmit)="applyFilters()">
     <div class="grid gap-3 sm:grid-cols-2 xl:grid-cols-5">
       <label class="field-label">Company ID
-        <input class="field" name="company" type="number" min="1" max="2147483647" [(ngModel)]="companyId" placeholder="All companies">
+        <input i18n-placeholder="@@ui-i4yiur" class="field" name="company" type="number" min="1" max="2147483647" [(ngModel)]="companyId" placeholder="All companies">
       </label>
       @if (kind || section.path === 'accounts') {
         <label class="field-label">{{ kind ? 'Reference' : 'Company or tax ID' }}
@@ -27,7 +27,7 @@
         </label>
       }
       @if (statuses.length) {
-        <label class="field-label">Status
+        <label class="field-label"><ng-container i18n="@@ui-3pd73">Status</ng-container>
           <select class="field" name="status" [(ngModel)]="status">
             <option value="">All statuses</option>
             @for (option of statuses; track option) { <option [value]="option">{{ label(option) }}</option> }
@@ -41,8 +41,8 @@
     </div>
     @if (validation()) { <p class="error mt-3" role="alert">{{ validation() }}</p> }
     <div class="mt-3 flex flex-wrap items-center gap-2">
-      <button type="submit" class="action primary" [disabled]="busy()">Apply filters</button>
-      <button type="button" class="action" [disabled]="busy()" (click)="reset()">Clear</button>
+      <button type="submit" class="action primary" [disabled]="busy()"><ng-container i18n="@@ui-1ml4h1c">Apply filters</ng-container></button>
+      <button type="button" class="action" [disabled]="busy()" (click)="reset()"><ng-container i18n="@@ui-1aeugy">Clear</ng-container></button>
     </div>
   </form>
 
@@ -98,7 +98,7 @@
               <legend class="font-medium text-gray-900 dark:text-white">Document lines</legend>
               @for (line of operation.lines; track line; let i = $index) {
                 <div class="grid gap-3 rounded-xl border border-gray-200 p-3 sm:grid-cols-2 xl:grid-cols-3 dark:border-gray-800">
-                  <label class="field-label">Description
+                  <label class="field-label"><ng-container i18n="@@ui-sjj37t">Description</ng-container>
                     <input class="field" [name]="'description-' + i" required maxlength="500" [(ngModel)]="line.description">
                   </label>
                   <label class="field-label">Quantity
@@ -127,7 +127,7 @@
           @if (actionError()) { <p role="alert" class="error">{{ actionError() }}</p> }
           <div class="flex flex-wrap gap-2">
             <button type="submit" class="action primary" [disabled]="busy() || actionForm.invalid">{{ busy() ? 'Saving…' : operation.action.title }}</button>
-            <button type="button" class="action" [disabled]="busy()" (click)="form = undefined">Cancel</button>
+            <button type="button" class="action" [disabled]="busy()" (click)="form = undefined"><ng-container i18n="@@ui-ew9em3">Cancel</ng-container></button>
           </div>
         </form>
       </app-component-card>
@@ -141,7 +141,7 @@
     <app-component-card title="Customer balances">
       <div class="overflow-x-auto">
         <table class="billing-table">
-          <thead><tr><th scope="col">Company</th><th scope="col">Tax ID</th><th scope="col">Invoiced</th>
+          <thead><tr><th scope="col"><ng-container i18n="@@ui-1hra0d8">Company</ng-container></th><th scope="col">Tax ID</th><th scope="col">Invoiced</th>
             <th scope="col">Applied to invoices</th><th scope="col">Outstanding</th><th scope="col">Unapplied funds</th><th scope="col">Overdue invoices</th><th scope="col">Activity</th></tr></thead>
           <tbody>
             @for (account of accountList; track account.company.id) {
@@ -200,9 +200,9 @@
           </div>
           @if (result.next || applied().cursors.length > 1) {
             <nav class="mt-4 flex gap-2" aria-label="Billing results pages">
-              <button class="action" type="button" [disabled]="applied().cursors.length === 1" (click)="previous()">Previous</button>
+              <button class="action" type="button" [disabled]="applied().cursors.length === 1" (click)="previous()"><ng-container i18n="@@ui-1t5jxvs">Previous</ng-container></button>
               <span class="muted self-center">Page {{ applied().cursors.length }}</span>
-              <button class="action" type="button" [disabled]="!result.next" (click)="result.next && next(result.next)">Next</button>
+              <button class="action" type="button" [disabled]="!result.next" (click)="result.next && next(result.next)"><ng-container i18n="@@ui-1padbm0">Next</ng-container></button>
             </nav>
           }
         </app-component-card>

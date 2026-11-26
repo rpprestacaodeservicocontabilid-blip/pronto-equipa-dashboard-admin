@@ -2,7 +2,7 @@ import { Component, DestroyRef, Input, OnInit, computed, inject, signal } from '
 import { takeUntilDestroyed, toSignal } from '@angular/core/rxjs-interop';
 import { ActivatedRoute, RouterLink } from '@angular/router';
 import { catchError, forkJoin, of, switchMap } from 'rxjs';
-import { apiErrorMessage } from '../../../../core/api/api-error';
+import { contractErrorMessage } from '../contract-errors';
 import { AuthService } from '../../../../core/auth/auth.service';
 import { ComponentCardComponent } from '../../../../shared/components/common/component-card/component-card.component';
 import {
@@ -16,9 +16,9 @@ import { ContractDocumentsComponent } from '../documents/contract-documents.comp
 import { ContractSalaryComponent } from './contract-salary.component';
 
 const DETAIL_TABS = {
-  overview: 'Overview', employee: 'Employee', conditions: 'Conditions', renewals: 'Renewals',
-  amendments: 'Amendments', suspensions: 'Suspensions', terminations: 'Terminations',
-  documents: 'Documents', history: 'History',
+  overview: $localize`:@@contracts-overview:Overview`, employee: $localize`:@@contracts-employee:Employee`, conditions: $localize`:@@contracts-conditions:Conditions`, renewals: $localize`:@@contracts-renewals:Renewals`,
+  amendments: $localize`:@@contracts-amendments:Amendments`, suspensions: $localize`:@@contracts-suspensions:Suspensions`, terminations: $localize`:@@contracts-terminations:Terminations`,
+  documents: $localize`:@@contracts-documents:Documents`, history: $localize`:@@contracts-history:History`,
 } as const;
 type DetailTab = keyof typeof DETAIL_TABS;
 
@@ -27,10 +27,24 @@ const RECORD_TYPES: Partial<Record<DetailTab, readonly string[]>> = {
   terminations: ['TERMINATION'],
 };
 
+const RECORD_LABELS = new Map<string, string>([
+  ...Object.entries(CONTRACT_STATUSES),
+  ['CREATED', $localize`:@@contracts-contract-created:Contract created`],
+  ['DRAFT_UPDATED', $localize`:@@contracts-draft-updated:Draft updated`],
+  ['SUBMITTED', $localize`:@@contracts-submitted-for-approval:Submitted for approval`],
+  ['RENEWAL', $localize`:@@contracts-contract-renewed:Contract renewed`],
+  ['AMENDMENT', $localize`:@@contracts-contract-amended:Contract amended`],
+  ['SUSPENSION', CONTRACT_STATUSES.SUSPENDED],
+  ['RESUMPTION', $localize`:@@contracts-contract-resumed:Contract resumed`],
+  ['TERMINATION', CONTRACT_STATUSES.TERMINATED],
+  ['ARCHIVE', $localize`:@@contracts-contract-archived:Contract archived`],
+  ['DOCUMENT', $localize`:@@contracts-document-linked-to-the-contract:Document linked to the contract.`],
+]);
+
 const TERM_LABELS = {
-  hiringRegime: 'Hiring arrangement', probationDays: 'Probation days', payFrequency: 'Pay frequency',
-  allowances: 'Allowances', paymentTerms: 'Payment terms', workingHours: 'Working hours', schedule: 'Schedule',
-  workplace: 'Workplace', department: 'Department', jobTitle: 'Job title', notes: 'Notes',
+  hiringRegime: $localize`:@@contracts-hiring-arrangement:Hiring arrangement`, probationDays: $localize`:@@contracts-probation-days:Probation days`, payFrequency: $localize`:@@contracts-pay-frequency:Pay frequency`,
+  allowances: $localize`:@@contracts-allowances:Allowances`, paymentTerms: $localize`:@@contracts-payment-terms:Payment terms`, workingHours: $localize`:@@contracts-working-hours:Working hours`, schedule: $localize`:@@contracts-schedule:Schedule`,
+  workplace: $localize`:@@contracts-workplace:Workplace`, department: $localize`:@@contracts-department:Department`, jobTitle: $localize`:@@contracts-job-title:Job title`, notes: $localize`:@@contracts-notes:Notes`,
 };
 
 const LIFECYCLE: readonly ContractStatus[] = ['DRAFT', 'PENDING_APPROVAL', 'APPROVED', 'ACTIVE'];
@@ -123,10 +137,10 @@ export class ContractDetailComponent implements OnInit {
         contract: of(contract),
         type: this.api.types(companyId).pipe(catchError(() => of([]))),
         employee: this.allowed('employees.read') ? this.api.employee(companyId, contract.employeeId).pipe(
-          catchError(error => { this.employeeError.set(apiErrorMessage(error)); return of(null); }),
+          catchError(error => { this.employeeError.set(contractErrorMessage(error)); return of(null); }),
         ) : of(null),
         records: this.allowed('contracts.history.read') ? this.api.records(companyId, this.id, 'history').pipe(
-          catchError(error => { this.activityError.set(apiErrorMessage(error)); return of(null); }),
+          catchError(error => { this.activityError.set(contractErrorMessage(error)); return of(null); }),
         ) : of(null),
       })),
       takeUntilDestroyed(this.destroyRef),
@@ -139,7 +153,7 @@ export class ContractDetailComponent implements OnInit {
         this.historyLoaded.set(records !== null);
         this.loading.set(false);
       },
-      error: error => { this.error.set(apiErrorMessage(error)); this.loading.set(false); },
+      error: error => { this.error.set(contractErrorMessage(error)); this.loading.set(false); },
     });
   }
 
@@ -150,7 +164,7 @@ export class ContractDetailComponent implements OnInit {
 
   protected finish(action?: ContractAction) {
     if (action === 'archive') this.archived.set(true);
-    this.notice.set(action ? 'Contract operation recorded.' : 'Document linked to the contract.');
+    this.notice.set(action ? $localize`:@@contracts-contract-operation-recorded:Contract operation recorded.` : $localize`:@@contracts-document-linked-to-the-contract:Document linked to the contract.`);
     this.action.set(null);
     this.load();
   }
@@ -162,8 +176,8 @@ export class ContractDetailComponent implements OnInit {
     const snapshot = record.payload.snapshot;
     if (!previous) return [];
     const values = [
-      { label: 'End date', before: this.date(previous.endDate), after: this.date(snapshot.endDate) },
-      { label: 'Compensation', before: this.money(previous.salaryAmount, previous.currency), after: this.money(snapshot.salaryAmount, snapshot.currency) },
+      { label: $localize`:@@ui-ivkp8q:End date`, before: this.date(previous.endDate), after: this.date(snapshot.endDate) },
+      { label: $localize`:@@contracts-compensation:Compensation`, before: this.money(previous.salaryAmount, previous.currency), after: this.money(snapshot.salaryAmount, snapshot.currency) },
       ...Object.entries(TERM_LABELS).map(([key, label]) => ({
         label, before: this.termText(previous.terms[key]), after: this.termText(snapshot.terms[key]),
       })),
@@ -180,6 +194,6 @@ export class ContractDetailComponent implements OnInit {
   }
 
   protected recordLabel(type: string) {
-    return type.toLowerCase().replaceAll('_', ' ').replace(/^./, char => char.toUpperCase());
+    return RECORD_LABELS.get(type) ?? type;
   }
 }

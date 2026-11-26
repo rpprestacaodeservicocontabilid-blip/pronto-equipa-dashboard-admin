@@ -81,7 +81,7 @@ export class OrganizationApi {
   audit(companyId: number, purpose: string, cursor?: number, throughSequence?: number, limit = 20) {
     return this.http.get<Data<{ data: AuditEvent[]; nextCursor: number | null; throughSequence: number }>>(
       this.config.apiBaseUrl + '/audit/records', {
-        headers: { ...companyScope(companyId).headers, 'X-Audit-Purpose': purpose },
+        headers: { ...companyScope(companyId).headers, 'X-Audit-Purpose': 'utf8:' + encodeURIComponent(purpose) },
         params: { module: 'organization', limit, ...(cursor != null ? { cursor } : {}),
           ...(throughSequence != null ? { throughSequence } : {}) },
       },

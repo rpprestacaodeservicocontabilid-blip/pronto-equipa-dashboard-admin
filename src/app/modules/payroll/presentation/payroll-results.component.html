@@ -31,7 +31,7 @@
     }
     <div class="overflow-x-auto">
       <table class="w-full text-start text-sm text-gray-700 dark:text-gray-300">
-        <thead class="table-heading"><tr><th scope="col">Employee</th><th scope="col">Gross</th><th scope="col">Deductions</th><th scope="col">Net</th><th scope="col">Employer costs</th></tr></thead>
+        <thead class="table-heading"><tr><th scope="col"><ng-container i18n="@@ui-1fak8xt">Employee</ng-container></th><th scope="col">Gross</th><th scope="col">Deductions</th><th scope="col">Net</th><th scope="col">Employer costs</th></tr></thead>
         <tbody class="divide-y divide-gray-200 dark:divide-gray-800">
           @for (row of visible(); track row.id) {
             <tr>
@@ -49,8 +49,8 @@
       <div class="mt-4 flex flex-wrap items-center justify-between gap-2 text-sm text-gray-600 dark:text-gray-400">
         <span>Page {{ page() }} · {{ filtered().length }} results</span>
         <div class="flex gap-2">
-          <button class="action" type="button" [disabled]="page() === 1" (click)="changePage(-1)">Previous</button>
-          <button class="action" type="button" [disabled]="page() * pageSize >= filtered().length" (click)="changePage(1)">Next</button>
+          <button class="action" type="button" [disabled]="page() === 1" (click)="changePage(-1)"><ng-container i18n="@@ui-1t5jxvs">Previous</ng-container></button>
+          <button class="action" type="button" [disabled]="page() * pageSize >= filtered().length" (click)="changePage(1)"><ng-container i18n="@@ui-1padbm0">Next</ng-container></button>
         </div>
       </div>
     }
@@ -99,7 +99,7 @@
             } @else {
               <div class="overflow-x-auto">
                 <table class="w-full text-start text-sm text-gray-700 dark:text-gray-300">
-                  <thead class="table-heading"><tr><th scope="col">Employee</th><th scope="col">Net difference</th></tr></thead>
+                  <thead class="table-heading"><tr><th scope="col"><ng-container i18n="@@ui-1fak8xt">Employee</ng-container></th><th scope="col">Net difference</th></tr></thead>
                   <tbody class="divide-y divide-gray-200 dark:divide-gray-800">
                     @for (row of diff.data.slice((comparisonPage() - 1) * pageSize, comparisonPage() * pageSize); track row.employeeId) {
                       <tr><td class="table-cell">{{ row.employeeId }}</td><td class="table-cell">{{ money(row.netDifference, row.currency) }}</td></tr>
@@ -109,8 +109,8 @@
               </div>
               @if (diff.data.length > pageSize) {
                 <div class="mt-4 flex flex-wrap items-center gap-2 text-sm text-gray-600 dark:text-gray-400">
-                  <button class="action" type="button" [disabled]="comparisonPage() === 1" (click)="changeComparisonPage(-1)">Previous</button>
-                  <button class="action" type="button" [disabled]="comparisonPage() * pageSize >= diff.data.length" (click)="changeComparisonPage(1)">Next</button>
+                  <button class="action" type="button" [disabled]="comparisonPage() === 1" (click)="changeComparisonPage(-1)"><ng-container i18n="@@ui-1t5jxvs">Previous</ng-container></button>
+                  <button class="action" type="button" [disabled]="comparisonPage() * pageSize >= diff.data.length" (click)="changeComparisonPage(1)"><ng-container i18n="@@ui-1padbm0">Next</ng-container></button>
                   <span>Page {{ comparisonPage() }} · {{ diff.data.length }} comparisons</span>
                 </div>
               }

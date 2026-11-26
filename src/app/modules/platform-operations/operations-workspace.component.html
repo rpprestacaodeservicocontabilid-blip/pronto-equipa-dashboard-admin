@@ -4,7 +4,7 @@
     <p role="status" class="text-sm text-gray-600 dark:text-gray-400">Loading operational data…</p>
   } @else if (snapshot.error(); as error) {
     <p class="feedback" role="alert">{{ errorMessage(error) }}</p>
-    <button type="button" class="action" (click)="snapshot.reload()">Retry</button>
+    <button type="button" class="action" (click)="snapshot.reload()"><ng-container i18n="@@ui-zkouah">Retry</ng-container></button>
   } @else if (snapshot.hasValue()) {
     @let view = snapshot.value();
     <div class="flex flex-wrap items-center justify-between gap-3 text-sm text-gray-600 dark:text-gray-400">
@@ -92,7 +92,7 @@
       <app-component-card title="Scheduled jobs in this API instance">
         <div class="custom-scrollbar overflow-x-auto">
           <table class="w-full text-start text-sm text-gray-700 dark:text-gray-300">
-            <thead class="table-heading"><tr><th scope="col">Job</th><th scope="col">Status</th><th scope="col">Schedule time zone</th><th scope="col">Next run (UTC)</th></tr></thead>
+            <thead class="table-heading"><tr><th scope="col">Job</th><th scope="col"><ng-container i18n="@@ui-3pd73">Status</ng-container></th><th scope="col">Schedule time zone</th><th scope="col">Next run (UTC)</th></tr></thead>
             <tbody>
               @for (job of view.data.schedules; track job.key) {
                 <tr class="border-b border-gray-100 dark:border-gray-800">

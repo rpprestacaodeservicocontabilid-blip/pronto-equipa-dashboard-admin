@@ -18,11 +18,11 @@ const workspace = () => import('./presentation/leave-workspace.component').then(
 export const LEAVE_ROUTES: Routes = [
   {
     path: '', pathMatch: 'full', title: 'Select company | Leave',
-    data: { workspace: { label: 'Leave', path: '/leave' } },
+    data: { workspace: { label: $localize`:@@ui-1xf0sbk:Leave`, path: '/leave' } },
     loadComponent: () => import('../../shared/components/common/company-workspace/company-workspace-picker.component')
       .then(module => module.CompanyWorkspacePickerComponent),
   },
-  { path: ':companyId', pathMatch: 'full', title: 'Leave | PRONTOEQUIPAS', resolve: { access: resolveCompany }, loadComponent: workspace },
+  { path: ':companyId', pathMatch: 'full', title: $localize`:@@ui-1xf0sbk:Leave` + ' | PRONTOEQUIPAS', resolve: { access: resolveCompany }, loadComponent: workspace },
   { path: ':companyId/:section', title: 'Leave management | PRONTOEQUIPAS', resolve: { access: resolveCompany }, loadComponent: workspace },
   { path: ':companyId/:section/:id', title: 'Leave details | PRONTOEQUIPAS', resolve: { access: resolveCompany }, loadComponent: workspace },
 ];

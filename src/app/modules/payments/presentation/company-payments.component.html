@@ -164,7 +164,7 @@
       <app-component-card [title]="section()?.title ?? 'Payment records'">
         <form class="mb-4 flex flex-wrap items-end gap-3" (ngSubmit)="reload(1)">
           @if (states().length && !section()?.status) {
-            <label class="field-label">Status
+            <label class="field-label"><ng-container i18n="@@ui-3pd73">Status</ng-container>
               <select class="field" name="status" [(ngModel)]="status" [disabled]="busy()">
                 <option value="">All statuses</option>
                 @for (value of states(); track value) { <option [value]="value">{{ label(value) }}</option> }
@@ -199,8 +199,8 @@
           <div class="mt-4 flex flex-wrap items-center justify-between gap-2">
             <span class="metric-caption">{{ result.total | number }} records · Page {{ result.page }}</span>
             <div class="flex gap-2">
-              <button type="button" class="action" (click)="reload(result.page - 1)" [disabled]="busy() || result.page <= 1">Previous</button>
-              <button type="button" class="action" (click)="reload(result.page + 1)" [disabled]="busy() || result.page * result.limit >= result.total">Next</button>
+              <button type="button" class="action" (click)="reload(result.page - 1)" [disabled]="busy() || result.page <= 1"><ng-container i18n="@@ui-1t5jxvs">Previous</ng-container></button>
+              <button type="button" class="action" (click)="reload(result.page + 1)" [disabled]="busy() || result.page * result.limit >= result.total"><ng-container i18n="@@ui-1padbm0">Next</ng-container></button>
             </div>
           </div>
         }
@@ -213,7 +213,7 @@
           <div class="flex flex-wrap items-center gap-3">
             <p class="metric-label break-all">{{ row.id }}</p>
             @if (row.status) { <span [class]="'badge ' + statusTone(row.status)">{{ label(row.status) }}</span> }
-            <button type="button" class="action" [disabled]="busy()" (click)="closeDetails()">Close</button>
+            <button type="button" class="action" [disabled]="busy()" (click)="closeDetails()"><ng-container i18n="@@ui-1l0xxoj">Close</ng-container></button>
           </div>
           @if (columns().length) {
             <dl class="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
@@ -357,7 +357,7 @@
                 <thead><tr>
                   @if (directory() === 'orders') {
                     @for (column of attemptColumns; track column.key) { <th scope="col">{{ column.label }}</th> }
-                  } @else { <th scope="col">Operation</th><th scope="col">Actor</th><th scope="col">Date</th> }
+                  } @else { <th scope="col">Operation</th><th scope="col">Actor</th><th scope="col"><ng-container i18n="@@ui-ggjuyh">Date</ng-container></th> }
                 </tr></thead>
                 <tbody>
                   @for (entry of rows; track $index) {
@@ -384,7 +384,7 @@
     <label class="field-label">{{ detail() ? 'Replacement identifier (optional)' : 'Bank account identifier' }}
       <input class="field" name="accountIdentifier" type="password" autocomplete="off" maxlength="80" [(ngModel)]="form.identifier">
     </label>
-    <label class="field-label">Currency<input class="field" name="currency" maxlength="3" required [(ngModel)]="form.currency"></label>
+    <label class="field-label"><ng-container i18n="@@ui-5o3zh2">Currency</ng-container><input class="field" name="currency" maxlength="3" required [(ngModel)]="form.currency"></label>
     <label class="field-label flex items-center gap-2"><input name="primary" type="checkbox" [(ngModel)]="form.primary"> Primary account</label>
   </div>
 </ng-template>

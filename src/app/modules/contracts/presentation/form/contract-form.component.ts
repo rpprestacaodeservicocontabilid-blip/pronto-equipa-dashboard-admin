@@ -3,13 +3,13 @@ import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { FormBuilder, FormsModule, ReactiveFormsModule, Validators } from '@angular/forms';
 import { Router, RouterLink } from '@angular/router';
 import { catchError, firstValueFrom, forkJoin, of } from 'rxjs';
-import { apiErrorMessage } from '../../../../core/api/api-error';
+import { contractErrorMessage } from '../contract-errors';
 import { ComponentCardComponent } from '../../../../shared/components/common/component-card/component-card.component';
 import {
   CompanyContext, ContractTerms, ContractType, Department, DocumentSummary, EmployeeSummary, EmploymentContract,
 } from '../../domain/contracts.models';
 import { ContractsApi } from '../../infrastructure/contracts-api.service';
-import { contractAmount, employeeName, formatContractDate } from '../format-contract';
+import { contractAmount, contractSalaryPattern, departmentNumber, employeeName, formatContractDate, normalizeContractSalary } from '../format-contract';
 import { ContractDocumentPickerComponent } from '../documents/contract-document-picker.component';
 
 @Component({
@@ -27,7 +27,9 @@ export class ContractFormComponent implements OnInit {
   private readonly destroyRef = inject(DestroyRef);
   private readonly fb = inject(FormBuilder).nonNullable;
 
-  protected readonly steps = ['Employee', 'Contract type', 'Compensation', 'Working conditions', 'Documents', 'Review'];
+  protected readonly steps = [$localize`:@@contracts-employee:Employee`, $localize`:@@contracts-contract-type:Contract type`, $localize`:@@contracts-compensation:Compensation`, $localize`:@@contracts-working-conditions:Working conditions`, $localize`:@@contracts-documents:Documents`, $localize`:@@contracts-review:Review`];
+  protected readonly editTitle = $localize`:@@contracts-edit-contract-draft:Edit contract draft`;
+  protected readonly createTitle = $localize`:@@contracts-new-contract:New contract`;
   protected readonly step = signal(0);
   protected readonly loading = signal(true);
   protected readonly saving = signal(false);
@@ -56,7 +58,7 @@ export class ContractFormComponent implements OnInit {
     hiringRegime: '',
     probationDays: ['', Validators.pattern(/^\d*$/)],
     currency: ['AOA', [Validators.required, Validators.pattern(/^[A-Za-z]{3}$/)]],
-    salaryAmount: ['', Validators.pattern(/^\d+(\.\d{1,2})?$/)],
+    salaryAmount: ['', Validators.pattern(contractSalaryPattern)],
     payFrequency: '',
     allowances: '',
     paymentTerms: '',
@@ -77,7 +79,7 @@ export class ContractFormComponent implements OnInit {
 
   protected readonly departmentName = computed(() => {
     const id = this.employee()?.departmentId;
-    return id ? this.departments().find(department => String(department.id) === String(id))?.name ?? 'Department #' + id : '';
+    return id ? this.departments().find(department => String(department.id) === String(id))?.name ?? departmentNumber(id) : '';
   });
 
   ngOnInit() { this.load(); }
@@ -88,7 +90,7 @@ export class ContractFormComponent implements OnInit {
     const companyId = this.context.company.id;
     const grant = this.id ? 'contracts.update' : 'contracts.create';
     if (!this.context.permissions.includes(grant)) {
-      this.loadError.set('Your company role does not allow this contract operation.');
+      this.loadError.set($localize`:@@contracts-your-company-role-does-not-allow-this-contract-operation:Your company role does not allow this contract operation.`);
       this.loading.set(false);
       return;
     }
@@ -103,17 +105,17 @@ export class ContractFormComponent implements OnInit {
         this.departments.set(departments);
         this.contract.set(contract);
         if (contract && contract.status !== 'DRAFT') {
-          this.loadError.set('Only a draft can be edited.');
+          this.loadError.set($localize`:@@contracts-only-a-draft-can-be-edited:Only a draft can be edited.`);
         } else if (contract) {
           this.patchDraft(contract);
         } else if (this.context.permissions.includes('employees.read')) {
           this.searchEmployees(1);
         } else {
-          this.loadError.set('Your company role needs employee access to select a worker for a new contract.');
+          this.loadError.set($localize`:@@contracts-your-company-role-needs-employee-access-to-select-a-worker-for-a-new-contract:Your company role needs employee access to select a worker for a new contract.`);
         }
         this.loading.set(false);
       },
-      error: error => { this.loadError.set(apiErrorMessage(error)); this.loading.set(false); },
+      error: error => { this.loadError.set(contractErrorMessage(error)); this.loading.set(false); },
     });
   }
 
@@ -129,7 +131,7 @@ export class ContractFormComponent implements OnInit {
           this.employeePages.set(result.pagination.totalPages);
           this.searching.set(false);
         },
-        error: error => { this.error.set(apiErrorMessage(error)); this.searching.set(false); },
+        error: error => { this.error.set(contractErrorMessage(error)); this.searching.set(false); },
       });
   }
 
@@ -178,7 +180,7 @@ export class ContractFormComponent implements OnInit {
     const terms: ContractTerms = { ...existing?.terms, ...conditions };
     const fields = {
       typeCode, startDate, endDate: endDate || null, currency: currency.toUpperCase(),
-      salaryAmount: salaryAmount || null, terms,
+      salaryAmount: salaryAmount ? normalizeContractSalary(salaryAmount) : null, terms,
     };
     try {
       let contract = await this.result(existing
@@ -196,8 +198,8 @@ export class ContractFormComponent implements OnInit {
       await this.router.navigate(['/contracts', companyId, 'details', contract.id]);
     } catch (error) {
       if (!this.destroyRef.destroyed) {
-        const message = apiErrorMessage(error);
-        this.error.set(this.saved() ? 'The draft was saved. Open it to complete the remaining action. ' + message : message);
+        const message = contractErrorMessage(error);
+        this.error.set(this.saved() ? $localize`:@@contracts-the-draft-was-saved-open-it-to-complete-the-remaining-action:The draft was saved. Open it to complete the remaining action.` + ' ' + message : message);
       }
     } finally {
       this.saving.set(false);
@@ -210,16 +212,16 @@ export class ContractFormComponent implements OnInit {
   private validateStep(step: number) {
     const { contractNumber, typeCode, startDate, endDate, currency, salaryAmount, probationDays } = this.form.getRawValue();
     if (step === 0 && !this.id && (!this.employee() || !contractNumber.trim() || contractNumber.length > 50)) {
-      return 'Select an employee and enter a contract number of up to 50 characters.';
+      return $localize`:@@contracts-select-an-employee-and-enter-a-contract-number-of-up-to-50-characters:Select an employee and enter a contract number of up to 50 characters.`;
     }
     if (step === 1) {
-      if (!typeCode || !startDate) return 'Select a contract type and enter a start date.';
-      if (this.requiresEndDate() && !endDate) return 'This contract type requires an end date.';
-      if (endDate && endDate < startDate) return 'The end date must be on or after the start date.';
-      if (probationDays && !/^\d+$/.test(probationDays)) return 'Enter a whole number of probation days.';
+      if (!typeCode || !startDate) return $localize`:@@contracts-select-a-contract-type-and-enter-a-start-date:Select a contract type and enter a start date.`;
+      if (this.requiresEndDate() && !endDate) return $localize`:@@contracts-this-contract-type-requires-an-end-date:This contract type requires an end date.`;
+      if (endDate && endDate < startDate) return $localize`:@@contracts-the-end-date-must-be-on-or-after-the-start-date:The end date must be on or after the start date.`;
+      if (probationDays && !/^\d+$/.test(probationDays)) return $localize`:@@contracts-enter-a-whole-number-of-probation-days:Enter a whole number of probation days.`;
     }
-    if (step === 2 && (!/^[A-Za-z]{3}$/.test(currency) || (salaryAmount && !/^\d+(\.\d{1,2})?$/.test(salaryAmount)))) {
-      return 'Enter a three-letter currency code and a non-negative salary with up to two decimal places.';
+    if (step === 2 && (!/^[A-Za-z]{3}$/.test(currency) || (salaryAmount && !contractSalaryPattern.test(salaryAmount)))) {
+      return $localize`:@@contracts-enter-a-three-letter-currency-code-and-a-non-negative-salary-with-up-to-two-decimal-places:Enter a three-letter currency code and a non-negative salary with up to two decimal places.`;
     }
     return '';
   }

@@ -5,8 +5,8 @@
         @for (entry of options; track entry.id) { <option [ngValue]="entry.id">{{ entry.label }}</option> }
       </select></label>
       @if (directory.employees().length) {
-        <label class="field">Employee<select class="control" name="employee" [(ngModel)]="employee">
-          <option value="">All employees</option>@for (entry of directory.employees(); track entry.id) { <option [value]="entry.id">{{ directory.name(entry.id) }}</option> }
+        <label class="field"><ng-container i18n="@@ui-1fak8xt">Employee</ng-container><select class="control" name="employee" [(ngModel)]="employee">
+          <option value=""><ng-container i18n="@@ui-3jqtdp">All employees</ng-container></option>@for (entry of directory.employees(); track entry.id) { <option [value]="entry.id">{{ directory.name(entry.id) }}</option> }
         </select></label>
       }
       @if (report !== 'balances') {
@@ -14,7 +14,7 @@
         <label class="field">To<input class="control" type="date" name="to" [(ngModel)]="to" [attr.min]="from" required /></label>
       }
       @if (report === 'department' && directory.departments().length) {
-        <label class="field">Department<select class="control" name="department" [(ngModel)]="department">
+        <label class="field"><ng-container i18n="@@ui-1430r53">Department</ng-container><select class="control" name="department" [(ngModel)]="department">
           <option value="">All departments</option>@for (entry of directory.departments(); track entry.id) { <option [value]="entry.id">{{ entry.name }}</option> }
         </select></label>
       }
@@ -44,8 +44,8 @@
         <div class="flex flex-wrap items-center justify-between gap-2">
           <span class="text-sm text-gray-600 dark:text-gray-400">{{ result.rows.length }} rows · Page {{ page() }}</span>
           <div class="flex gap-2">
-            <button type="button" class="action" [disabled]="page() <= 1" (click)="page.set(page() - 1)">Previous</button>
-            <button type="button" class="action" [disabled]="page() * pageSize >= result.rows.length" (click)="page.set(page() + 1)">Next</button>
+            <button type="button" class="action" [disabled]="page() <= 1" (click)="page.set(page() - 1)"><ng-container i18n="@@ui-1t5jxvs">Previous</ng-container></button>
+            <button type="button" class="action" [disabled]="page() * pageSize >= result.rows.length" (click)="page.set(page() + 1)"><ng-container i18n="@@ui-1padbm0">Next</ng-container></button>
           </div>
         </div>
       }

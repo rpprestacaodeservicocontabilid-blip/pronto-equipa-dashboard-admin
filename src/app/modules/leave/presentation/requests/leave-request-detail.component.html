@@ -9,7 +9,7 @@
   @if (!loading() && request(); as row) {
     <app-component-card [title]="directory.name(row.employeeId)" [desc]="types[row.leaveType] + ' · ' + statuses[row.status]">
       <dl class="grid gap-3 text-sm text-gray-700 dark:text-gray-300 sm:grid-cols-2 xl:grid-cols-4">
-        <div><dt>Department</dt><dd class="font-semibold">{{ directory.department(row.employeeId) }}</dd></div>
+        <div><dt><ng-container i18n="@@ui-1430r53">Department</ng-container></dt><dd class="font-semibold">{{ directory.department(row.employeeId) }}</dd></div>
         <div><dt>Requested days</dt><dd class="font-semibold">{{ row.requestedDays }}</dd></div>
         @if (actualDays() !== null) { <div><dt>Actual days taken</dt><dd class="font-semibold">{{ actualDays() }}</dd></div> }
         <div><dt>Submitted</dt><dd class="font-semibold">{{ (row.submittedAt | date:'medium') || '—' }}</dd></div>
@@ -59,7 +59,7 @@
             @if (error()) { <p role="alert" class="feedback">{{ error() }}</p> }
             <div class="flex gap-2">
               <button class="action action-primary" type="submit" [disabled]="stale()">{{ busy() ? 'Saving…' : 'Confirm' }}</button>
-              <button class="action" type="button" (click)="action.set(null); error.set('')">Back</button>
+              <button class="action" type="button" (click)="action.set(null); error.set('')"><ng-container i18n="@@ui-1hzmxtu">Back</ng-container></button>
             </div>
           </fieldset>
         </form>

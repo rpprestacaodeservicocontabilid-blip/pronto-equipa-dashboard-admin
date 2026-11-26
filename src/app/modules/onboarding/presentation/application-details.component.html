@@ -46,7 +46,7 @@
           </label>
           <div class="flex flex-wrap gap-2">
             <button type="submit" class="ob-button" [disabled]="decisionForm.invalid || !reason.trim() || saving()">{{ saving() ? 'Saving…' : pending.title }}</button>
-            <button type="button" class="ob-secondary" [disabled]="saving()" (click)="closeAction()">Cancel</button>
+            <button type="button" class="ob-secondary" [disabled]="saving()" (click)="closeAction()"><ng-container i18n="@@ui-ew9em3">Cancel</ng-container></button>
           </div>
         </form>
       </app-component-card>

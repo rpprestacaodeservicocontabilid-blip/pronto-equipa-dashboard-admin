@@ -15,24 +15,24 @@
         <select name="scope" [(ngModel)]="scope" class="mt-1 block h-11 rounded-lg border border-gray-300 bg-white px-3 dark:border-gray-700 dark:bg-gray-900">
           <option value="">All scopes</option>
           <option value="PLATFORM">Platform</option>
-          <option value="TENANT">Company</option>
+          <option value="TENANT"><ng-container i18n="@@ui-1hra0d8">Company</ng-container></option>
           <option value="GLOBAL">Legacy global</option>
         </select>
       </label>
     }
     <label class="min-w-52 flex-1 text-sm font-medium text-gray-700 dark:text-gray-300">
-      Search
+      <ng-container i18n="@@ui-1j0itop">Search</ng-container>
       <input name="search" [(ngModel)]="search" maxlength="150" [placeholder]="view === 'permissions' ? 'Code, resource or action' : 'Role name'"
         class="mt-1 block h-11 w-full rounded-lg border border-gray-300 bg-transparent px-3 dark:border-gray-700" />
     </label>
-    <button [disabled]="filterForm.invalid" class="h-11 rounded-lg bg-brand-500 px-4 text-sm font-medium text-white disabled:opacity-50 dark:hover:bg-brand-400">Apply filters</button>
+    <button [disabled]="filterForm.invalid" class="h-11 rounded-lg bg-brand-500 px-4 text-sm font-medium text-white disabled:opacity-50 dark:hover:bg-brand-400"><ng-container i18n="@@ui-1ml4h1c">Apply filters</ng-container></button>
   </form>
 
   @if (data.isLoading()) {
     <p role="status" class="text-sm text-gray-600 dark:text-gray-400">Loading directory…</p>
   } @else if (data.error(); as error) {
     <p role="alert" class="text-sm text-error-600 dark:text-error-400">{{ errorMessage(error) }}</p>
-    <button type="button" (click)="data.reload()" class="mt-3 text-sm text-brand-600 dark:text-brand-400">Retry</button>
+    <button type="button" (click)="data.reload()" class="mt-3 text-sm text-brand-600 dark:text-brand-400"><ng-container i18n="@@ui-zkouah">Retry</ng-container></button>
   } @else if (data.hasValue()) {
     @let entry = data.value();
     @if (entry.kind === 'roles') {
@@ -77,8 +77,8 @@
     <div class="mt-5 flex flex-wrap items-center justify-between gap-3 text-sm text-gray-600 dark:text-gray-400">
       <span>{{ page.total }} results · Page {{ page.page }}</span>
       <div class="flex gap-4">
-        <button type="button" [disabled]="page.page <= 1" (click)="paginate(page.page - 1)" class="disabled:opacity-40">Previous</button>
-        <button type="button" [disabled]="page.page * page.limit >= page.total" (click)="paginate(page.page + 1)" class="disabled:opacity-40">Next</button>
+        <button type="button" [disabled]="page.page <= 1" (click)="paginate(page.page - 1)" class="disabled:opacity-40"><ng-container i18n="@@ui-1t5jxvs">Previous</ng-container></button>
+        <button type="button" [disabled]="page.page * page.limit >= page.total" (click)="paginate(page.page + 1)" class="disabled:opacity-40"><ng-container i18n="@@ui-1padbm0">Next</ng-container></button>
       </div>
     </div>
   } @else {

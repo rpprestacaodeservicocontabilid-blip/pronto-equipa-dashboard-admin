@@ -8,7 +8,7 @@
     @if (section.endpoint === 'knowledge/articles') {
       <form class="flex flex-wrap items-end gap-2" (ngSubmit)="apply()">
         <label class="sup-label">Search articles<input class="sup-input" name="query" maxlength="200" [(ngModel)]="search"></label>
-        <button class="sup-secondary" type="submit" [disabled]="busy()">Search</button>
+        <button class="sup-secondary" type="submit" [disabled]="busy()"><ng-container i18n="@@ui-1j0itop">Search</ng-container></button>
       </form>
     }
     @if (newAction && can(newAction.grant)) {
@@ -17,7 +17,7 @@
     @if (section.path === 'reports' && can('reports:export')) {
       <button class="sup-secondary" type="button" [disabled]="busy() || writing()" (click)="exportReport()">Export report</button>
     }
-    <button class="sup-secondary ms-auto" type="button" [disabled]="busy() || writing()" (click)="load()">Refresh</button>
+    <button class="sup-secondary ms-auto" type="button" [disabled]="busy() || writing()" (click)="load()"><ng-container i18n="@@ui-28r6qc">Refresh</ng-container></button>
   </div>
 }
 
@@ -25,7 +25,7 @@
   <app-component-card title="Ticket filters" class="mb-5">
     <form class="flex flex-wrap items-end gap-3" (ngSubmit)="apply()">
       @if (!section.preset?.status) {
-        <label class="sup-label">Status<select class="sup-input" name="status" [(ngModel)]="filters.status"><option value="">All statuses</option>
+        <label class="sup-label"><ng-container i18n="@@ui-3pd73">Status</ng-container><select class="sup-input" name="status" [(ngModel)]="filters.status"><option value="">All statuses</option>
           @for (state of states; track state) { <option [value]="state">{{ label(state) }}</option> }
         </select></label>
       }
@@ -37,7 +37,7 @@
           @for (type of types; track type) { <option [value]="type">{{ label(type) }}</option> }
         </select></label>
       }
-      <button class="sup-button" type="submit" [disabled]="busy()">Apply filters</button>
+      <button class="sup-button" type="submit" [disabled]="busy()"><ng-container i18n="@@ui-1ml4h1c">Apply filters</ng-container></button>
     </form>
   </app-component-card>
 }
@@ -98,7 +98,7 @@
 } @else if (page(); as data) {
   <app-component-card title="Tickets">
     <div class="overflow-x-auto">
-      <table class="sup-table"><thead><tr><th scope="col">Ticket</th><th scope="col">Status</th><th scope="col">Priority</th><th scope="col">Agent</th><th scope="col">Created</th></tr></thead>
+      <table class="sup-table"><thead><tr><th scope="col">Ticket</th><th scope="col"><ng-container i18n="@@ui-3pd73">Status</ng-container></th><th scope="col">Priority</th><th scope="col">Agent</th><th scope="col">Created</th></tr></thead>
         <tbody>
           @for (row of data.data; track row.id) {
             <tr><td>
@@ -117,8 +117,8 @@
       <div class="mt-4 flex flex-wrap items-center justify-between gap-2">
         <p class="sup-muted">Page {{ data.page }} · {{ data.total | number }} tickets</p>
         <div class="flex gap-2">
-          <button class="sup-secondary" type="button" [disabled]="data.page === 1" (click)="load(data.page - 1)">Previous</button>
-          <button class="sup-secondary" type="button" [disabled]="data.page * data.limit >= data.total" (click)="load(data.page + 1)">Next</button>
+          <button class="sup-secondary" type="button" [disabled]="data.page === 1" (click)="load(data.page - 1)"><ng-container i18n="@@ui-1t5jxvs">Previous</ng-container></button>
+          <button class="sup-secondary" type="button" [disabled]="data.page * data.limit >= data.total" (click)="load(data.page + 1)"><ng-container i18n="@@ui-1padbm0">Next</ng-container></button>
         </div>
       </div>
     }
@@ -126,7 +126,7 @@
 } @else if (rows(); as list) {
   <app-component-card [title]="section.title">
     <div class="overflow-x-auto"><table class="sup-table">
-      <thead><tr><th scope="col">Status</th>
+      <thead><tr><th scope="col"><ng-container i18n="@@ui-3pd73">Status</ng-container></th>
         @for (column of section.columns; track column.key) { <th scope="col">{{ column.label }}</th> }
         <th scope="col">Updated</th><th scope="col">Details</th></tr></thead>
       <tbody>

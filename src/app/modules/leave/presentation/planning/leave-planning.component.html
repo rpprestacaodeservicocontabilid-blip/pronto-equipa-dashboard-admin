@@ -5,17 +5,17 @@
         <label class="field">Year<input class="control" type="number" min="2000" max="2099" [ngModel]="year()" (change)="changeYear(+$any($event.target).value)" [disabled]="loading()" /></label>
       }
       @if (directory.departments().length) {
-        <label class="field">Department<select class="control" [ngModel]="department()" (ngModelChange)="department.set($event)">
+        <label class="field"><ng-container i18n="@@ui-1430r53">Department</ng-container><select class="control" [ngModel]="department()" (ngModelChange)="department.set($event)">
           <option value="">All departments</option>@for (entry of directory.departments(); track entry.id) { <option [value]="entry.id">{{ entry.name }}</option> }
         </select></label>
       }
       @if (directory.employees().length) {
-        <label class="field">Employee<select class="control" [ngModel]="employee()" (ngModelChange)="employee.set($event)">
-          <option value="">All employees</option>@for (entry of directory.employees(); track entry.id) { <option [value]="entry.id">{{ directory.name(entry.id) }}</option> }
+        <label class="field"><ng-container i18n="@@ui-1fak8xt">Employee</ng-container><select class="control" [ngModel]="employee()" (ngModelChange)="employee.set($event)">
+          <option value=""><ng-container i18n="@@ui-3jqtdp">All employees</ng-container></option>@for (entry of directory.employees(); track entry.id) { <option [value]="entry.id">{{ directory.name(entry.id) }}</option> }
         </select></label>
       }
       @if (has('leave.requests.read')) {
-        <label class="field">Status<select class="control" [ngModel]="status()" (ngModelChange)="status.set($event)">
+        <label class="field"><ng-container i18n="@@ui-3pd73">Status</ng-container><select class="control" [ngModel]="status()" (ngModelChange)="status.set($event)">
           <option value="">All statuses</option>@for (entry of statuses; track entry[0]) { <option [ngValue]="entry[0]">{{ entry[1] }}</option> }
         </select></label>
       }
@@ -57,7 +57,7 @@
       @if (!loading()) {
         <div class="overflow-x-auto rounded-lg border border-gray-200 dark:border-gray-800">
           <table class="w-full min-w-[48rem] text-start text-sm text-gray-700 dark:text-gray-300">
-            <thead class="table-heading"><tr><th scope="col">Employee</th>@for (month of months; track month) { <th scope="col" class="text-center">{{ month }}</th> }</tr></thead>
+            <thead class="table-heading"><tr><th scope="col"><ng-container i18n="@@ui-1fak8xt">Employee</ng-container></th>@for (month of months; track month) { <th scope="col" class="text-center">{{ month }}</th> }</tr></thead>
             <tbody class="divide-y divide-gray-200 dark:divide-gray-800">
               @for (row of planRows(); track row.employeeId) {
                 <tr>
@@ -93,9 +93,9 @@
     }
     @if (mode === 'calendar') {
       <div class="flex flex-wrap items-center justify-between gap-2">
-        <button type="button" class="action" (click)="move(-1)" [disabled]="loading()">Previous</button>
+        <button type="button" class="action" (click)="move(-1)" [disabled]="loading()"><ng-container i18n="@@ui-1t5jxvs">Previous</ng-container></button>
         <p class="text-sm font-semibold text-gray-900 dark:text-gray-100" aria-live="polite">{{ range().startDate | date:'mediumDate':'UTC' }} – {{ range().endDate | date:'mediumDate':'UTC' }}</p>
-        <button type="button" class="action" (click)="move(1)" [disabled]="loading()">Next</button>
+        <button type="button" class="action" (click)="move(1)" [disabled]="loading()"><ng-container i18n="@@ui-1padbm0">Next</ng-container></button>
       </div>
       @if (site) { <p class="text-sm text-gray-600 dark:text-gray-400">Establishment changes the workday overlay. Leave requests remain company-wide.</p> }
       @if (!loading() && view() !== 'list') {

@@ -15,13 +15,13 @@
 }
 
 @if (canRead && !editing()) {
-  <app-component-card title="Filters">
+  <app-component-card i18n-title="@@ui-345x4c" title="Filters">
     <div class="grid gap-4 lg:grid-cols-[minmax(0,1fr)_2fr]">
       <app-loan-employee-picker [company]="company" [canSearch]="canSearch" [value]="filters.employee" (employeeChange)="filters.employee = $event" />
       <form (ngSubmit)="apply()" class="space-y-3">
         <div class="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
           @if (!lockedStatus) {
-            <label class="field">Status<select class="control" name="status" [(ngModel)]="filters.status">
+            <label class="field"><ng-container i18n="@@ui-3pd73">Status</ng-container><select class="control" name="status" [(ngModel)]="filters.status">
               <option value="">{{ mode === 'active' && !applicationFilter ? 'Active and suspended' : 'All statuses' }}</option>
               @for (status of statuses; track status) { <option [value]="status">{{ label(status) }}</option> }
             </select></label>
@@ -37,7 +37,7 @@
           <label class="field">Minimum (Kz)<input class="control" name="min" maxlength="16" inputmode="decimal" [(ngModel)]="filters.min" /></label>
           <label class="field">Maximum (Kz)<input class="control" name="max" maxlength="16" inputmode="decimal" [(ngModel)]="filters.max" /></label>
         </div>
-        <button class="action action-primary" type="submit" [disabled]="loading()">Apply filters</button>
+        <button class="action action-primary" type="submit" [disabled]="loading()"><ng-container i18n="@@ui-1ml4h1c">Apply filters</ng-container></button>
         @if (filterError()) { <p class="feedback" role="alert">{{ filterError() }}</p> }
       </form>
     </div>
@@ -53,7 +53,7 @@
       <div class="overflow-x-auto rounded-lg border border-gray-200 dark:border-gray-800">
         <table class="w-full min-w-[42rem] text-start text-sm text-gray-700 dark:text-gray-300">
           <thead class="table-heading"><tr>
-            <th scope="col">Reference</th><th scope="col">Employee</th><th scope="col">Status</th>
+            <th scope="col">Reference</th><th scope="col"><ng-container i18n="@@ui-1fak8xt">Employee</ng-container></th><th scope="col"><ng-container i18n="@@ui-3pd73">Status</ng-container></th>
             <th scope="col">{{ isApplication ? 'Requested' : 'Principal' }}</th><th scope="col">{{ isApplication ? 'Type' : 'Balance' }}</th>
             <th scope="col">Created</th><th scope="col"><span class="sr-only">Details</span></th>
           </tr></thead>
@@ -72,7 +72,7 @@
                 <td class="table-cell whitespace-nowrap">{{ row.createdAt | date:'mediumDate' }}</td>
                 <td class="table-cell"><a class="text-brand-700 underline dark:text-brand-300"
                   [attr.aria-label]="'View ' + (application(row) ? 'application ' + row.id : row.loanNumber)"
-                  [routerLink]="['/loans', company, isApplication ? 'applications' : mode, row.id]">View details</a></td>
+                  [routerLink]="['/loans', company, isApplication ? 'applications' : mode, row.id]"><ng-container i18n="@@ui-5dxh2m">View details</ng-container></a></td>
               </tr>
             } @empty { <tr><td colspan="7" class="table-cell">No records match the filters.</td></tr> }
           </tbody>
@@ -81,8 +81,8 @@
       <div class="flex flex-wrap items-center justify-between gap-3">
         <p class="text-sm text-gray-600 dark:text-gray-400">{{ data.total }} records · Page {{ page }}</p>
         <div class="flex gap-2">
-          <button type="button" class="action" [disabled]="page <= 1" (click)="go(page - 1)">Previous</button>
-          <button type="button" class="action" [disabled]="page * pageSize >= data.total" (click)="go(page + 1)">Next</button>
+          <button type="button" class="action" [disabled]="page <= 1" (click)="go(page - 1)"><ng-container i18n="@@ui-1t5jxvs">Previous</ng-container></button>
+          <button type="button" class="action" [disabled]="page * pageSize >= data.total" (click)="go(page + 1)"><ng-container i18n="@@ui-1padbm0">Next</ng-container></button>
         </div>
       </div>
     </app-component-card>

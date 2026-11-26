@@ -62,7 +62,7 @@
     @if (error()) { <p class="feedback" role="alert">{{ error() }}</p> }
     <div class="flex flex-wrap gap-2">
       <button class="action action-primary" type="submit" [disabled]="busy() || form.invalid || !confirmed()">{{ busy() ? 'Saving…' : titles[action] }}</button>
-      <button class="action" type="button" [disabled]="busy()" (click)="cancelled.emit()">Cancel</button>
+      <button class="action" type="button" [disabled]="busy()" (click)="cancelled.emit()"><ng-container i18n="@@ui-ew9em3">Cancel</ng-container></button>
     </div>
   </form>
 </app-component-card>

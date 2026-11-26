@@ -9,7 +9,7 @@
   @let loan = data.loan;
   <app-component-card [title]="loan.loanNumber" [desc]="employeeName(data)">
     <dl class="grid gap-4 text-sm text-gray-700 sm:grid-cols-2 xl:grid-cols-4 dark:text-gray-300">
-      <div><dt class="font-semibold">Status</dt><dd>{{ label(loan.status) }}</dd></div>
+      <div><dt class="font-semibold"><ng-container i18n="@@ui-3pd73">Status</ng-container></dt><dd>{{ label(loan.status) }}</dd></div>
       <div><dt class="font-semibold">Granted principal</dt><dd>{{ money(loan.principalAmount, loan.currency) }}</dd></div>
       <div><dt class="font-semibold">Principal repaid</dt><dd>{{ loan.disbursedAt ? money(amortized(loan), loan.currency) : '—' }}</dd></div>
       <div><dt class="font-semibold">Reconciled balance</dt><dd>{{ loan.disbursedAt ? money(loan.balance.total, loan.currency) : 'Awaiting disbursement' }}</dd></div>

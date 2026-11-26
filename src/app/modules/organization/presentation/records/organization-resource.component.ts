@@ -4,7 +4,7 @@ import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { ApiPage, CompanyWorkspace } from '../../../../core/api/company-workspace-api';
-import { apiErrorMessage } from '../../../../core/api/api-error';
+import { organizationErrorMessage } from '../organization-display';
 import { ComponentCardComponent } from '../../../../shared/components/common/component-card/component-card.component';
 import { OrganizationRecord, OrganizationStatus, Resource } from '../../domain/organization.models';
 import { ORGANIZATION_RESOURCES, resourceGrant } from '../../domain/organization.resources';
@@ -22,6 +22,26 @@ import { OrganizationHistoryComponent } from '../history/organization-history.co
   templateUrl: './organization-resource.component.html',
 })
 export class OrganizationResourceComponent implements OnInit {
+  protected versionLabel(code: string, version: number) {
+    return $localize`:@@organization-code-version:${code}:CODE: · Version ${version}:VERSION:`;
+  }
+
+  protected confirmLabel(row: OrganizationRecord) {
+    return row.status === 'ACTIVE'
+      ? $localize`:@@organization-deactivate-named-record:Deactivate ${row.name}:NAME:?`
+      : $localize`:@@organization-activate-named-record:Activate ${row.name}:NAME:?`;
+  }
+
+  protected readonly labels = {
+    active: $localize`:@@organization-active:Active`,
+    inactive: $localize`:@@organization-inactive:Inactive`,
+    openEnded: $localize`:@@organization-open-ended:Open-ended`,
+    deactivate: $localize`:@@organization-deactivate:Deactivate`,
+    activate: $localize`:@@organization-activate:Activate`,
+    selectSchedule: $localize`:@@organization-select-a-schedule-to-manage-shifts:Select a schedule to manage shifts`,
+    shifts: $localize`:@@organization-shifts:Shifts`,
+  };
+
   @Input({ required: true }) context!: CompanyWorkspace;
   @Input({ required: true }) resource!: Resource;
   @Input() id = '';
@@ -81,7 +101,7 @@ export class OrganizationResourceComponent implements OnInit {
       ...(this.appliedStatus ? { status: this.appliedStatus } : {}),
     }, page).pipe(takeUntilDestroyed(this.destroy)).subscribe({
       next: result => { this.page.set(result); this.loading.set(false); },
-      error: error => { this.error.set(apiErrorMessage(error)); this.loading.set(false); },
+      error: error => { this.error.set(organizationErrorMessage(error)); this.loading.set(false); },
     });
   }
 
@@ -90,7 +110,7 @@ export class OrganizationResourceComponent implements OnInit {
     this.error.set('');
     this.api.get(this.context.company.id, this.resource, this.id).pipe(takeUntilDestroyed(this.destroy)).subscribe({
       next: record => { this.record.set(record); this.loading.set(false); },
-      error: error => { this.error.set(apiErrorMessage(error)); this.loading.set(false); },
+      error: error => { this.error.set(organizationErrorMessage(error)); this.loading.set(false); },
     });
   }
 
@@ -101,7 +121,7 @@ export class OrganizationResourceComponent implements OnInit {
       return;
     }
     this.record.set(record);
-    this.notice.set('Changes saved.');
+    this.notice.set($localize`:@@organization-changes-saved:Changes saved.`);
   }
 
   protected changeStatus(record: OrganizationRecord) {
@@ -114,26 +134,31 @@ export class OrganizationResourceComponent implements OnInit {
         this.record.set(updated);
         this.confirm.set(false);
         this.busy.set(false);
-        this.notice.set(updated.status === 'ACTIVE' ? 'Record activated.' : 'Record deactivated.');
+        this.notice.set(updated.status === 'ACTIVE' ? $localize`:@@organization-record-activated:Record activated.` : $localize`:@@organization-record-deactivated:Record deactivated.`);
       },
       error: error => {
         this.confirm.set(false);
         this.busy.set(false);
-        this.error.set(apiErrorMessage(error));
+        this.error.set(organizationErrorMessage(error));
       },
     });
   }
 
-  protected display(value: unknown) {
+  protected display(value: unknown, choices?: readonly { value: string; label: string }[]) {
+    const choice = choices?.find(option => option.value === value);
+    if (choice) return choice.label;
     if (Array.isArray(value)) return value.join(', ') || '—';
     return typeof value === 'string' || typeof value === 'number' ? String(value) || '—' : '—';
   }
 
   protected summary(row: OrganizationRecord) {
     if (this.resource === 'establishments') return [row.data['province'], row.data['municipality']].filter(Boolean).join(' · ');
-    if (this.resource === 'schedules') return this.display(row.data['scheduleType']);
+    if (this.resource === 'schedules') {
+      const choices = ORGANIZATION_RESOURCES.schedules.fields.find(field => field.key === 'scheduleType')?.choices;
+      return this.display(row.data['scheduleType'], choices);
+    }
     const manager = row.data['managerEmployeeId'];
-    if (this.resource === 'departments' && typeof manager === 'string') return this.managers().get(manager) ?? 'Manager assigned';
+    if (this.resource === 'departments' && typeof manager === 'string') return this.managers().get(manager) ?? $localize`:@@organization-manager-assigned:Manager assigned`;
     return '';
   }
 }

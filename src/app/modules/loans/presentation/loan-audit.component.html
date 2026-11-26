@@ -10,7 +10,7 @@
   @if (events(); as rows) {
     <div class="overflow-x-auto rounded-lg border border-gray-200 dark:border-gray-800">
       <table class="w-full min-w-[40rem] text-start text-sm text-gray-700 dark:text-gray-300">
-        <thead class="table-heading"><tr><th scope="col">Date</th><th scope="col">Action</th><th scope="col">User</th><th scope="col">Resource</th><th scope="col">Outcome</th></tr></thead>
+        <thead class="table-heading"><tr><th scope="col"><ng-container i18n="@@ui-ggjuyh">Date</ng-container></th><th scope="col">Action</th><th scope="col">User</th><th scope="col">Resource</th><th scope="col">Outcome</th></tr></thead>
         <tbody class="divide-y divide-gray-100 dark:divide-gray-800">
           @for (event of rows; track event.id) {
             <tr><td class="table-cell">{{ event.occurredAt | date:'medium' }}</td><td class="table-cell">{{ event.action }}</td>

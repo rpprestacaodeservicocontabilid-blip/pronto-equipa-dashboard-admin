@@ -139,7 +139,7 @@ export class SalaryCatalogComponent implements OnInit {
   }
 
   protected step(grade: Grade) {
-    this.form.set({ title: 'Add step · ' + grade.name, fields: [...recordFields, { key: 'amount', label: 'Amount', kind: 'amount', required: true, max: 19 }],
+    this.form.set({ title: 'Add step · ' + grade.name, fields: [...recordFields, { key: 'amount', label: $localize`:@@ui-a2ky21:Amount`, kind: 'amount', required: true, max: 19 }],
       send: values => {
         const value = amount(string(values, 'amount'));
         if (cents(value)! < cents(grade.minAmount)! || cents(value)! > cents(grade.maxAmount)!) throw new Error('Step amount must be within the grade range.');

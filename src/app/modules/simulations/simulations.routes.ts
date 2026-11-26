@@ -16,10 +16,10 @@ const resolveCompany: ResolveFn<SimulationAccess> = route => {
 const workspace = () => import('./simulation-workspace.component').then(module => module.SimulationWorkspaceComponent);
 export const SIMULATIONS_ROUTES: Routes = [
   { path: '', pathMatch: 'full', title: 'Select company | Simulations',
-    data: { workspace: { label: 'Simulations', path: '/simulations' } },
+    data: { workspace: { label: $localize`:@@ui-1fhsqsf:Simulations`, path: '/simulations' } },
     loadComponent: () => import('../../shared/components/common/company-workspace/company-workspace-picker.component')
       .then(module => module.CompanyWorkspacePickerComponent) },
-  { path: ':companyId', pathMatch: 'full', title: 'Simulations | PRONTOEQUIPAS',
+  { path: ':companyId', pathMatch: 'full', title: $localize`:@@ui-1fhsqsf:Simulations` + ' | PRONTOEQUIPAS',
     resolve: { access: resolveCompany }, loadComponent: workspace },
   ...simulationSections.map(section => ({
     path: ':companyId/' + section.path, title: section.title + ' | Simulations',

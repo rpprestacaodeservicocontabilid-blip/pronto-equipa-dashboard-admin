@@ -21,7 +21,7 @@ const workspace = () => import('./presentation/payroll-workspace.component').the
 export const PAYROLL_ROUTES: Routes = [
   {
     path: '', pathMatch: 'full', title: 'Select company | Payroll',
-    data: { workspace: { label: 'Payroll', path: '/payroll' } },
+    data: { workspace: { label: $localize`:@@ui-ghd2d6:Payroll`, path: '/payroll' } },
     loadComponent: () => import('../../shared/components/common/company-workspace/company-workspace-picker.component')
       .then(module => module.CompanyWorkspacePickerComponent),
   },

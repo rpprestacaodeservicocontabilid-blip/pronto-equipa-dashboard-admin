@@ -35,7 +35,7 @@
         <label class="field min-w-44 grow">Search versions
           <input class="control" type="search" [ngModel]="search()" (ngModelChange)="search.set($event); page.set(1)" placeholder="Identifier, version or source" />
         </label>
-        <label class="field min-w-36">Status
+        <label class="field min-w-36"><ng-container i18n="@@ui-3pd73">Status</ng-container>
           <select class="control" [ngModel]="status()" (ngModelChange)="status.set($event); page.set(1)">
             <option value="">All statuses</option>
             @for (item of statuses; track item) { <option [value]="item">{{ label(item) }}</option> }
@@ -51,7 +51,7 @@
     <div class="overflow-x-auto">
       <table class="w-full text-start text-sm text-gray-700 dark:text-gray-300">
         <thead class="table-heading">
-          <tr><th scope="col">Rule set</th><th scope="col">Scope</th><th scope="col">Effective dates</th><th scope="col">Status</th><th scope="col">Reference</th></tr>
+          <tr><th scope="col">Rule set</th><th scope="col">Scope</th><th scope="col">Effective dates</th><th scope="col"><ng-container i18n="@@ui-3pd73">Status</ng-container></th><th scope="col">Reference</th></tr>
         </thead>
         <tbody class="divide-y divide-gray-200 dark:divide-gray-800">
           @for (record of section.view === 'overview' ? result.data.slice(0, 8) : visible(); track record.id) {
@@ -72,8 +72,8 @@
     @if (section.view !== 'overview' && filtered().length > pageSize) {
       <div class="mt-4 flex flex-wrap items-center gap-2 text-sm text-gray-600 dark:text-gray-400">
         <span>Page {{ page() }} · {{ filtered().length }} versions</span>
-        <button class="action" type="button" [disabled]="page() === 1" (click)="changePage(-1)">Previous</button>
-        <button class="action" type="button" [disabled]="page() * pageSize >= filtered().length" (click)="changePage(1)">Next</button>
+        <button class="action" type="button" [disabled]="page() === 1" (click)="changePage(-1)"><ng-container i18n="@@ui-1t5jxvs">Previous</ng-container></button>
+        <button class="action" type="button" [disabled]="page() * pageSize >= filtered().length" (click)="changePage(1)"><ng-container i18n="@@ui-1padbm0">Next</ng-container></button>
       </div>
     }
   </app-component-card>

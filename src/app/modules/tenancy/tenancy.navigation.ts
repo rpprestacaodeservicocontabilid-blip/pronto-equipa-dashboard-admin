@@ -6,8 +6,8 @@ export const TENANCY_SECTIONS: readonly {
   group: string;
   status?: CompanyStatus;
 }[] = [
-  { path: 'overview', title: 'Overview', group: 'Monitoring' },
-  { path: '', title: 'All companies', group: 'Company directory' },
-  { path: 'active', title: 'Active companies', group: 'Company directory', status: 'ACTIVE' },
-  { path: 'suspended', title: 'Suspended companies', group: 'Lifecycle', status: 'SUSPENDED' },
+  { path: 'overview', title: $localize`:@@ui-thnxru:Overview`, group: 'Monitoring' },
+  { path: '', title: $localize`:@@ui-i4yiur:All companies`, group: 'Company directory' },
+  { path: 'active', title: $localize`:@@ui-1mljis0:Active companies`, group: 'Company directory', status: 'ACTIVE' },
+  { path: 'suspended', title: $localize`:@@ui-134xxyp:Suspended companies`, group: 'Lifecycle', status: 'SUSPENDED' },
 ];

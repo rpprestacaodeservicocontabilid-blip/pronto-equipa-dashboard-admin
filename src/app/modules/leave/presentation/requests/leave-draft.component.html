@@ -5,7 +5,7 @@
       <fieldset class="space-y-4" [disabled]="busy()">
         <div class="grid gap-3 sm:grid-cols-2">
           @if (!request) {
-            <label class="field">Employee<select class="control" name="employeeId" [(ngModel)]="employeeId" (ngModelChange)="preview.set(null)" required>
+            <label class="field"><ng-container i18n="@@ui-1fak8xt">Employee</ng-container><select class="control" name="employeeId" [(ngModel)]="employeeId" (ngModelChange)="preview.set(null)" required>
               <option value="">Select employee</option>
               @for (worker of directory.employees(); track worker.id) { <option [value]="worker.id">{{ directory.name(worker.id) }} · {{ worker.employeeNumber }}</option> }
             </select></label>
@@ -31,7 +31,7 @@
           <button class="action action-primary" type="submit">{{ busy() ? 'Working…' : 'Save draft' }}</button>
           @if (has('leave.planning.read')) { <button class="action" type="button" (click)="inspect()">Check dates</button> }
           @if (request) { <button class="action" type="button" (click)="dismissed.emit()">Cancel editing</button> }
-          @else { <a class="action" [routerLink]="['/leave', context.company.id, planYear ? 'plans' : 'requests']">Back</a> }
+          @else { <a class="action" [routerLink]="['/leave', context.company.id, planYear ? 'plans' : 'requests']"><ng-container i18n="@@ui-1hzmxtu">Back</ng-container></a> }
         </div>
       </fieldset>
     </form>

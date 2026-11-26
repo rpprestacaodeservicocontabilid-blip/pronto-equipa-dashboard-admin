@@ -1,8 +1,8 @@
 @if (loading()) {
-  <app-component-card [title]="names[view]"><p role="status" class="text-sm text-gray-600 dark:text-gray-400">Loading contracts…</p></app-component-card>
+  <app-component-card [title]="names[view]"><p role="status" class="text-sm text-gray-600 dark:text-gray-400"><ng-container i18n="@@contracts-loading-contracts">Loading contracts…</ng-container></p></app-component-card>
 } @else if (error()) {
   <p role="alert" class="feedback">{{ error() }}</p>
-  <button type="button" class="action mt-3" (click)="load()">Try again</button>
+  <button type="button" class="action mt-3" (click)="load()"><ng-container i18n="@@contracts-try-again">Try again</ng-container></button>
 } @else {
   @if (supplementalError()) { <p role="status" class="mb-4 text-sm text-gray-600 dark:text-gray-400">{{ supplementalError() }}</p> }
 
@@ -17,17 +17,17 @@
       }
     </div>
     <div class="mb-5 grid gap-5 xl:grid-cols-2">
-      <app-component-card title="Upcoming expirations" desc="Active contracts ending within 30 days.">
+      <app-component-card i18n-title="@@contracts-upcoming-expirations" i18n-desc="@@contracts-active-contracts-ending-within-30-days" title="Upcoming expirations" desc="Active contracts ending within 30 days.">
         <ul class="divide-y divide-gray-200 dark:divide-gray-800">
           @for (contract of upcoming(); track contract.id) {
             <li class="flex justify-between gap-3 py-2 text-sm">
               <a class="text-brand-600 dark:text-brand-400" [routerLink]="['/contracts', context.company.id, 'details', contract.id]">{{ contract.contractNumber }}</a>
               <span class="text-gray-600 dark:text-gray-400">{{ formatDate(contract.endDate) }}</span>
             </li>
-          } @empty { <li class="text-sm text-gray-600 dark:text-gray-400">No upcoming expirations.</li> }
+          } @empty { <li class="text-sm text-gray-600 dark:text-gray-400"><ng-container i18n="@@contracts-no-upcoming-expirations">No upcoming expirations.</ng-container></li> }
         </ul>
       </app-component-card>
-      <app-component-card title="Contracts by type">
+      <app-component-card i18n-title="@@contracts-contracts-by-type" title="Contracts by type">
         <ul class="space-y-3">
           @for (entry of distribution(); track entry[0]) {
             <li>
@@ -36,48 +36,48 @@
               </div>
               <progress class="h-2 w-full accent-brand-500" [value]="entry[1]" [max]="rows().length" [attr.aria-label]="typeNames().get(entry[0]) ?? entry[0]"></progress>
             </li>
-          } @empty { <li class="text-sm text-gray-600 dark:text-gray-400">No contracts to group.</li> }
+          } @empty { <li class="text-sm text-gray-600 dark:text-gray-400"><ng-container i18n="@@contracts-no-contracts-to-group">No contracts to group.</ng-container></li> }
         </ul>
       </app-component-card>
     </div>
   }
 
-  <app-component-card [title]="view === 'dashboard' ? 'Recent contracts' : names[view]">
+  <app-component-card [title]="view === 'dashboard' ? recentTitle : names[view]">
     @if (view !== 'dashboard') {
       <div class="mb-5 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
-        <label class="field">Search<input class="control" type="search" maxlength="100" placeholder="Contract number or employee" [ngModel]="search()" (ngModelChange)="search.set($event); page.set(1)" /></label>
-        <label class="field">Status
+        <label class="field"><ng-container i18n="@@ui-1j0itop">Search</ng-container><input i18n-placeholder="@@contracts-contract-number-or-employee" class="control" type="search" maxlength="100" placeholder="Contract number or employee" [ngModel]="search()" (ngModelChange)="search.set($event); page.set(1)" /></label>
+        <label class="field"><ng-container i18n="@@ui-3pd73">Status</ng-container>
           <select class="control" [ngModel]="status()" (ngModelChange)="status.set($event); page.set(1)">
-            <option value="">All available statuses</option>
+            <option value=""><ng-container i18n="@@contracts-all-available-statuses">All available statuses</ng-container></option>
             @for (state of availableStates(); track state) { <option [value]="state">{{ statuses[state] }}</option> }
           </select>
         </label>
-        <label class="field">Contract type
+        <label class="field"><ng-container i18n="@@contracts-contract-type">Contract type</ng-container>
           <select class="control" [ngModel]="type()" (ngModelChange)="type.set($event); page.set(1)">
-            <option value="">All types</option>
+            <option value=""><ng-container i18n="@@contracts-all-types">All types</ng-container></option>
             @for (entry of types(); track entry.id) { <option [value]="entry.code">{{ entry.name }}</option> }
           </select>
         </label>
         @if (departments().length) {
-          <label class="field">Department
+          <label class="field"><ng-container i18n="@@ui-1430r53">Department</ng-container>
             <select class="control" [ngModel]="department()" (ngModelChange)="department.set($event); page.set(1)">
-              <option value="">All departments</option>
+              <option value=""><ng-container i18n="@@contracts-all-departments">All departments</ng-container></option>
               @for (entry of departments(); track entry.id) { <option [value]="entry.id">{{ entry.name }}</option> }
             </select>
           </label>
         }
-        <label class="field">Period from<input class="control" type="date" [ngModel]="from()" [attr.max]="to() || null" (ngModelChange)="from.set($event); page.set(1)" /></label>
-        <label class="field">Period to<input class="control" type="date" [ngModel]="to()" [attr.min]="from() || null" (ngModelChange)="to.set($event); page.set(1)" /></label>
+        <label class="field"><ng-container i18n="@@contracts-period-from">Period from</ng-container><input class="control" type="date" [ngModel]="from()" [attr.max]="to() || null" (ngModelChange)="from.set($event); page.set(1)" /></label>
+        <label class="field"><ng-container i18n="@@contracts-period-to">Period to</ng-container><input class="control" type="date" [ngModel]="to()" [attr.min]="from() || null" (ngModelChange)="to.set($event); page.set(1)" /></label>
         @if (view === 'expiring') {
-          <label class="field">Ending within
+          <label class="field"><ng-container i18n="@@contracts-ending-within">Ending within</ng-container>
             <select class="control" [ngModel]="expiryDays()" (ngModelChange)="expiryDays.set($event); page.set(1)">
-              <option [ngValue]="30">30 days</option><option [ngValue]="15">15 days</option><option [ngValue]="7">7 days</option>
+              <option [ngValue]="30"><ng-container i18n="@@contracts-30-days">30 days</ng-container></option><option [ngValue]="15"><ng-container i18n="@@contracts-15-days">15 days</ng-container></option><option [ngValue]="7"><ng-container i18n="@@contracts-7-days">7 days</ng-container></option>
             </select>
           </label>
         } @else {
-          <label class="field">Sort by
+          <label class="field"><ng-container i18n="@@contracts-sort-by">Sort by</ng-container>
             <select class="control" [ngModel]="order()" (ngModelChange)="order.set($event); page.set(1)">
-              <option value="recent">Recently created</option><option value="number">Contract number</option><option value="start">Latest start date</option><option value="end">Nearest end date</option>
+              <option value="recent"><ng-container i18n="@@contracts-recently-created">Recently created</ng-container></option><option value="number"><ng-container i18n="@@contracts-contract-number">Contract number</ng-container></option><option value="start"><ng-container i18n="@@contracts-latest-start-date">Latest start date</ng-container></option><option value="end"><ng-container i18n="@@contracts-nearest-end-date">Nearest end date</ng-container></option>
             </select>
           </label>
         }
@@ -86,7 +86,7 @@
     <div class="overflow-x-auto rounded-lg border border-gray-200 dark:border-gray-800">
       <table class="w-full min-w-[760px] text-start text-sm text-gray-700 dark:text-gray-300">
         <thead class="table-heading">
-          <tr><th scope="col">Contract</th><th scope="col">Employee</th><th scope="col">Type</th><th scope="col">Start</th><th scope="col">End</th><th scope="col">Compensation</th><th scope="col">Status</th></tr>
+          <tr><th scope="col"><ng-container i18n="@@contracts-contract">Contract</ng-container></th><th scope="col"><ng-container i18n="@@ui-1fak8xt">Employee</ng-container></th><th scope="col"><ng-container i18n="@@contracts-type">Type</ng-container></th><th scope="col"><ng-container i18n="@@contracts-start">Start</ng-container></th><th scope="col"><ng-container i18n="@@contracts-end">End</ng-container></th><th scope="col"><ng-container i18n="@@contracts-compensation">Compensation</ng-container></th><th scope="col"><ng-container i18n="@@ui-3pd73">Status</ng-container></th></tr>
         </thead>
         <tbody class="divide-y divide-gray-200 dark:divide-gray-800">
           @for (contract of view === 'dashboard' ? displayRows().slice(0, 6) : pageRows(); track contract.id) {
@@ -100,7 +100,7 @@
               <td class="table-cell whitespace-nowrap">
                 {{ formatDate(contract.endDate) }}
                 @if (view === 'expiring') {
-                  <span class="block text-xs text-warning-700 dark:text-warning-400">{{ daysToEnd(contract) }} days left</span>
+                  <span class="block text-xs text-warning-700 dark:text-warning-400"><ng-container i18n="@@contracts-remaining-days">{{ daysToEnd(contract) }} days left</ng-container></span>
                 }
               </td>
               <td class="table-cell whitespace-nowrap">{{ formatAmount(contract.salaryAmount, contract.currency) }}</td>
@@ -111,20 +111,20 @@
               </td>
             </tr>
           } @empty {
-            <tr><td colspan="7" class="table-cell text-center text-gray-600 dark:text-gray-400">No contracts match this view.</td></tr>
+            <tr><td colspan="7" class="table-cell text-center text-gray-600 dark:text-gray-400"><ng-container i18n="@@contracts-no-contracts-match-this-view">No contracts match this view.</ng-container></td></tr>
           }
         </tbody>
       </table>
     </div>
     @if (view !== 'dashboard') {
       <div class="mt-4 flex flex-wrap items-center justify-between gap-3">
-        <p class="text-sm text-gray-600 dark:text-gray-400">{{ displayRows().length }} contracts · Page {{ page() }} of {{ totalPages() }}</p>
+        <p class="text-sm text-gray-600 dark:text-gray-400"><ng-container i18n="@@contracts-list-pagination">{{ displayRows().length }} contracts · Page {{ page() }} of {{ totalPages() }}</ng-container></p>
         <div class="flex flex-wrap gap-2">
           @if (context.permissions.includes('contracts.export')) {
-            <button class="action" type="button" [disabled]="exporting() || !displayRows().length" (click)="exportCsv()">{{ exporting() ? 'Exporting…' : 'Export CSV' }}</button>
+            <button class="action" type="button" [disabled]="exporting() || !displayRows().length" (click)="exportCsv()">@if (exporting()) { <ng-container i18n="@@contracts-exporting">Exporting…</ng-container> } @else { <ng-container i18n="@@contracts-export-csv">Export CSV</ng-container> }</button>
           }
-          <button class="action" type="button" [disabled]="page() <= 1" (click)="page.set(page() - 1)">Previous</button>
-          <button class="action" type="button" [disabled]="page() >= totalPages()" (click)="page.set(page() + 1)">Next</button>
+          <button class="action" type="button" [disabled]="page() <= 1" (click)="page.set(page() - 1)"><ng-container i18n="@@ui-1t5jxvs">Previous</ng-container></button>
+          <button class="action" type="button" [disabled]="page() >= totalPages()" (click)="page.set(page() + 1)"><ng-container i18n="@@ui-1padbm0">Next</ng-container></button>
         </div>
       </div>
       @if (exportError()) { <p role="alert" class="feedback mt-4">{{ exportError() }}</p> }

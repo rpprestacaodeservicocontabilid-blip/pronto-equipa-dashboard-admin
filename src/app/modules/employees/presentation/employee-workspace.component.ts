@@ -21,13 +21,13 @@ import { EmployeeDraftsComponent } from './employee-drafts.component';
       <app-page-breadcrumb [pageTitle]="section.title" homeLink="/employees" />
       @if (accessError()) {
         <p role="alert" class="feedback">{{ accessError() }}</p>
-        <a routerLink="/employees" class="action">Choose a company</a>
+        <a routerLink="/employees" class="action"><ng-container i18n="@@employees-choose-a-company">Choose a company</ng-container></a>
       } @else if (context(); as scope) {
         <div class="flex flex-wrap items-center justify-between gap-3 text-sm">
           <p class="font-medium text-gray-800 dark:text-gray-200">{{ scope.company.name }}</p>
-          <a routerLink="/employees" [queryParams]="{ section: employeeId() ? 'all' : section.path }" class="action">Change company</a>
+          <a routerLink="/employees" [queryParams]="{ section: employeeId() ? 'all' : section.path }" class="action"><ng-container i18n="@@employees-change-company">Change company</ng-container></a>
         </div>
-        <nav [attr.aria-label]="employeeId() ? 'Employee profile' : 'Employees'" class="flex flex-wrap gap-1">
+        <nav [attr.aria-label]="employeeId() ? copy.profile : copy.employees" class="flex flex-wrap gap-1">
           @for (tab of tabs(); track tab.path) {
             <a [routerLink]="tabLink(tab.path)" routerLinkActive ariaCurrentWhenActive="page"
               [routerLinkActiveOptions]="{ exact: true }" class="section-link">{{ tab.title }}</a>
@@ -37,7 +37,7 @@ import { EmployeeDraftsComponent } from './employee-drafts.component';
           @switch (section.view) {
             @case ('new') {
               @if (canReviewDirectory()) {
-                <a [routerLink]="['/employees', scope.company.id, 'registrations']" class="action">Open drafts and reviews</a>
+                <a [routerLink]="['/employees', scope.company.id, 'registrations']" class="action"><ng-container i18n="@@employees-open-drafts-and-reviews">Open drafts and reviews</ng-container></a>
               }
               <app-employee-registration [company]="scope.company.id" [canRead]="canRead()" />
             }
@@ -58,6 +58,11 @@ import { EmployeeDraftsComponent } from './employee-drafts.component';
   `,
 })
 export class EmployeeWorkspaceComponent {
+  protected readonly copy = {
+    profile: $localize`:@@employees-employee-profile:Employee profile`,
+    employees: $localize`:@@employees-employees:Employees`,
+  };
+
   private readonly route = inject(ActivatedRoute);
   private readonly data = toSignal(this.route.data, { requireSync: true });
   private readonly params = toSignal(this.route.paramMap, { requireSync: true });
@@ -76,10 +81,10 @@ export class EmployeeWorkspaceComponent {
     const access = this.data()['access'] as EmployeeAccess;
     if ('error' in access) return access.error;
     if (access.context.company.status !== 'ACTIVE' || !hasEmployeeGrants(access.context.permissions, this.section.grants)) {
-      return 'This section requires employee permissions for the selected company.';
+      return $localize`:@@employees-this-section-requires-employee-permissions-for-the-selected-company:This section requires employee permissions for the selected company.`;
     }
     if (this.employeeId() && !/^[\da-f]{8}(?:-[\da-f]{4}){3}-[\da-f]{12}$/i.test(this.employeeId())) {
-      return 'Invalid employee identifier.';
+      return $localize`:@@employees-invalid-employee-identifier:Invalid employee identifier.`;
     }
     return '';
   });

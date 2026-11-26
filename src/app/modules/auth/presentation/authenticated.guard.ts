@@ -28,8 +28,5 @@ export const signInGuard: CanActivateFn = route => {
   const router = inject(Router);
   const returnUrl = route.queryParamMap.get('returnUrl');
   if (auth.tokens()) return router.parseUrl(signInDestination(returnUrl, auth.homeUrl));
-  if (auth.sessionUnavailable()) return router.createUrlTree(['/session-unavailable'], {
-    queryParams: { returnUrl },
-  });
   return true;
 };

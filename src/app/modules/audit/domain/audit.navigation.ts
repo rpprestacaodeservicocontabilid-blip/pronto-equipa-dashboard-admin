@@ -24,7 +24,7 @@ const managed = (path: string, title: string, group: string, endpoint: string, r
   ({ path, title, group, view: 'managed', endpoint, permission: auditGrant(read), columns: Object.entries(columns).map(([key, label]) => ({ key, label })) });
 
 export const AUDIT_SECTIONS: readonly AuditSection[] = [
-  { path: 'overview', title: 'Overview', group: 'Overview', view: 'dashboard', endpoint: 'dashboard', permission: AUDIT_READ },
+  { path: 'overview', title: $localize`:@@ui-thnxru:Overview`, group: 'Overview', view: 'dashboard', endpoint: 'dashboard', permission: AUDIT_READ },
   managed('alerts', 'Alerts', 'Overview', 'admin/alerts', 'alerts:read', { type: 'Type', severity: 'Severity', count: 'Occurrences' }),
   records('records', 'All records', 'Audit records'),
   records('critical', 'Critical records', 'Audit records', { severity: 'CRITICAL' }),

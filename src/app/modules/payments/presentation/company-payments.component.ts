@@ -23,8 +23,8 @@ const blankForm = () => ({
   currency: 'AOA', primary: false, chosen: '', reason: '', evidence: '', acknowledged: false, providerStatus: 'ACTIVE',
 });
 const directoryColumns = (view: Directory): DirectoryColumn[] => view === 'bank-accounts'
-  ? [{ key: 'accountName', label: 'Account' }, { key: 'bankCode', label: 'Bank' }, { key: 'accountIdentifier', label: 'Identifier' },
-    { key: 'currency', label: 'Currency' }, { key: 'status', label: 'Status' }]
+  ? [{ key: 'accountName', label: $localize`:@@ui-oyp43g:Account` }, { key: 'bankCode', label: 'Bank' }, { key: 'accountIdentifier', label: 'Identifier' },
+    { key: 'currency', label: $localize`:@@ui-5o3zh2:Currency` }, { key: 'status', label: $localize`:@@ui-3pd73:Status` }]
   : columns[view].filter(column => column.key !== 'companyId');
 const detailViews: Directory[] = ['instructions', 'batches', 'orders', 'transactions', 'reconciliations'];
 

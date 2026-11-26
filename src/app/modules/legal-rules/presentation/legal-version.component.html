@@ -15,11 +15,11 @@
         <dl class="grid gap-3 text-sm text-gray-700 sm:grid-cols-2 xl:grid-cols-3 dark:text-gray-300">
           <div><dt class="font-semibold">Created</dt><dd>{{ current.createdAt }} · #{{ current.createdBy }}</dd></div>
           @if (current.submittedAt) { <div><dt class="font-semibold">Submitted</dt><dd>{{ current.submittedAt }} · #{{ current.submittedBy }}</dd></div> }
-          @if (current.approvedAt) { <div><dt class="font-semibold">Approved</dt><dd>{{ current.approvedAt }} · #{{ current.approvedBy }}</dd></div> }
+          @if (current.approvedAt) { <div><dt class="font-semibold"><ng-container i18n="@@ui-1j3qly2">Approved</ng-container></dt><dd>{{ current.approvedAt }} · #{{ current.approvedBy }}</dd></div> }
           @if (current.publishedAt) { <div><dt class="font-semibold">Published</dt><dd>{{ current.publishedAt }} · #{{ current.publishedBy }}</dd></div> }
           @if (current.retiredAt) { <div><dt class="font-semibold">Retired</dt><dd>{{ current.retiredAt }} · #{{ current.retiredBy }}</dd></div> }
           @if (current.rejectedAt) {
-            <div><dt class="font-semibold">Rejected</dt><dd>{{ current.rejectedAt }} · #{{ current.rejectedBy }}</dd></div>
+            <div><dt class="font-semibold"><ng-container i18n="@@ui-1uofzaf">Rejected</ng-container></dt><dd>{{ current.rejectedAt }} · #{{ current.rejectedBy }}</dd></div>
             <div><dt class="font-semibold">Rejection reason</dt><dd class="whitespace-pre-wrap">{{ current.rejectionReason }}</dd></div>
           }
           @if (current.integrityHash) { <div class="sm:col-span-2"><dt class="font-semibold">Engine payload SHA-256</dt><dd class="break-all font-mono">{{ current.integrityHash }}</dd></div> }
@@ -54,7 +54,7 @@
           }
           <div class="flex flex-wrap gap-2">
             <button class="action action-primary" type="submit" [disabled]="working() || (action.reason && !reason.trim())">Confirm {{ action.label.toLowerCase() }}</button>
-            <button class="action" type="button" [disabled]="working()" (click)="pending.set(null)">Cancel</button>
+            <button class="action" type="button" [disabled]="working()" (click)="pending.set(null)"><ng-container i18n="@@ui-ew9em3">Cancel</ng-container></button>
           </div>
         </form>
       </app-component-card>

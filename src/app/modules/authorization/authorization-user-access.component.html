@@ -11,7 +11,7 @@
       Scope
       <select name="scope" [(ngModel)]="scope" class="mt-1 block h-11 w-full rounded-lg border border-gray-300 bg-white px-3 dark:border-gray-700 dark:bg-gray-900">
         <option value="PLATFORM">Platform</option>
-        <option value="TENANT">Company</option>
+        <option value="TENANT"><ng-container i18n="@@ui-1hra0d8">Company</ng-container></option>
       </select>
     </label>
     @if (scope === 'TENANT') {

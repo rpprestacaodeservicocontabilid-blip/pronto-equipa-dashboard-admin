@@ -51,7 +51,7 @@ export class SimulationWorkspaceComponent {
     return [
       { label: 'Listed executions', value: rows.length },
       { label: 'In progress', value: rows.filter(row => this.activeStatuses.includes(row.status)).length },
-      { label: 'Completed', value: rows.filter(row => row.status === 'COMPLETED').length },
+      { label: $localize`:@@ui-1tmo59u:Completed`, value: rows.filter(row => row.status === 'COMPLETED').length },
       { label: 'With failures', value: rows.filter(row => row.status === 'FAILED' || row.status === 'PARTIALLY_COMPLETED').length },
     ];
   });

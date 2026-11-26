@@ -3,17 +3,17 @@
     <fieldset [disabled]="busy" class="space-y-5">
       <div class="grid gap-3 sm:grid-cols-3">
         <label class="sub-label">Code<input name="code" class="sub-input" [(ngModel)]="draft.code" [readOnly]="!!plan" pattern="[A-Za-z0-9_\-]{2,40}" required></label>
-        <label class="sub-label">Name<input name="name" class="sub-input" [(ngModel)]="draft.name" minlength="2" maxlength="120" required></label>
+        <label class="sub-label"><ng-container i18n="@@ui-4el6o6">Name</ng-container><input name="name" class="sub-input" [(ngModel)]="draft.name" minlength="2" maxlength="120" required></label>
         <label class="sub-label">Plan type<select name="type" class="sub-input" [(ngModel)]="draft.type">@for (type of types; track type) { <option [value]="type">{{ label(type) }}</option> }</select></label>
       </div>
-      <label class="sub-label">Description<textarea name="description" class="sub-input" [(ngModel)]="draft.description" maxlength="2000"></textarea></label>
+      <label class="sub-label"><ng-container i18n="@@ui-sjj37t">Description</ng-container><textarea name="description" class="sub-input" [(ngModel)]="draft.description" maxlength="2000"></textarea></label>
       <fieldset class="space-y-3">
         <legend class="sub-label">Prices</legend>
         @for (price of draft.prices; track price; let i = $index) {
           <div class="grid items-end gap-3 rounded-lg border border-gray-200 p-3 sm:grid-cols-3 dark:border-gray-700">
             <label class="sub-label">Billing interval<select [name]="'interval'+i" class="sub-input" [(ngModel)]="price.interval">@for (interval of intervals; track interval) { <option [value]="interval">{{ label(interval) }}</option> }</select></label>
-            <label class="sub-label">Currency<input [name]="'currency'+i" class="sub-input" [(ngModel)]="price.currency" pattern="[A-Za-z]{3}" required></label>
-            <label class="sub-label">Amount<input [name]="'amount'+i" class="sub-input" inputmode="decimal" [(ngModel)]="price.amount" pattern="[0-9]{1,12}(\.[0-9]{1,2})?" required></label>
+            <label class="sub-label"><ng-container i18n="@@ui-5o3zh2">Currency</ng-container><input [name]="'currency'+i" class="sub-input" [(ngModel)]="price.currency" pattern="[A-Za-z]{3}" required></label>
+            <label class="sub-label"><ng-container i18n="@@ui-a2ky21">Amount</ng-container><input [name]="'amount'+i" class="sub-input" inputmode="decimal" [(ngModel)]="price.amount" pattern="[0-9]{1,12}(\.[0-9]{1,2})?" required></label>
             @if (price.interval === 'CUSTOM') { <label class="sub-label">Days<input type="number" min="1" max="3650" [name]="'days'+i" class="sub-input" [(ngModel)]="price.customDays" required></label> }
             @if (draft.prices.length > 1) { <button type="button" class="sub-button justify-self-start" (click)="draft.prices.splice(i, 1)">Remove price</button> }
           </div>
@@ -48,7 +48,7 @@
     @if (error) { <p class="sub-error" role="alert">{{ error }}</p> }
     <div class="flex flex-wrap gap-2">
       <button type="submit" class="sub-primary" [disabled]="busy || editor.invalid">Save draft</button>
-      <button type="button" class="sub-button" (click)="closed.emit()" [disabled]="busy">Close</button>
+      <button type="button" class="sub-button" (click)="closed.emit()" [disabled]="busy"><ng-container i18n="@@ui-1l0xxoj">Close</ng-container></button>
     </div>
   </form>
 </app-component-card>

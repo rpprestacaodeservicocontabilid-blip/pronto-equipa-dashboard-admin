@@ -1,7 +1,7 @@
 import { Component, DestroyRef, Input, OnInit, inject, signal } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { FormsModule } from '@angular/forms';
-import { apiErrorMessage } from '../../../../core/api/api-error';
+import { contractErrorMessage } from '../contract-errors';
 import { ComponentCardComponent } from '../../../../shared/components/common/component-card/component-card.component';
 import { CompanyContext, ContractType } from '../../domain/contracts.models';
 import { ContractsApi } from '../../infrastructure/contracts-api.service';
@@ -36,7 +36,7 @@ export class ContractTypesComponent implements OnInit {
     this.error.set('');
     this.api.types(this.context.company.id).pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
       next: types => { this.types.set(types); this.loading.set(false); },
-      error: error => { this.error.set(apiErrorMessage(error)); this.loading.set(false); },
+      error: error => { this.error.set(contractErrorMessage(error)); this.loading.set(false); },
     });
   }
 
@@ -46,7 +46,7 @@ export class ContractTypesComponent implements OnInit {
     const name = this.name.trim();
     if (!/^[A-Za-z0-9_-]{1,50}$/.test(code) || !name
         || (this.maxRenewals !== null && (!Number.isInteger(this.maxRenewals) || this.maxRenewals < 0))) {
-      this.error.set('Enter a valid code, name and renewal limit.');
+      this.error.set($localize`:@@contracts-enter-a-valid-code-name-and-renewal-limit:Enter a valid code, name and renewal limit.`);
       return;
     }
     this.saving.set(true);
@@ -60,7 +60,7 @@ export class ContractTypesComponent implements OnInit {
       next: () => {
         this.showForm.set(false);
         this.saving.set(false);
-        this.notice.set('Contract type created.');
+        this.notice.set($localize`:@@contracts-contract-type-created:Contract type created.`);
         this.code = '';
         this.name = '';
         this.ruleVersion = '';
@@ -68,7 +68,7 @@ export class ContractTypesComponent implements OnInit {
         this.maxRenewals = null;
         this.load();
       },
-      error: error => { this.error.set(apiErrorMessage(error)); this.saving.set(false); },
+      error: error => { this.error.set(contractErrorMessage(error)); this.saving.set(false); },
     });
   }
 }

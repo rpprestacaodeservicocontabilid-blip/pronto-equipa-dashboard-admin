@@ -1,4 +1,5 @@
-import { ApplicationConfig, inject, provideAppInitializer, provideZoneChangeDetection } from '@angular/core';
+import { ApplicationConfig, LOCALE_ID, inject, provideAppInitializer, provideZoneChangeDetection } from '@angular/core';
+import { activeLocale } from './core/i18n/locale';
 import { Directionality } from '@angular/cdk/bidi';
 import { provideRouter, withInMemoryScrolling } from '@angular/router';
 
@@ -11,6 +12,7 @@ import { LiveDirectionality } from './core/services/live-directionality.service'
 
 export const appConfig: ApplicationConfig = {
   providers: [
+    { provide: LOCALE_ID, useFactory: activeLocale },
     provideZoneChangeDetection({ eventCoalescing: true }),
     provideRouter(routes, withInMemoryScrolling({ anchorScrolling: 'enabled' })),
     provideHttpClient(withInterceptors([authInterceptor])),

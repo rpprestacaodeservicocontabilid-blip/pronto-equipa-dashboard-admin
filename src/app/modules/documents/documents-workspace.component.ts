@@ -133,7 +133,7 @@ export class DocumentsWorkspaceComponent {
       ? ['approve', 'reject'].map(verb => ({ title: this.label(verb) + ' deletion request', path: '/deletion-requests/' + row.id + '/' + verb, reason: true })) : [];
     if (this.section.view !== 'library') return [];
     const result: Action[] = [];
-    if (row.status === 'ACTIVE' && this.can('archive')) result.push({ title: 'Archive', path: path + '/archive' });
+    if (row.status === 'ACTIVE' && this.can('archive')) result.push({ title: $localize`:@@ui-w0suw5:Archive`, path: path + '/archive' });
     if (row.status === 'ARCHIVED' && this.can('restore')) result.push({ title: 'Restore', path: path + '/restore' });
     if (row.status === 'PENDING_VALIDATION') {
       if (this.can('validation:submit')) result.push({ title: 'Submit for review', path: path + '/validation/submit' });

@@ -10,7 +10,7 @@
         <label class="ai-label min-w-40 flex-1">Company name or ID
           <input class="ai-field" maxlength="100" name="company-search" [(ngModel)]="search">
         </label>
-        <button class="ai-secondary" type="submit">Search</button>
+        <button class="ai-secondary" type="submit"><ng-container i18n="@@ui-1j0itop">Search</ng-container></button>
       </form>
       @if (optional) { <button class="ai-secondary w-full justify-start" type="button" (click)="choose(null)">Platform</button> }
       @if (error()) { <p class="ai-error" role="alert">{{ error() }}</p> }
@@ -25,8 +25,8 @@
         </ul>
         @if (items.total > items.limit) {
           <div class="flex items-center justify-between gap-2">
-            <button class="ai-secondary" type="button" [disabled]="items.page === 1" (click)="load(items.page - 1)">Previous</button>
-            <button class="ai-secondary" type="button" [disabled]="items.page * items.limit >= items.total" (click)="load(items.page + 1)">Next</button>
+            <button class="ai-secondary" type="button" [disabled]="items.page === 1" (click)="load(items.page - 1)"><ng-container i18n="@@ui-1t5jxvs">Previous</ng-container></button>
+            <button class="ai-secondary" type="button" [disabled]="items.page * items.limit >= items.total" (click)="load(items.page + 1)"><ng-container i18n="@@ui-1padbm0">Next</ng-container></button>
           </div>
         }
       }

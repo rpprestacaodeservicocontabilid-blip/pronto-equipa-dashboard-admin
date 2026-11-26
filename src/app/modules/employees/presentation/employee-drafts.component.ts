@@ -4,7 +4,7 @@ import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { FormsModule } from '@angular/forms';
 import { RouterLink } from '@angular/router';
 import { Observable } from 'rxjs';
-import { apiErrorMessage } from '../../../core/api/api-error';
+import { employeeErrorMessage } from './employee-display';
 import { AuthService } from '../../../core/auth/auth.service';
 import { ComponentCardComponent } from '../../../shared/components/common/component-card/component-card.component';
 import { RegistrationDetails, RegistrationsPage, RegistrationStatus } from '../domain/employee-administration';
@@ -12,7 +12,7 @@ import { employeeGrants, hasEmployeeGrants } from '../domain/employee-navigation
 import { emptyEmployee, normalizeEmployee, registrationFields } from '../domain/employee-registration';
 import { EmployeesApi } from '../infrastructure/employees-api.service';
 
-const labels: Record<RegistrationStatus, string> = { DRAFT: 'Draft', PENDING: 'Pending review', APPROVED: 'Approved', REJECTED: 'Rejected' };
+const labels: Record<RegistrationStatus, string> = { DRAFT: $localize`:@@employees-draft:Draft`, PENDING: $localize`:@@employees-pending-review:Pending review`, APPROVED: $localize`:@@employees-approved:Approved`, REJECTED: $localize`:@@employees-rejected:Rejected` };
 
 @Component({
   selector: 'app-employee-drafts', standalone: true,
@@ -20,6 +20,11 @@ const labels: Record<RegistrationStatus, string> = { DRAFT: 'Draft', PENDING: 'P
   templateUrl: './employee-drafts.component.html',
 })
 export class EmployeeDraftsComponent implements OnInit {
+  protected readonly copy = {
+    noNumber: $localize`:@@employees-no-employee-number:No employee number`,
+    newDraft: $localize`:@@employees-new-draft:New draft`,
+  };
+
   @Input({ required: true }) company = 0;
   @Input() permissions: readonly string[] = [];
   private readonly auth = inject(AuthService);
@@ -63,7 +68,7 @@ export class EmployeeDraftsComponent implements OnInit {
     this.error.set('');
     this.api.registrations(this.company, page, this.appliedStatus || undefined).pipe(takeUntilDestroyed(this.destroy)).subscribe({
       next: data => { this.result.set(data); this.loading.set(false); },
-      error: error => { this.result.set(null); this.error.set(apiErrorMessage(error)); this.loading.set(false); },
+      error: error => { this.result.set(null); this.error.set(employeeErrorMessage(error)); this.loading.set(false); },
     });
   }
   protected newDraft() {
@@ -84,16 +89,16 @@ export class EmployeeDraftsComponent implements OnInit {
     if (!submit) {
       const content = Object.fromEntries(Object.entries(this.draft)
         .filter(([, value]) => value !== null && (typeof value !== 'string' || value.trim() !== '')));
-      this.send(this.api.saveDraft(this.company, content, this.selected() ?? undefined), 'Draft saved.');
+      this.send(this.api.saveDraft(this.company, content, this.selected() ?? undefined), $localize`:@@employees-draft-saved:Draft saved.`);
       return;
     }
     const selected = this.selected();
     if (!selected) return;
     try {
       const content = normalizeEmployee(this.draft);
-      this.send(this.api.saveDraft(this.company, content, selected), 'Draft saved.', saved =>
-        this.send(this.api.registrationAction(this.company, saved, 'submit'), 'Registration submitted for review.'));
-    } catch (error) { this.error.set(apiErrorMessage(error)); }
+      this.send(this.api.saveDraft(this.company, content, selected), $localize`:@@employees-draft-saved:Draft saved.`, saved =>
+        this.send(this.api.registrationAction(this.company, saved, 'submit'), $localize`:@@employees-registration-submitted-for-review:Registration submitted for review.`));
+    } catch (error) { this.error.set(employeeErrorMessage(error)); }
   }
 
   protected decide(action: 'approve' | 'reject') {
@@ -102,7 +107,7 @@ export class EmployeeDraftsComponent implements OnInit {
     if (this.busy() || !selected || !this.canReview || !this.confirmed ||
       (action === 'reject' && reason.length < 3)) return;
     this.send(this.api.registrationAction(this.company, selected, action, reason || undefined),
-      action === 'approve' ? 'Registration approved. The employee profile is active.' : 'Registration rejected.');
+      action === 'approve' ? $localize`:@@employees-registration-approved-the-employee-profile-is-active:Registration approved. The employee profile is active.` : $localize`:@@employees-registration-rejected:Registration rejected.`);
   }
 
   private send(request: Observable<RegistrationDetails>, notice?: string, after?: (data: RegistrationDetails) => void) {
@@ -121,7 +126,7 @@ export class EmployeeDraftsComponent implements OnInit {
         if (after) after(data);
         else if (notice) this.list();
       },
-      error: error => { this.error.set(apiErrorMessage(error)); this.busy.set(false); },
+      error: error => { this.error.set(employeeErrorMessage(error)); this.busy.set(false); },
     });
   }
 }

@@ -17,7 +17,7 @@ import { Component, Input } from '@angular/core';
   ],
 })
 export class SignInHeaderComponent {
-  @Input() title: string = 'Sign In';
-  @Input() description: string = 'Enter your email and password to sign in!';
+  @Input() title: string = $localize`:@@ui-wcrgg3:Sign In`;
+  @Input() description: string = $localize`:@@ui-1cjb5fy:Enter your email and password to sign in!`;
   @Input() className: string = '';
 }

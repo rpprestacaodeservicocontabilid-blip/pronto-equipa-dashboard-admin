@@ -11,8 +11,8 @@ interface Section {
 }
 
 export const LOAN_SECTIONS: Section[] = [
-  { path: 'overview', title: 'Overview', group: 'Loans', page: 'overview', grants: ['reports.read', 'applications.read', 'loans.read', 'deductions.read'] },
-  { path: 'applications', title: 'Applications', group: 'Loans', page: 'register', detail: 'application', grants: ['applications.read', 'applications.create'] },
+  { path: 'overview', title: $localize`:@@ui-thnxru:Overview`, group: 'Loans', page: 'overview', grants: ['reports.read', 'applications.read', 'loans.read', 'deductions.read'] },
+  { path: 'applications', title: $localize`:@@ui-d6g082:Applications`, group: 'Loans', page: 'register', detail: 'application', grants: ['applications.read', 'applications.create'] },
   { path: 'approvals', title: 'Pending approvals', group: 'Loans', page: 'register', grants: ['applications.read'] },
   { path: 'active', title: 'Active loans', group: 'Loans', page: 'register', detail: 'loan', grants: ['loans.read'] },
   { path: 'advances', title: 'Salary advances', group: 'Loans', page: 'register', grants: ['applications.read', 'applications.create'] },
@@ -28,8 +28,8 @@ export const LOAN_SECTIONS: Section[] = [
     grants: ['renegotiations.request', 'renegotiations.decide'] },
   { path: 'settlements', title: 'Settlements', group: 'Financial operations', page: 'register', detail: 'loan', grants: ['loans.read'] },
   { path: 'policies', title: 'Lending policies', group: 'Administration', page: 'policies', grants: ['policies.read', 'policies.manage'] },
-  { path: 'reports', title: 'Reports', group: 'Administration', page: 'collections', grants: ['reports.read'] },
-  { path: 'audit', title: 'Audit history', group: 'Administration', page: 'audit', grants: ['audit:records:read-tenant'] },
+  { path: 'reports', title: $localize`:@@ui-wwt148:Reports`, group: 'Administration', page: 'collections', grants: ['reports.read'] },
+  { path: 'audit', title: $localize`:@@ui-jnu6u8:Audit history`, group: 'Administration', page: 'audit', grants: ['audit:records:read-tenant'] },
 ];
 
 export function hasGrant(permissions: string[], grant: string) {

@@ -5,15 +5,15 @@
       <form class="flex flex-wrap items-end gap-3" (ngSubmit)="scope()">
         <label class="sub-label">Company ID<input class="sub-input" type="number" min="1" max="2147483647" name="company" [(ngModel)]="companyFilter"></label>
         @if (section.view === 'subscriptions' && !section.status) {
-          <label class="sub-label">Status<select class="sub-input" name="status" [(ngModel)]="status">
+          <label class="sub-label"><ng-container i18n="@@ui-3pd73">Status</ng-container><select class="sub-input" name="status" [(ngModel)]="status">
             <option value="">All statuses</option>@for (value of statuses; track value) { <option [value]="value">{{ label(value) }}</option> }
           </select></label>
         }
-        <button type="submit" class="sub-button" [disabled]="loading() || saving()">Apply filters</button>
+        <button type="submit" class="sub-button" [disabled]="loading() || saving()"><ng-container i18n="@@ui-1ml4h1c">Apply filters</ng-container></button>
       </form>
     }
     <div class="ms-auto flex flex-wrap gap-2">
-      <button type="button" class="sub-button" [disabled]="loading() || saving()" (click)="load()">Refresh</button>
+      <button type="button" class="sub-button" [disabled]="loading() || saving()" (click)="load()"><ng-container i18n="@@ui-28r6qc">Refresh</ng-container></button>
       @if (section.path === 'plans') { <button class="sub-primary" type="button" [disabled]="loading() || saving()" (click)="editor.set({plan: null})">New plan</button> }
       @if (section.path === 'directory' && companyId) { <button class="sub-primary" type="button" [disabled]="loading() || saving()" (click)="start('create', '')">New subscription</button> }
       @if (section.view === 'features') { <button class="sub-primary" type="button" [disabled]="saving()" (click)="showFeature = !showFeature">Add feature</button> }
@@ -63,7 +63,7 @@
         </fieldset>
         <div class="flex gap-2">
           <button type="submit" class="sub-primary" [disabled]="operation.invalid || loading() || saving()">{{ titles[cmd.type] }}</button>
-          <button type="button" class="sub-button" [disabled]="saving()" (click)="command.set(null)">Close</button>
+          <button type="button" class="sub-button" [disabled]="saving()" (click)="command.set(null)"><ng-container i18n="@@ui-1l0xxoj">Close</ng-container></button>
         </div>
       </form>
     </app-component-card>

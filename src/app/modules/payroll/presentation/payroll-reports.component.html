@@ -27,9 +27,9 @@
           <thead class="table-heading"><tr>
             <th scope="col">Run</th>
             @if (type() === 'summary') {
-              <th scope="col">Employees</th><th scope="col">Gross</th><th scope="col">Deductions</th><th scope="col">Net</th><th scope="col">Employer costs</th>
+              <th scope="col"><ng-container i18n="@@ui-f4bo3a">Employees</ng-container></th><th scope="col">Gross</th><th scope="col">Deductions</th><th scope="col">Net</th><th scope="col">Employer costs</th>
             } @else {
-              <th scope="col">Employee</th><th scope="col">Pay item</th><th scope="col">Amount</th><th scope="col">Source</th>
+              <th scope="col"><ng-container i18n="@@ui-1fak8xt">Employee</ng-container></th><th scope="col">Pay item</th><th scope="col"><ng-container i18n="@@ui-a2ky21">Amount</ng-container></th><th scope="col">Source</th>
             }
           </tr></thead>
           <tbody class="divide-y divide-gray-200 dark:divide-gray-800">
@@ -53,8 +53,8 @@
         <div class="mt-4 flex flex-wrap items-center justify-between gap-2 text-sm text-gray-600 dark:text-gray-400">
           <span>Page {{ page() }} · {{ response.data.length }} entries</span>
           <div class="flex gap-2">
-            <button type="button" class="action" [disabled]="page() === 1" (click)="changePage(-1)">Previous</button>
-            <button type="button" class="action" [disabled]="page() * pageSize >= response.data.length" (click)="changePage(1)">Next</button>
+            <button type="button" class="action" [disabled]="page() === 1" (click)="changePage(-1)"><ng-container i18n="@@ui-1t5jxvs">Previous</ng-container></button>
+            <button type="button" class="action" [disabled]="page() * pageSize >= response.data.length" (click)="changePage(1)"><ng-container i18n="@@ui-1padbm0">Next</ng-container></button>
           </div>
         </div>
       }

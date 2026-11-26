@@ -19,7 +19,7 @@
 @if (error()) { <p role="alert" class="nt-error mb-4">{{ error() }}</p> }
 
 @if (loading()) {
-  <p role="status" class="nt-muted py-4">Loading…</p>
+  <p role="status" class="nt-muted py-4"><ng-container i18n="@@ui-cwepyb">Loading…</ng-container></p>
 } @else if (preferencePage) {
   <app-component-card title="Channels by category">
     <label class="nt-label max-w-xs">Category
@@ -82,9 +82,9 @@
       } @empty { <li class="nt-muted py-6">No notifications match this view.</li> }
     </ul>
     <div class="mt-2 flex flex-wrap items-center gap-3">
-      <button type="button" class="nt-secondary" (click)="browse(page - 1)" [disabled]="page === 1 || writing()">Previous</button>
+      <button type="button" class="nt-secondary" (click)="browse(page - 1)" [disabled]="page === 1 || writing()"><ng-container i18n="@@ui-1t5jxvs">Previous</ng-container></button>
       <span class="nt-muted">Page {{ page }}</span>
-      <button type="button" class="nt-secondary" (click)="browse(page + 1)" [disabled]="entries().length < 50 || writing()">Next</button>
+      <button type="button" class="nt-secondary" (click)="browse(page + 1)" [disabled]="entries().length < 50 || writing()"><ng-container i18n="@@ui-1padbm0">Next</ng-container></button>
     </div>
   </app-component-card>
 }
@@ -95,7 +95,7 @@
       @if (entry.data.readState === 'UNREAD') {
         <button type="button" class="nt-secondary" [disabled]="writing()" (click)="mark('read', entry.id)">Mark as read</button>
       }
-      <button type="button" class="nt-secondary" [disabled]="writing()" (click)="mark('archive', entry.id)">Archive</button>
+      <button type="button" class="nt-secondary" [disabled]="writing()" (click)="mark('archive', entry.id)"><ng-container i18n="@@ui-w0suw5">Archive</ng-container></button>
     </div>
   }
 </ng-template>

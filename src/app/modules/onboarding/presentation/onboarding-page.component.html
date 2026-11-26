@@ -33,7 +33,7 @@
 @if (section.kind !== 'settings' && section.kind !== 'overview') {
   <form class="mb-5 grid items-end gap-3 rounded-xl border border-gray-200 bg-white p-4 sm:grid-cols-2 xl:grid-cols-4 dark:border-gray-800 dark:bg-gray-900" (ngSubmit)="changePage(1)">
     @if (section.kind === 'applications') {
-      <label class="ob-label sm:col-span-2">Search<input type="search" name="search" class="ob-input" [(ngModel)]="filters.search" placeholder="Company, tax ID, source or reference" maxlength="150"></label>
+      <label class="ob-label sm:col-span-2"><ng-container i18n="@@ui-1j0itop">Search</ng-container><input type="search" name="search" class="ob-input" [(ngModel)]="filters.search" placeholder="Company, tax ID, source or reference" maxlength="150"></label>
       <label class="ob-label">Mode<select name="mode" class="ob-input" [(ngModel)]="filters.mode">
         <option value="">All modes</option>
         @for (mode of modes; track mode) { <option [value]="mode">{{ label(mode) }}</option> }
@@ -42,7 +42,7 @@
       <label class="ob-label">Assignee account<input name="assignee" inputmode="numeric" pattern="[0-9]*" class="ob-input" [(ngModel)]="filters.assignee"></label>
     }
     @if ((section.kind === 'applications' || section.kind === 'resources') && !section.statuses) {
-      <label class="ob-label">Status<select name="status" class="ob-input" [(ngModel)]="filters.status">
+      <label class="ob-label"><ng-container i18n="@@ui-3pd73">Status</ng-container><select name="status" class="ob-input" [(ngModel)]="filters.status">
         <option value="">All statuses</option>
         @for (status of statuses; track status) { <option [value]="status">{{ label(status) }}</option> }
       </select></label>
@@ -300,8 +300,8 @@
     <div class="mt-4 flex flex-wrap items-center justify-between gap-3">
       <p class="ob-muted" aria-live="polite">{{ total }} record(s) · Page {{ page }}</p>
       <div class="flex flex-wrap gap-2">
-        <button type="button" class="ob-secondary" [disabled]="page <= 1" (click)="changePage(page - 1)">Previous</button>
-        <button type="button" class="ob-secondary" [disabled]="page * limit >= total" (click)="changePage(page + 1)">Next</button>
+        <button type="button" class="ob-secondary" [disabled]="page <= 1" (click)="changePage(page - 1)"><ng-container i18n="@@ui-1t5jxvs">Previous</ng-container></button>
+        <button type="button" class="ob-secondary" [disabled]="page * limit >= total" (click)="changePage(page + 1)"><ng-container i18n="@@ui-1padbm0">Next</ng-container></button>
       </div>
     </div>
   }
